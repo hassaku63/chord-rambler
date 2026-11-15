@@ -1,6 +1,6 @@
 ---
 name: standards
-description: 業界標準の索引（今は Dockerfile、BuildKit のビルドチェック、Compose Specification、MusicXML の音高）。ファイル形式・記法・プロトコルを決めるとき、Dockerfile や compose.yaml を書く・変えるとき、外の形式を読み書きするとき、独自の書き方を足す前に引く。仕様の中身は持たず、一次情報の場所と当たるべき場面だけを返す。
+description: 業界標準の索引（今は Dockerfile、BuildKit のビルドチェック、Compose Specification、MusicXML の音高と和音の種類）。ファイル形式・記法・プロトコルを決めるとき、Dockerfile や compose.yaml を書く・変えるとき、外の形式を読み書きするとき、独自の書き方を足す前に引く。仕様の中身は持たず、一次情報の場所と当たるべき場面だけを返す。
 ---
 
 # standards

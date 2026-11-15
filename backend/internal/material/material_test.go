@@ -1,6 +1,9 @@
 package material_test
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/hassaku63/chord-rambler/backend/internal/material"
 )
 
@@ -58,4 +61,34 @@ func allIntervals() []material.Interval {
 		}
 	}
 	return ivs
+}
+
+// notes parses note names for a test table, such as "F♯ A♯ C♯".
+func notes(s string) []material.NoteName {
+	var out []material.NoteName
+	for _, f := range strings.Fields(s) {
+		r := []rune(f)
+		l := material.Letter(strings.IndexRune("CDEFGAB", r[0]))
+		alter := strings.Count(f, "♯") - strings.Count(f, "♭")
+		out = append(out, note(l, alter))
+	}
+	return out
+}
+
+// ivs parses intervals for a test table, such as "M3 P5 m7".
+func ivs(s string) []material.Interval {
+	qualities := map[byte]material.Quality{
+		'P': material.Perfect, 'M': material.Major, 'm': material.Minor,
+		'A': material.Augmented, 'd': material.Diminished,
+	}
+	var out []material.Interval
+	for _, f := range strings.Fields(s) {
+		q, ok := qualities[f[0]]
+		number, err := strconv.Atoi(f[1:])
+		if !ok || err != nil {
+			panic("bad interval in a test table: " + f)
+		}
+		out = append(out, interval(number, q))
+	}
+	return out
 }
