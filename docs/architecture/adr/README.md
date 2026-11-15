@@ -14,3 +14,4 @@
 | [0008](0008-tech-stack.md) | エンジンは Go の API、画面は React と TypeScript |
 | [0009](0009-frontend-supporting-dependencies.md) | フロントエンドの道具を支える依存 |
 | [0010](0010-container-images.md) | コンテナは、distroless の API と nginx の画面の 2 つのイメージ |
+| [0011](0011-models-by-stage.md) | 段階ごとにモデルを使い分け、`ready` の Issue を引き継ぎの文書にする |
