@@ -2,6 +2,7 @@ package notation_test
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -43,6 +44,16 @@ func chord(root material.NoteName, intervals, bass string) material.Chord {
 		}
 	}
 	return c
+}
+
+// describe shows a chord in a failure message: the root, the intervals and the
+// bass.
+func describe(c material.Chord) string {
+	bass, ok := c.Bass()
+	if !ok {
+		return fmt.Sprintf("%s %v", c.Root(), c.Intervals())
+	}
+	return fmt.Sprintf("%s %v / %s", c.Root(), c.Intervals(), bass)
 }
 
 // The names are the display forms of docs/architecture/theory-conventions.md,
@@ -93,7 +104,7 @@ func TestChordNames(t *testing.T) {
 				t.Errorf("FormatChord(%s %s / %s) = %q, %v; want %q", tt.root, tt.intervals, tt.bass, got, err, tt.name)
 			}
 			if got, err := notation.ParseChord(tt.name); err != nil || got != want {
-				t.Errorf("ParseChord(%q) = %v %v, %v; want %v %v", tt.name, got.Root(), got.Intervals(), err, want.Root(), want.Intervals())
+				t.Errorf("ParseChord(%q) = %s, %v; want %s", tt.name, describe(got), err, describe(want))
 			}
 		})
 	}
@@ -162,6 +173,8 @@ func TestParseChordRejects(t *testing.T) {
 		{"Cm9", notation.ErrChordKind, "m9"},
 		{"C###", notation.ErrAccidental, "###"},
 		{"C♯♯♯m", notation.ErrAccidental, "♯♯♯m"},
+		// A double sharp is 𝄪, x or ##; ♯♯ is not among the spellings read.
+		{"C♯♯", notation.ErrAccidental, "♯♯"},
 		{"C7(9", notation.ErrUnclosedParen, "(9"},
 		{"Cm7(♭5", notation.ErrUnclosedParen, "(♭5"},
 		{"C(9)", notation.ErrNoTensions, "(9)"},
@@ -291,29 +304,30 @@ func displayNames(root string, basses []string) []string {
 // Reading a name in the display form and writing it back gives the same text,
 // and reading that gives the same chord. Writing for display keeps the
 // sounding pitch classes. The only failures allowed are a member or bass beyond
-// a double sharp or flat, and a bass with no interval to the root.
+// a double sharp or flat, and a bass with no interval to the root; every name
+// on a natural root without a bass reads.
 func TestChordRoundTrip(t *testing.T) {
 	var spellings []string
 	for _, n := range allNotes() {
 		spellings = append(spellings, notation.FormatNoteName(n))
 	}
-	read := 0
 	for _, root := range spellings {
 		for _, name := range displayNames(root, spellings) {
 			c, err := notation.ParseChord(name)
-			if errors.Is(err, material.ErrAlterOutOfRange) || errors.Is(err, material.ErrInvalidInterval) {
+			hasBass := strings.Contains(name, "/")
+			allowed := errors.Is(err, material.ErrAlterOutOfRange) || hasBass && errors.Is(err, material.ErrInvalidInterval)
+			if allowed && (hasBass || len(root) > 1) {
 				continue
 			}
 			if err != nil {
 				t.Fatalf("ParseChord(%q): %v", name, err)
 			}
-			read++
 			written, err := notation.FormatChord(c)
 			if err != nil || written != name {
 				t.Fatalf("FormatChord(ParseChord(%q)) = %q, %v", name, written, err)
 			}
 			if back, err := notation.ParseChord(written); err != nil || back != c {
-				t.Fatalf("ParseChord(%q) = %v, %v; want the chord read from %q", written, back.Intervals(), err, name)
+				t.Fatalf("ParseChord(%q) = %s, %v; want %s, read from %q", written, describe(back), err, describe(c), name)
 			}
 			shown, err := notation.FormatChordForDisplay(c)
 			if err != nil {
@@ -323,9 +337,5 @@ func TestChordRoundTrip(t *testing.T) {
 				t.Fatalf("ParseChord(%q) = %s, %v; want the sounding pitch classes %s of %q", shown, back.SoundingPitchClasses(), err, c.SoundingPitchClasses(), name)
 			}
 		}
-	}
-	t.Logf("%d names read", read)
-	if read == 0 {
-		t.Fatal("no name was read")
 	}
 }
