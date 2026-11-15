@@ -13,7 +13,7 @@ import (
 var ErrNoteName = errors.New("not a note name: an uppercase letter A to G")
 
 // ErrAccidental reports accidentals beyond the accepted spellings: one of ♯ #
-// ♭ b, or a double one, 𝄪 x ## or 𝄫 bb ♭♭.
+// ♭ b, or a double one, 𝄪 x ## ♯♯ or 𝄫 bb ♭♭.
 var ErrAccidental = errors.New("accidental is beyond a double sharp or flat, or not an accepted spelling")
 
 // ErrTrailing reports text left after a whole name has been read.
@@ -38,13 +38,14 @@ func (e *ParseError) Error() string {
 
 func (e *ParseError) Unwrap() error { return e.Err }
 
-// accidentals holds the accepted spellings of the alterations, longest first
-// so that "bb" is read before "b".
+// accidentals holds the accepted spellings of the alterations. They are tried
+// in order, so each double spelling comes before the single one it starts with
+// ("bb" before "b", "♯♯" before "♯").
 var accidentals = []struct {
 	text  string
 	alter int
 }{
-	{"##", 2}, {"bb", -2}, {"♭♭", -2},
+	{"##", 2}, {"♯♯", 2}, {"bb", -2}, {"♭♭", -2},
 	{"𝄪", 2}, {"x", 2}, {"𝄫", -2},
 	{"♯", 1}, {"#", 1}, {"♭", -1}, {"b", -1},
 }
@@ -53,7 +54,7 @@ var accidentals = []struct {
 var written = [...]string{"𝄫", "♭", "", "♯", "𝄪"}
 
 // ParseNoteName reads a note name: an uppercase letter and at most one
-// accidental (♯ or #, ♭ or b, 𝄪 x or ## for a double sharp, 𝄫 bb or ♭♭ for a
+// accidental (♯ or #, ♭ or b, 𝄪 x ## or ♯♯ for a double sharp, 𝄫 bb or ♭♭ for a
 // double flat). It fails with a *ParseError.
 func ParseNoteName(s string) (material.NoteName, error) {
 	n, rest, err := readNoteName(s)

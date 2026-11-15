@@ -47,6 +47,7 @@ func TestParseNoteName(t *testing.T) {
 		{"C𝄪", note(material.C, 2), "C𝄪"},
 		{"Cx", note(material.C, 2), "C𝄪"},
 		{"C##", note(material.C, 2), "C𝄪"},
+		{"C♯♯", note(material.C, 2), "C𝄪"},
 		{"B𝄫", note(material.B, -2), "B𝄫"},
 		{"Bbb", note(material.B, -2), "B𝄫"},
 		{"B♭♭", note(material.B, -2), "B𝄫"},

@@ -216,28 +216,37 @@ func readBass(c material.Chord, s string) (material.Chord, string, error) {
 // to the same chord. It fails with ErrNoName for a chord outside the
 // vocabulary.
 func FormatChord(c material.Chord) (string, error) {
-	return formatChord(c, func(n material.NoteName) material.NoteName { return n })
+	return formatChord(c, false)
 }
 
 // FormatChordForDisplay writes the chord name as FormatChord does, but with the
-// root and the bass each respelled by DisplaySpelling (B♭♭m is Am). The name
-// may read back to a different spelling of the chord.
+// root respelled by DisplaySpelling (B♭♭m is Am). When the root is respelled,
+// the bass is written from the new root at the same interval, so the bass keeps
+// its interval to the root (B♭♭/D♭ is A/C♯); otherwise the bass is respelled on
+// its own. The name may read back to a different spelling of the chord.
 func FormatChordForDisplay(c material.Chord) (string, error) {
-	return formatChord(c, DisplaySpelling)
+	return formatChord(c, true)
 }
 
-func formatChord(c material.Chord, spell func(material.NoteName) material.NoteName) (string, error) {
+func formatChord(c material.Chord, display bool) (string, error) {
 	suffix, err := chordSuffix(c.Intervals()[1:])
 	if err != nil {
 		return "", fmt.Errorf("chord on %s with %v: %w", c.Root(), c.Intervals()[1:], err)
 	}
-	name := FormatNoteName(spell(c.Root())) + suffix
+	root := c.Root()
+	if display {
+		root = DisplaySpelling(root)
+	}
+	name := FormatNoteName(root) + suffix
 	if bass, ok := c.Bass(); ok {
-		n, err := c.Root().Transpose(bass)
+		n, err := root.Transpose(bass)
 		if err != nil {
 			return "", err
 		}
-		name += "/" + FormatNoteName(spell(n))
+		if display && root == c.Root() {
+			n = DisplaySpelling(n)
+		}
+		name += "/" + FormatNoteName(n)
 	}
 	return name, nil
 }
