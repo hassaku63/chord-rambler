@@ -1,6 +1,6 @@
 # 開発のプラクティスの索引
 
-項目の形と、載せるもの・載せないものは `SKILL.md`。節は「どの判断を助けるか」で分けている。
+項目の形と、載せるもの・載せないものは `SKILL.md`。1〜5 の節は「どの判断を助けるか」で、6〜9 の節は技術で分けている。
 
 ## 1. テストを何で、どう書くか
 
@@ -236,19 +236,176 @@
 | 対象 | なし |
 | 確認 | 2026-11-15 / 間隔 90 日 |
 
+## 6. Go（エンジンとサーバー）
+
+### エラーを包むかは API として決め、比べるときは木をたどる
+
+| 欄 | 内容 |
+| --- | --- |
+| 出どころ | Damien Neil、Jonathan Amsterdam「Working with Errors in Go 1.13」。https://go.dev/blog/go1.13-errors 。Go の標準ライブラリ `errors` の文書。https://pkg.go.dev/errors |
+| ソース | `golang/website:_content/blog/go1.13-errors.md@9d2e951`, `golang/go:src/errors/errors.go@7b28810`, `golang/go:src/errors/wrap.go@7b28810` |
+| 何を言っているか | `%w` で包んだエラーは、呼び出し側が `errors.Is` と `errors.As` で中を調べられる。包むと、そのエラーは API の一部になり、実装を替えても返し続ける約束になる。実装の詳細を見せたくなければ `%v` にする。人が読む文は、どちらでも同じ。今の版の `errors` の文書は、`==` と型の断定より `Is` と `AsType` を勧め、`As` より `AsType` を勧める。 |
+| 確からしさ | 公式の推奨。包むかどうかに一つの答えはない、とブログ自身が書いている。誤用: 下の層のエラーを何でも `%w` で包み、使っているライブラリのエラーを呼び出し側に漏らす。包んだエラーを `==` や型の断定で比べる。 |
+| 当たるべき場面 | エンジンが返すエラーの種類を決めるとき（不正な和音名、範囲の外の音など）。`httpapi` でエラーを応答のステータスに振り分けるとき。下の層のエラーに文脈を足すとき。 |
+| 判断の問い | この `%w` で、呼び出し側に何を調べさせたいか。それをこの先も返し続けると約束できるか。包まれうるエラーを `==` や型の断定で比べていないか。 |
+| このプロジェクトの立場 | エラーの文と名前は lint が強制する（`backend/.golangci.yml` の `revive` の `error-strings`・`errorf`・`error-naming`、`errname`）。包むかどうかは未定 |
+| 対象 | `go@1.27` |
+| 確認 | 2026-11-15 / 間隔 180 日 |
+
+### テーブル駆動のテストを、名前つきのサブテストで回す
+
+| 欄 | 内容 |
+| --- | --- |
+| 出どころ | Go wiki「TableDrivenTests」。https://go.dev/wiki/TableDrivenTests 。Go wiki「Go Code Review Comments」の「Useful Test Failures」。https://go.dev/wiki/CodeReviewComments 。標準ライブラリ `testing` の文書。https://pkg.go.dev/testing |
+| ソース | `golang/wiki:TableDrivenTests.md@fe2268b`, `golang/wiki:CodeReviewComments.md@fe2268b`, `golang/go:src/testing/testing.go@7b28810` |
+| 何を言っているか | 表の 1 行が入力と期待を持つ 1 件で、`t.Run` に名前を付けて回す。名前は `-run` の `/` で区切った式で選べる。`t.Errorf` は止まらずに続けるので、どの入力で失敗するかの形が見える。失敗の文は入力・得た値・期待の順に書き、`got` を先にする。`t.Parallel` は `t.Setenv` や `t.Chdir` と一緒に使えない。`t.Context` は、`Cleanup` の関数を呼ぶ直前に取り消される。Go 1.22 からは、ループの変数を写し直す必要がない。 |
+| 確からしさ | 公式の推奨（Go のチームの wiki と標準ライブラリの文書）。wiki は、表を map にすると順序に依らないことを確かめられる、とも書く。誤用: 失敗の文に入力を書かず、どの行が落ちたか分からない。比べる補助の関数を自作して、失敗の文を貧しくする。 |
+| 当たるべき場面 | エンジンの事例のテスト（「事例をデータの表にする」の Go での書き方）を書く、レビューするとき。テストを並行にするか決めるとき。テストで `context.Context` が要るとき。 |
+| 判断の問い | 落ちたとき、テストのコードを読まずに、どの入力で何を得て何を期待したかが分かるか。`t.Fatalf` は、それ以上続けても意味がない所だけで使っているか。並行にしたテストが、環境変数・作業ディレクトリ・共有の値を触っていないか。 |
+| このプロジェクトの立場 | エンジンのテストはテーブル駆動（`docs/dev/workflow.md` の「テストの書き方」）。ループの変数の写し直しは lint が落とす（`backend/.golangci.yml` の `copyloopvar`）。並行にするかは未定 |
+| 対象 | `go@1.27` |
+| 確認 | 2026-11-15 / 間隔 180 日 |
+
+### `log/slog` の属性は、書き方をそろえ、共通のものは `With` で付ける
+
+| 欄 | 内容 |
+| --- | --- |
+| 出どころ | Jonathan Amsterdam「Structured Logging with slog」。https://go.dev/blog/slog 。標準ライブラリ `log/slog` の文書。https://pkg.go.dev/log/slog |
+| ソース | `golang/website:_content/blog/slog.md@9d2e951`, `golang/go:src/log/slog/doc.go@7b28810` |
+| 何を言っているか | 属性は、キーと値を交互に並べるか、`slog.Int` などの `Attr` で書く。交互の書き方は読みにくく、キーや値を落としやすいという強い反対があったが、軽さを優先して残し、`go vet` の検査で誤りを拾う形にした。多くの行に共通の属性は `Logger.With` で付けると、組み込みのハンドラは一度だけ整形する。文脈があれば `Context` の付く関数に渡す。値の見せ方（秘密を伏せるなど）は `LogValuer` で型に持たせる。 |
+| 確からしさ | 公式の推奨。交互か `Attr` かは、設計の議論で割れたと公式のブログが書いている。誤用: 交互の書き方で値を 1 つ落とし、以降のキーと値がずれる。同じ属性をすべての呼び出しで手で付ける。 |
+| 当たるべき場面 | サーバーにログを足すとき。リクエストごとの属性（パス、所要時間など）の付け方を決めるとき。ログに出す値の型を足すとき。 |
+| 判断の問い | このファイルの中で、交互と `Attr` が混ざっていないか。すべての行に同じ属性を手で付けていないか（`With` で足りないか）。ログに出す値に、出してはいけない中身がないか。 |
+| このプロジェクトの立場 | logger は引数で渡す（`AGENTS.md` の 4 章）。大域の logger と `err` のキーは lint が落とす（`backend/.golangci.yml` の `sloglint`）。交互か `Attr` か、キーの名前の書き方は未定 |
+| 対象 | `go@1.27` |
+| 確認 | 2026-11-15 / 間隔 180 日 |
+
+### インタフェースは使う側に、使われてから置く
+
+| 欄 | 内容 |
+| --- | --- |
+| 出どころ | Go wiki「Go Code Review Comments」の「Interfaces」と「Package Names」。https://go.dev/wiki/CodeReviewComments |
+| ソース | `golang/wiki:CodeReviewComments.md@fe2268b` |
+| 何を言っているか | インタフェースは、その型の値を使うパッケージに置き、実装するパッケージは具体的な型を返す。そうすれば実装に関数を足しても、使う側を直さずに済む。「モックのため」に実装の側でインタフェースを定義せず、本物の公開の API で試せるように設計する。使う例がないうちに定義しない。パッケージの名前は識別子の一部として読まれるので、名前を繰り返さず、`util` や `common` のような意味のない名前を避ける。 |
+| 確からしさ | 広く共有された実務の知見（Go のレビューでよく付くコメントの一覧）。網羅的な規約ではないと自ら断り、より長い指針として Google の Go Style Guide を挙げる。誤用: 具体的な型が 1 つしかないのに、先にインタフェースを作り、その偽物でだけ試す。 |
+| 当たるべき場面 | エンジンのまとまりの境目に型を置くとき。`httpapi` がエンジンを呼ぶ形を決めるとき。テストで依存を差し替えたくなったとき（「依存は本物を優先し、代役は fake、stub、呼び出しの検証の順に選ぶ」と合わせて引く）。 |
+| 判断の問い | このインタフェースは、どのパッケージが使っているか。実装の側に置いていないか。実装が 1 つしかなく、テストのためだけに足していないか。 |
+| このプロジェクトの立場 | エンジンの各まとまりの向きは lint が強制する（`backend/.golangci.yml` の `depguard`）。インタフェースの置き場所は未定 |
+| 対象 | なし |
+| 確認 | 2026-11-15 / 間隔 365 日 |
+
+## 7. TypeScript
+
+### 状態を判別共用体で表し、`never` で網羅を確かめる
+
+| 欄 | 内容 |
+| --- | --- |
+| 出どころ | TypeScript Handbook「Narrowing」の「Discriminated unions」「The never type」「Exhaustiveness checking」。https://www.typescriptlang.org/docs/handbook/2/narrowing.html |
+| ソース | `microsoft/TypeScript-Website:packages/documentation/copy/en/handbook-v2/Narrowing.md@4ec663a` |
+| 何を言っているか | 共用体のすべての型が、リテラルの型の共通の項目を持つと、その項目で絞り込める。省略できる項目を 1 つの型に並べるより、種別ごとの型の共用体にした方が、型の検査が正しく働く。`switch` の `default` で値を `never` の変数に入れると、種別を足して扱い忘れたときに型の誤りになる。 |
+| 確からしさ | 公式の推奨。誤用: 判別の項目を持たない共用体を作り、`in` や型の断定で分岐する。`default` で何もせず返し、種別の追加に気づけなくする。 |
+| 当たるべき場面 | API の応答、画面の状態（読み込み中・成功・失敗など）、和音や枠の種別の型を書くとき。種別を足す差分をレビューするとき。「不正な状態を表せない形にする」の TypeScript での書き方。 |
+| 判断の問い | 種別によってある・ないが決まる項目を、省略できる項目として 1 つの型に並べていないか。種別ごとの分岐は、種別を足したときに型の誤りになるか。 |
+| このプロジェクトの立場 | 未定（`frontend/eslint.config.js` の `strictTypeChecked` は、`switch` の網羅の検査を含まない） |
+| 対象 | `typescript@5` |
+| 確認 | 2026-11-15 / 間隔 180 日 |
+
+### インデックスの読み出しと、省略した項目を、`undefined` と区別する
+
+| 欄 | 内容 |
+| --- | --- |
+| 出どころ | TSConfig Reference「noUncheckedIndexedAccess」「exactOptionalPropertyTypes」。https://www.typescriptlang.org/tsconfig/#noUncheckedIndexedAccess 、https://www.typescriptlang.org/tsconfig/#exactOptionalPropertyTypes |
+| ソース | `microsoft/TypeScript-Website:packages/tsconfig-reference/copy/en/options/noUncheckedIndexedAccess.md@4ec663a`, `microsoft/TypeScript-Website:packages/tsconfig-reference/copy/en/options/exactOptionalPropertyTypes.md@4ec663a` |
+| 何を言っているか | `noUncheckedIndexedAccess` は、インデックスシグネチャで読んだ、宣言していない項目の型に `undefined` を足す。`exactOptionalPropertyTypes` は、`?` の付いた項目に `undefined` を入れることを許さない。項目に `undefined` が入っていることと、項目がないことは違う（`in` の結果が変わる）ためで、「ない」は項目を置かないことで表す。 |
+| 確からしさ | 公式の文書（設定の意味の説明）。誤用: 足された `undefined` を、確かめずに断定で消す。「ない」を表すために `undefined` を代入し、型を `undefined` との共用体に広げて検査を黙らせる。 |
+| 当たるべき場面 | 配列や辞書から値を読む処理を書くとき。省略できる項目を持つ型（API の応答、設定）を書くとき。`?` の項目に `undefined` を入れようとして型の誤りが出たとき。 |
+| 判断の問い | 読み出しの `undefined` を、絞り込みで扱っているか（断定で消していないか）。省略できる項目を「ない」にするとき、項目を置かない形で書いているか。 |
+| このプロジェクトの立場 | どちらも有効（`frontend/tsconfig.app.json`、`AGENTS.md` の 4 章）。`!` による断定は lint が落とす（`frontend/eslint.config.js` の `strictTypeChecked`） |
+| 対象 | `typescript@5` |
+| 確認 | 2026-11-15 / 間隔 180 日 |
+
+## 8. React
+
+### 描画から導ける値とイベントの処理に、Effect を使わない
+
+| 欄 | 内容 |
+| --- | --- |
+| 出どころ | React の文書「You Might Not Need an Effect」。https://react.dev/learn/you-might-not-need-an-effect |
+| ソース | `reactjs/react.dev:src/content/learn/you-might-not-need-an-effect.md@46a54e0` |
+| 何を言っているか | Effect は外の仕組みと同期するためのもの。props や状態から計算できる値は、描画の中で計算する（重ければ `useMemo`）。props が変わったら全体を初期化したいなら `key` を変える。利用者の操作で起きる処理はイベントの処理に書き、表示されたことが理由で動く処理だけを Effect に置く。複数の部品の状態を同期したくなったら、状態を持ち上げる。 |
+| 確からしさ | 公式の推奨。React Compiler を使えば手書きの `useMemo` が要らない場合が多い、とも書く。誤用: 状態を別の状態に写す Effect を書き、描画が 1 回余計に走る。Effect の連鎖で計算を進める。 |
+| 当たるべき場面 | 部品か hook に `useEffect` を足す差分を書く、レビューするとき。選んだ和音から説明や候補を導く処理の置き場所を決めるとき。 |
+| 判断の問い | この Effect は、どの外の仕組み（通信、音、保存、タイマー）と同期しているか。答えられないなら、描画の中の計算かイベントの処理にできないか。状態から計算できる値を、別の状態として持っていないか。 |
+| このプロジェクトの立場 | 通信・音・保存・タイマーは部品ではなく hook に置く（`AGENTS.md` の 4 章、`frontend/eslint.config.js`）。React Compiler は使っていない。そのほかは未定 |
+| 対象 | `react@19` |
+| 確認 | 2026-11-15 / 間隔 180 日 |
+
+### Effect での通信は、後片付けで古い応答を捨てる
+
+| 欄 | 内容 |
+| --- | --- |
+| 出どころ | React の文書「Synchronizing with Effects」の「Fetching data」。https://react.dev/learn/synchronizing-with-effects 。同「You Might Not Need an Effect」の「Fetching data」。https://react.dev/learn/you-might-not-need-an-effect |
+| ソース | `reactjs/react.dev:src/content/learn/synchronizing-with-effects.md@46a54e0`, `reactjs/react.dev:src/content/learn/you-might-not-need-an-effect.md@46a54e0` |
+| 何を言っているか | 依存の値が変わるたびに通信すると、応答の順序は保証されず、古い応答が新しい結果を上書きする。Effect の後片付けで、通信を取り消すか結果を無視する。開発の Strict Mode は部品を 2 回取り付けるので通信が 2 回見えるが、後片付けがあれば結果は変わらない。Effect での通信には、キャッシュがない、親から子へ順に待つ、などの弱点がある。フレームワークの仕組みかキャッシュのライブラリを勧め、自前で続けるなら専用の hook に閉じ込めると後で替えやすい、と書く。 |
+| 確からしさ | 公式の推奨。Effect での通信を続けてもよいと明記している。誤用: 2 回の通信を止めるために ref で 1 回だけ走らせる（文書が名指しで避けるよう書いている）。後片付けのない通信の Effect。 |
+| 当たるべき場面 | 画面から API を呼ぶ hook を書く、レビューするとき。入力に追随して候補や説明を取り直す画面を作るとき。通信のライブラリ（依存）を足すか検討するとき。 |
+| 判断の問い | この Effect は、依存の値が速く変わったとき、最後の応答だけを反映するか。後片付けで取り消すか無視しているか。同じ通信を複数の部品が別々にしていないか。 |
+| このプロジェクトの立場 | 通信は hook に置く（`AGENTS.md` の 4 章）。依存を足すなら ADR を書く（`AGENTS.md` の 3 章）。キャッシュのライブラリを使うかは未定 |
+| 対象 | `react@19` |
+| 確認 | 2026-11-15 / 間隔 180 日 |
+
+### 状態は、重複させず、持つ部品を 1 つに決める
+
+| 欄 | 内容 |
+| --- | --- |
+| 出どころ | React の文書「Choosing the State Structure」。https://react.dev/learn/choosing-the-state-structure 。同「Sharing State Between Components」。https://react.dev/learn/sharing-state-between-components |
+| ソース | `reactjs/react.dev:src/content/learn/choosing-the-state-structure.md@46a54e0`, `reactjs/react.dev:src/content/learn/sharing-state-between-components.md@46a54e0` |
+| 何を言っているか | いつも一緒に変わる状態は 1 つにまとめる。あり得ない組み合わせを作らない。計算できる値や重複した値を状態に持たない。props を状態に写さない（更新を止めたいときを除く）。選択はものそのものではなく ID か位置で持つ。深い入れ子は平らにする。2 つの部品をそろえたいときは、状態を共通の親に移し、props とイベントの処理を下に渡す。状態ごとに、持つ部品を 1 つに決める。 |
+| 確からしさ | 公式の推奨。作りながら状態を上げ下げするのは普通のことだ、とも書く。誤用: すべての状態を最上位に集める（各状態の持ち主を 1 つに決めることは、1 か所に集めることではない）。 |
+| 当たるべき場面 | 進行・選んだ和音・再生の位置のような、画面の状態の形と置き場所を決めるとき。2 つの機能の部品が同じ値を見たくなったとき。 |
+| 判断の問い | この状態は、ほかの状態か props から計算できないか。同じものを 2 か所に持っていないか。選んだものを、ものそのものの写しで持っていないか。 |
+| このプロジェクトの立場 | 機能どうしは直接読み込まない。共有は `shared` に置く（`AGENTS.md` の 4 章、`frontend/eslint.config.js`）。状態の置き場所は未定 |
+| 対象 | `react@19` |
+| 確認 | 2026-11-15 / 間隔 365 日 |
+
+## 9. テストの道具
+
+### 部品は、利用者が見つける手がかりで問い合わせる
+
+| 欄 | 内容 |
+| --- | --- |
+| 出どころ | Testing Library の文書「About Queries」の「Priority」。https://testing-library.com/docs/queries/about#priority |
+| ソース | `testing-library/testing-library-docs:docs/queries/about.mdx@7c49d04` |
+| 何を言っているか | テストは利用者の使い方に似せる。問い合わせは、誰でも使える手がかり（役割と名前、ラベル、プレースホルダー、文字、入力の値）、意味の属性（代替の文字、`title`）、テスト用の ID の順に選ぶ。役割と名前でほぼ何でも取れ、取れないなら UI が使いにくい印かもしれない。テスト用の ID は、利用者に見えないので、役割や文字で取れないときだけにする。 |
+| 確からしさ | 公式の推奨（道具の作者の指針）。誤用: 取りにくい要素にテスト用の ID を付けて済ませ、UI が読み上げで使えないことに気づかない。 |
+| 当たるべき場面 | 画面のテストを書く、レビューするとき。テストのために要素へ属性を足したくなったとき。 |
+| 判断の問い | この問い合わせは、上の段の手がかりで書けないか。テスト用の ID を足すなら、役割や文字で取れない理由を言えるか。 |
+| このプロジェクトの立場 | DOM の直接の操作と `container` は lint が落とす（`frontend/eslint.config.js` の `eslint-plugin-testing-library`）。問い合わせの段の選び方は未定 |
+| 対象 | `@testing-library/react@16` |
+| 確認 | 2026-11-15 / 間隔 365 日 |
+
+### Vitest のモックは、何が自動で戻るかを知って戻す
+
+| 欄 | 内容 |
+| --- | --- |
+| 出どころ | Vitest の文書「Mocking」、設定の「clearMocks」「restoreMocks」「unstubGlobals」、「Migrating to Vitest 5.0」。https://vitest.dev/guide/mocking 、https://vitest.dev/config/clearmocks 、https://vitest.dev/guide/migration |
+| ソース | `vitest-dev/vitest:docs/guide/mocking.md@cab34bb`, `vitest-dev/vitest:docs/config/clearmocks.md@cab34bb`, `vitest-dev/vitest:docs/config/restoremocks.md@cab34bb`, `vitest-dev/vitest:docs/config/unstubglobals.md@cab34bb`, `vitest-dev/vitest:docs/guide/migration/index.md@cab34bb` |
+| 何を言っているか | Vitest 5 から `clearMocks` の既定が有効になり、各テストの前にモックの呼び出しの記録が消える（実装は残る）。テストの外（セットアップのファイル、モジュールの最上位、`beforeAll`）で記録した呼び出しは、確かめる前に消える。`vi.stubGlobal` で替えた大域の値は、`unstubGlobals` を有効にするか `vi.unstubAllGlobals` を呼ぶまで戻らない。`vi.restoreAllMocks` が戻すのは `vi.spyOn` で作ったものだけ。自動で戻す設定は、並行のテストでは、ほかのテストが使っている最中の値も戻す。 |
+| 確からしさ | 公式の文書。版で既定が変わった点を含む（5.0 の移行の手引き）。誤用: 古い版の記事に従い、各テストで記録を手で消す後片付けを重ねる。`restoreAllMocks` で `vi.fn` の実装も戻ると思い込む。 |
+| 当たるべき場面 | `fetch` や音の API を偽物に替えるテストを書くとき。テストの順序で結果が変わったとき。`vite.config.ts` の `test` の設定を変えるとき。Vitest の大きな版を上げるとき。 |
+| 判断の問い | このテストで替えた値は、次のテストの前に、どの仕組み（既定の設定、`afterEach`、自動の設定）で戻るか。テストの外で記録した呼び出しを、テストの中で確かめていないか。 |
+| このプロジェクトの立場 | 未定（`frontend/vite.config.ts` は戻す設定を変えておらず、大域の値はテストのファイルの `afterEach` で戻している） |
+| 対象 | `vitest@5` |
+| 確認 | 2026-11-15 / 間隔 180 日 |
+
 ## 対象外の依存
 
 項目を持たない依存（`SKILL.md` の「依存と項目の対応」）。
 
 | 依存 | 種類 | 理由 |
 | --- | --- | --- |
-| `go` | まだない | Go に固有の項目を書く（#39） |
 | `node` | 要らない | 画面のビルドとテストを動かすだけで、判断の要る使い方をしない |
-| `react` | まだない | React に固有の項目を書く（#39） |
 | `react-dom` | 要らない | 描画の入口だけで、使い方は `react` の項目で足りる |
-| `typescript` | まだない | TypeScript に固有の項目を書く（#39） |
-| `vitest` | まだない | テストの道具の項目を書く（#39） |
-| `@testing-library/react` | まだない | テストの道具の項目を書く（#39） |
 | `@testing-library/dom` | 要らない | `@testing-library/react` の土台。使い方はそちらの項目で足りる |
 | `@testing-library/jest-dom` | 要らない | 照合の関数を足すだけ |
 | `vite` | 要らない | ビルドの設定だけで、判断の要る使い方をしない |
@@ -280,3 +437,7 @@
 | 性質によるテストとファジングの境界 | Hypothesis のサイトの記事 | 定義の議論で、著者自身が確定的ではないと断っている |
 | 「Functional core, imperative shell」という呼び名 | Gary Bernhardt の講演 | 元の講演を開けなかった。同じ考えは「純粋な計算を、副作用で挟む」で持つ |
 | 統一したインターフェース、網羅性の検査など | Minsky「Effective ML Revisited」のほかの見出し | 出どころがコードだけで理由の文がなく、一部は OCaml に固有 |
+| findBy と waitFor の使い分け | Testing Library の文書「Async Methods」「Appearance and Disappearance」 | lint が強制する（`eslint-plugin-testing-library` の `prefer-find-by`、`no-wait-for-side-effects`、`no-wait-for-multiple-assertions`、`await-async-utils`） |
+| Effective Go の名前、コメント、パッケージの分け方 | go.dev「Effective Go」 | 2009 年の公開時に書かれて更新されておらず、ジェネリクスやモジュールを扱わないと自ら断る。今の版の指針は Go Code Review Comments で引く |
+| エラーの文は小文字で始め、句読点で終えない | Go Code Review Comments | lint が強制する（`revive` の `error-strings`） |
+| Context を最初の引数で渡す | Go Code Review Comments | 学習済みの一般的な知識で足りる。渡し忘れの一部は lint が落とす（`contextcheck`、`noctx`） |
