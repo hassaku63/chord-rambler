@@ -8,6 +8,10 @@ import (
 	"net/http"
 )
 
+// APIPrefix is the path every operation of the contract lives under; it is
+// the server URL of docs/api/openapi.yaml.
+const APIPrefix = "/api/v1"
+
 // Version is the build's version, set at link time (see the Makefile).
 var Version = "dev"
 
@@ -16,16 +20,18 @@ type Deps struct {
 	Logger *slog.Logger
 }
 
-// route is one operation of the API: a method, a path and its handler.
+// route is one operation of the API: a method, a path below APIPrefix and
+// its handler.
 type route struct {
 	method  string
 	path    string
 	handler func(*api) http.HandlerFunc
 }
 
-// routes lists every operation the server offers.
+// routes lists every operation the server offers. The contract lists the
+// same operations; a test keeps the two in step.
 var routes = []route{
-	{method: http.MethodGet, path: "/api/v1/health", handler: (*api).health},
+	{method: http.MethodGet, path: "/health", handler: (*api).health},
 }
 
 type api struct {
@@ -37,7 +43,7 @@ type api struct {
 func NewHandler(deps Deps) http.Handler {
 	a := &api{logger: deps.Logger, mux: http.NewServeMux()}
 	for _, r := range routes {
-		a.mux.HandleFunc(r.method+" "+r.path, r.handler(a))
+		a.mux.HandleFunc(r.method+" "+APIPrefix+r.path, r.handler(a))
 	}
 	return a
 }

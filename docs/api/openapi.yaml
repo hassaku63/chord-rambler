@@ -1,0 +1,57 @@
+openapi: 3.1.0
+info:
+  title: chord-rambler API
+  version: "1"
+  description: >-
+    The engine's HTTP API. This document is the contract: the server's routes
+    are tested against it, and the screen's types are generated from it.
+    Indentation is two spaces; the route test reads the paths by indentation.
+servers:
+  - url: /api/v1
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: The server's status and version
+      responses:
+        "200":
+          description: The server is running.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        default:
+          $ref: "#/components/responses/Problem"
+components:
+  schemas:
+    Health:
+      type: object
+      required: [status, version]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        version:
+          type: string
+          description: The build's version (a git description, or "dev").
+    Problem:
+      type: object
+      description: A problem document (RFC 9457).
+      required: [title, status]
+      properties:
+        title:
+          type: string
+          description: A short summary of the problem type.
+        status:
+          type: integer
+          description: The HTTP status code.
+        detail:
+          type: string
+          description: An explanation specific to this occurrence.
+  responses:
+    Problem:
+      description: The request failed.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
