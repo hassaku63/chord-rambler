@@ -17,3 +17,4 @@
 | [0011](0011-models-by-stage.md) | 段階ごとにモデルを使い分け、`ready` の Issue を引き継ぎの文書にする |
 | [0012](0012-explanations-refine-without-retraction.md) | 説明の文は、取り消さずに詳しくできる単純化だけを許す |
 | [0013](0013-agents-pick-by-rule-and-stop-at-three-prs.md) | エージェントは規則で Issue を選び、未マージの PR が 3 本で止まる |
+| [0014](0014-agents-merge-small-settled-prs.md) | 小さく、決まった判断に従うだけの PR は、エージェントがマージしてよい |
