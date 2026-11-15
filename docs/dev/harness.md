@@ -1,6 +1,6 @@
 # 開発ハーネスの一覧
 
-`make check` と CI が行う検査の全リスト（ADR-0004）。**検査を足すときは必ずここに 1 行足す。** 長いあいだ何も捕まえず費用だけがある検査は、削除の候補にする。
+`make check` と CI が行う検査の全リスト（ADR-0004）。**検査を足すときは必ずここに 1 行足す。** 長いあいだ何も捕まえず費用だけがある検査は、削除の候補にする（四半期の総点検で見る。`docs/dev/knowledge-review.md`）。
 
 CI の `required (make check)` は `make check` をそのまま呼ぶ。必須チェックはこの 1 つ。CI はそれに加えて、ネットワークが要る検査（`make backend-deps-check`、`make frontend-deps-check`）と、Docker が要る検査（`make dockerfile-lint`）と、比べる先が要る PR の大きさの予算（`make pr-size`）を、必須のジョブで走らせる。必須でない `image` のジョブが、イメージのビルドとスモークを走らせる。
 
