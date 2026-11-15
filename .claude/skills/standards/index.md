@@ -65,3 +65,15 @@
 | 当たるべき場面 | 和音名の読み書きを作る・変えるとき（表記のまとまり）。和音の種類の語彙や、テンションと変化の書き方を決めるとき。楽譜の形式と和音を交換するとき |
 | chord-rambler との接点 | `backend/internal/material` の和音（`Chord`）は、種類の名前を持たず、根音からの音程の集合で持つ（`docs/architecture/domain-model.md`）。種類は見方として導く。食い違い: MusicXML のバスは音名（`bass-step` と `bass-alter`）で、和音のバスは根音からの音程 |
 | 確認 | 2026-11-15 / 間隔 365 日 |
+
+### Harte の和音の記法（Harte、Sandler、Abdallah、Gómez、ISMIR 2005）
+
+| 欄 | 内容 |
+| --- | --- |
+| 発行元 | C. Harte、M. Sandler、S. Abdallah（Queen Mary, University of London）、E. Gómez（Universitat Pompeu Fabra）。ISMIR 2005 の論文「Symbolic representation of musical chords: a proposed syntax for text annotations」 |
+| 何を決めているか | 和音を調によらず、平文で曖昧なく書く記法。根音（幹音と `#`・`b`）、`:`、括弧の中にコンマで並べた度（`b3` のように変化を前に置く）、`/` のあとの度で書くバス。よく使う種類の短縮名（`maj`、`min`、`hdim7` など）と、足す度の括弧、省く度の `*`。文法を BNF で示す |
+| 一次情報 | https://archives.ismir.net/ismir2005/paper/000080.pdf （登録なしで読める PDF） |
+| 状態 | 2005 年の論文。開いたのはこの版だけで、のちの改訂は確かめていない |
+| 当たるべき場面 | 和音名の読み書きを作る・変えるとき（表記のまとまり）。和音名の文法や、足す音の書き方、バスの書き方を決めるとき。和音の注釈のデータと和音を交換するとき |
+| chord-rambler との接点 | `backend/internal/notation` の和音名（`docs/architecture/theory-conventions.md` の 6）。同じところ: 根音と、根音からの音程で和音を持つ（`backend/internal/material`）。足す音を括弧の中にコンマで並べる。`B` と `b` を大文字・小文字で分ける。食い違い: 和音名に `:` を書かない。バスは音名で書く（Harte は度）。変化記号に `♯`・`♭` も使う（Harte は `#`・`b` だけ）。種類は短い名前（`m`、`dim`）で書く（Harte は打ち間違いを見つけやすいように長い名前を選ぶ）。Harte の短縮名には sus2 と add9 がない |
+| 確認 | 2026-11-15 / 間隔 365 日 |
