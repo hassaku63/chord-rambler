@@ -87,3 +87,53 @@ func TestParallelModesAgreeWithScales(t *testing.T) {
 		}
 	})
 }
+
+// Every note name (35: seven letters, five alterations) as a
+// root, with every shape, in every key: if the chord has a position, the chord
+// of the position is the chord; if it has none, the error is ErrNoPosition.
+func TestPositionOfBothWays(t *testing.T) {
+	for kl := material.C; kl <= material.B; kl++ {
+		for ka := -1; ka <= 1; ka++ {
+			tonic := note(kl, ka)
+			key := major(tonic)
+			for l := material.C; l <= material.B; l++ {
+				for a := -2; a <= 2; a++ {
+					for _, s := range shapes {
+						c, err := material.NewChord(note(l, a), ivs(s.intervals)...)
+						if errors.Is(err, material.ErrAlterOutOfRange) {
+							continue
+						}
+						if err != nil {
+							t.Fatalf("NewChord: %v", err)
+						}
+						if s.bass != "" {
+							if c, err = c.WithBass(ivs(s.bass)[0]); errors.Is(err, material.ErrAlterOutOfRange) {
+								continue
+							} else if err != nil {
+								t.Fatalf("WithBass: %v", err)
+							}
+						}
+						p, err := relation.PositionOf(c, key)
+						if err != nil {
+							if !errors.Is(err, relation.ErrNoPosition) {
+								t.Errorf("%s in %s major: err = %v; want ErrNoPosition", c.Root(), tonic, err)
+							}
+							continue
+						}
+						back, err := p.Chord(tonic)
+						if err != nil || !chordsEqual(back, c) {
+							t.Errorf("%s in %s major: Chord(PositionOf) = %v, %v; want the chord", c.Root(), tonic, back, err)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// chordsEqual compares the root, the intervals and the bass.
+func chordsEqual(a, b material.Chord) bool {
+	ab, aok := a.Bass()
+	bb, bok := b.Bass()
+	return a.Root() == b.Root() && slices.Equal(a.Intervals(), b.Intervals()) && aok == bok && ab == bb
+}

@@ -3,6 +3,7 @@ package relation
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/hassaku63/chord-rambler/backend/internal/material"
 )
@@ -29,7 +30,8 @@ const tritone = 6
 // degree and C♯ the first). The alteration is the difference between the root
 // and the note of that degree in the scale: a half step up is Sharp, down is
 // Flat. The shape is the chord without its root (material.ShapeOf). No target
-// is set; whether a chord leads to another degree is a reading. It fails for a
+// is set; whether a chord leads to another degree is a reading. A position such as ♭I or ♯VII is returned as well, because it is
+// the inverse of Position.Chord. It fails for a
 // key other than Ionian (ErrNotMajor) and for a root two or more half steps
 // away from its degree (ErrNoPosition).
 func PositionOf(c material.Chord, key material.Scale) (material.Position, error) {
@@ -74,11 +76,34 @@ func ParallelModes(c material.Chord, key material.Scale) []material.Mode {
 	return modes
 }
 
-// HasLeadingTone reports whether the pitch classes that sound contain the
-// leading tone of the key, the note a minor second below the tonic.
+// HasLeadingTone reports whether the notes that sound (the members and the
+// bass, spelled) contain the leading tone of the key: the seventh degree of
+// the major scale on the tonic, a major seventh above it (B in C). It is
+// judged by spelling, not by pitch class, so C♭ is not the leading tone of C.
+// A tonic whose major seventh would need more than a double sharp or a double
+// flat has no spelled leading tone, and the answer is false.
 func HasLeadingTone(c material.Chord, key material.Scale) bool {
-	leading := material.NewPitchClassSet(key.Tonic().PitchClass()).Transpose(-1)
-	return leading.IsSubsetOf(c.SoundingPitchClasses())
+	majorSeventh, err := material.NewInterval(7, material.Major)
+	if err != nil {
+		panic(err) // a major seventh is a valid interval
+	}
+	leading, err := key.Tonic().Transpose(majorSeventh)
+	if err != nil {
+		return false
+	}
+	return slices.Contains(soundingNotes(c), leading)
+}
+
+// soundingNotes returns the spelled notes that sound: the members and the
+// bass.
+func soundingNotes(c material.Chord) []material.NoteName {
+	notes := c.Notes()
+	if bass, ok := c.Bass(); ok {
+		// WithBass checked that the bass is in range.
+		n, _ := c.Root().Transpose(bass)
+		notes = append(notes, n)
+	}
+	return notes
 }
 
 // HasTritone reports whether two of the pitch classes that sound are six half

@@ -244,6 +244,9 @@ func TestLeadingToneAndTritone(t *testing.T) {
 		{"Em (B, no tritone)", chord(note(material.E, nat), "m3 P5", ""), true, false},
 		{"D7 (F♯–C, no B)", chord(note(material.D, nat), "M3 P5 m7", ""), false, true},
 		{"C/B (B in the bass)", chord(note(material.C, nat), "M3 P5", "M7"), true, false},
+		// C♭ sounds like B but is not the leading tone of C: it is judged by spelling.
+		{"A♭m (C♭, not B)", chord(note(material.A, flat), "m3 P5", ""), false, false},
+		{"Fdim (C♭ is a member, F–C♭ a tritone)", chord(note(material.F, nat), "m3 d5", ""), false, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -289,6 +292,58 @@ func TestDominantSeventhInMajorKeys(t *testing.T) {
 			if !relation.HasLeadingTone(c, key) {
 				t.Errorf("HasLeadingTone(%s7) = false; want true", tt.dominant)
 			}
+			if !relation.HasTritone(c) {
+				t.Errorf("HasTritone(%s7) = false; want true", tt.dominant)
+			}
+			if !relation.InScale(c, key) {
+				t.Errorf("InScale(%s7, %s major) = false; want true", tt.dominant, tt.tonic)
+			}
 		})
+	}
+}
+
+// Only the position is limited to major keys. The other four facts do not
+// look at the mode, so in C Aeolian (C D E♭ F G A♭ B♭) Fm is in the scale and
+// its parallel modes are those on C whose scale holds F, A♭ and C: Phrygian,
+// Aeolian and Locrian. The leading tone is the seventh degree of the major
+// scale on the tonic, B, whatever the mode.
+func TestKeyOtherThanIonian(t *testing.T) {
+	cAeolian, err := material.NewScale(note(material.C, nat), material.Aeolian)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fm := chord(note(material.F, nat), "m3 P5", "")
+	if _, err := relation.PositionOf(fm, cAeolian); !errors.Is(err, relation.ErrNotMajor) {
+		t.Errorf("PositionOf in C Aeolian: err = %v; want ErrNotMajor", err)
+	}
+	if !relation.InScale(fm, cAeolian) {
+		t.Error("InScale(Fm, C Aeolian) = false; want true")
+	}
+	if relation.InScale(chord(note(material.F, nat), "M3 P5", ""), cAeolian) {
+		t.Error("InScale(F, C Aeolian) = true; want false (A is not in the scale)")
+	}
+	want := []material.Mode{material.Phrygian, material.Aeolian, material.Locrian}
+	if got := relation.ParallelModes(fm, cAeolian); !slices.Equal(got, want) {
+		t.Errorf("ParallelModes(Fm, C Aeolian) = %v; want %v", got, want)
+	}
+	g7 := chord(note(material.G, nat), "M3 P5 m7", "")
+	if !relation.HasLeadingTone(g7, cAeolian) || relation.HasLeadingTone(fm, cAeolian) {
+		t.Error("HasLeadingTone in C Aeolian: want true for G7 (B) and false for Fm")
+	}
+	if !relation.HasTritone(g7) || relation.HasTritone(fm) {
+		t.Error("HasTritone: want true for G7 (B–F) and false for Fm")
+	}
+}
+
+// A tonic that cannot spell its modes within a double sharp is still compared
+// by pitch class. On C𝄪 (pitch class 2) the E major triad (E, G♯, B: 4, 8, 11)
+// is 2, 6, 9 above the tonic, and of the seven modes only Lydian (0 2 4 6 7 9
+// 11) holds all three: Ionian lacks 6, the others lack 6 or 9.
+func TestParallelModesOfUnspellableMode(t *testing.T) {
+	key := major(note(material.C, 2))
+	e := chord(note(material.E, nat), "M3 P5", "")
+	want := []material.Mode{material.Lydian}
+	if got := relation.ParallelModes(e, key); !slices.Equal(got, want) {
+		t.Errorf("ParallelModes(E, C𝄪 major) = %v; want %v", got, want)
 	}
 }
