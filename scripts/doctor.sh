@@ -22,11 +22,21 @@ report() { # tool wanted found
 report golang "$(want golang)" "$(cd backend && go version 2>/dev/null | awk '{ sub(/^go/, "", $3); print $3 }')"
 report nodejs "$(want nodejs)" "$(node --version 2>/dev/null)"
 report golangci-lint "$(want golangci-lint)" "$(golangci-lint version 2>/dev/null | sed -nE 's/.*version v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')"
-# `make actions-lint` falls back to the pinned image, so docker is enough.
-if command -v actionlint >/dev/null 2>&1 || ! command -v docker >/dev/null 2>&1; then
+# `make actions-lint` falls back to the pinned image, so a running Docker is enough.
+docker_running() { docker info >/dev/null 2>&1; }
+if command -v actionlint >/dev/null 2>&1 || ! docker_running; then
   report actionlint "$(want actionlint)" "$(actionlint -version 2>/dev/null | head -1 | sed 's/^v//')"
 else
-  echo "- actionlint: not installed; make actions-lint runs the pinned image $(want actionlint) with docker"
+  echo "- actionlint: not installed; make actions-lint runs the pinned image $(want actionlint) with Docker"
+fi
+
+# Not part of `make check`: the containers need Docker, and CI runs these.
+if command -v hadolint >/dev/null 2>&1; then
+  report hadolint "$(want hadolint)" "$(hadolint --version 2>/dev/null | sed -nE 's/.*([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')"
+elif docker_running; then
+  echo "- hadolint: not installed; make dockerfile-lint runs the pinned image $(want hadolint) with Docker"
+else
+  echo "- hadolint, Docker: not available (optional; make dockerfile-lint, make up and make smoke need them, and CI runs them)"
 fi
 
 if [ "$status" -ne 0 ]; then

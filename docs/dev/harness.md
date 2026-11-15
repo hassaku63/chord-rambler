@@ -2,7 +2,7 @@
 
 `make check` と CI が行う検査の全リスト（ADR-0004）。**検査を足すときは必ずここに 1 行足す。** 長いあいだ何も捕まえず費用だけがある検査は、削除の候補にする。
 
-CI の `required (make check)` は `make check` をそのまま呼ぶ。必須チェックはこの 1 つ。CI はそれに加えて、ネットワークが要る検査（`make backend-deps-check`、`make frontend-deps-check`）を走らせる。
+CI の `required (make check)` は `make check` をそのまま呼ぶ。必須チェックはこの 1 つ。CI はそれに加えて、ネットワークが要る検査（`make backend-deps-check`、`make frontend-deps-check`）と、Docker が要る検査（`make dockerfile-lint`）を、必須のジョブで走らせる。必須でない `image` のジョブが、イメージのビルドとスモークを走らせる。
 
 ## 文書（ADR-0002）
 
@@ -50,14 +50,22 @@ CI の `required (make check)` は `make check` をそのまま呼ぶ。必須�
 | --- | --- | --- | --- |
 | `go mod tidy -diff`（ネットワークが要るので `make check` には入れない） | `go.mod` と `go.sum` の不整合、要らない依存 | `make backend-deps-check` | CI |
 | `npm audit --omit=dev --audit-level=high`（ネットワークが要るので `make check` には入れない） | 本番の依存の既知の脆弱性 | `make frontend-deps-check` | CI |
-| Dependabot（週次。GitHub Actions、Go のモジュール、npm。`typescript` と `@types/node` の大きな版、`@vitest/eslint-plugin` の 1.6.28 以降は上げない。理由は ADR-0009） | 依存と、SHA で固定したアクションの陳腐化 | — | GitHub |
+| Dependabot（週次。GitHub Actions、Go のモジュール、npm、Dockerfile の実行用のイメージ（digest）。`typescript` と `@types/node` の大きな版、`@vitest/eslint-plugin` の 1.6.28 以降は上げない。理由は ADR-0009） | 依存と、SHA で固定したアクションの陳腐化 | — | GitHub |
 
 ## 道具の版
 
 | 検査 | 防ぐもの | 個別実行 | 場所 |
 | --- | --- | --- | --- |
 | `.tool-versions` を CI の setup-go、setup-node、golangci-lint の導入が読む | CI と手元の版ずれ | — | CI |
-| `make doctor` | 手元の Go、Node、golangci-lint、actionlint の major.minor のずれ | `make doctor` | CI、手元 |
+| `make doctor` | 手元の Go、Node、golangci-lint、actionlint の major.minor のずれ。hadolint と Docker は、あるかどうかを知らせる | `make doctor` | CI、手元 |
+
+## コンテナ（ADR-0010）
+
+| 検査 | 防ぐもの | 個別実行 | 場所 |
+| --- | --- | --- | --- |
+| hadolint（`Dockerfile`。版は `.tool-versions`。hadolint か動いている Docker が要るので `make check` には入れない） | Dockerfile の典型的な誤りと、`RUN` の中のシェルの誤り | `make dockerfile-lint` | CI の必須のジョブ |
+| BuildKit のビルドチェック（`docker buildx build --check`、`api` と `web`） | hadolint にない規則: 定義されていない変数、`ARG`・`ENV` の秘密情報など | （CI の手順を参照） | CI の `image` |
+| イメージのビルドと、スモークの検査（`scripts/smoke.sh`: `health` が渡した版を返す、`/` が画面の HTML を返す、存在しないファイルが 404、API の存在しないパスが problem の文書の 404） | Dockerfile と compose の腐敗、配信と中継の退行 | `make up`、`make smoke`、`make down`（Docker が要る） | CI の `image`（必須ではない。ログを必ず出す） |
 
 ## 知識の鮮度（ADR-0007）
 

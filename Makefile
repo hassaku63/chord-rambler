@@ -5,8 +5,14 @@ FRONTEND := frontend
 # Override when the local toolchain lacks the coverage tools: make check GOTEST_FLAGS=-race
 GOTEST_FLAGS ?= -race -cover
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+# The images take the Go and Node versions from .tool-versions (ADR-0010).
+GO_VERSION := $(shell awk '$$1 == "golang" { print $$2 }' .tool-versions)
+NODE_VERSION := $(shell awk '$$1 == "nodejs" { print $$2 }' .tool-versions)
+WEB_PORT ?= 8080
+COMPOSE := GO_VERSION=$(GO_VERSION) NODE_VERSION=$(NODE_VERSION) VERSION=$(VERSION) WEB_PORT=$(WEB_PORT) docker compose
 
 .PHONY: help setup check doctor fmt fmt-check lint test build dev-backend dev-frontend \
+        image up down logs smoke dockerfile-lint \
         docs-check practices-check shell-lint actions-lint \
         backend-fmt backend-fmt-check backend-lint backend-test backend-build backend-deps-check \
         frontend-fmt frontend-fmt-check frontend-typecheck frontend-lint frontend-test frontend-build frontend-deps-check
@@ -80,6 +86,29 @@ frontend-build: ## Type check and build the screen to frontend/dist
 frontend-deps-check: ## Production npm dependencies have no high vulnerabilities (needs the network; CI runs it)
 	cd $(FRONTEND) && npm audit --omit=dev --audit-level=high
 
+# --- containers (need Docker; CI runs them) ------------------------------------
+
+image: ## Build the api and web images (Docker)
+	$(COMPOSE) build
+
+up: ## Build and start the stack on http://localhost:$(WEB_PORT) (Docker)
+	$(COMPOSE) up -d --build --wait
+
+down: ## Stop the stack
+	$(COMPOSE) down
+
+logs: ## Print the stack's logs
+	$(COMPOSE) logs
+
+smoke: ## Smoke test the running stack (scripts/smoke.sh)
+	bash scripts/smoke.sh http://localhost:$(WEB_PORT) "$(VERSION)"
+
+dockerfile-lint: ## hadolint the Dockerfile, with a local hadolint or the pinned image (needs one of them; CI runs it)
+	@v=$$(awk '$$1 == "hadolint" { print $$2 }' .tool-versions); \
+	if command -v hadolint >/dev/null; then hadolint Dockerfile; \
+	elif docker info >/dev/null 2>&1; then docker run --rm -i "hadolint/hadolint:v$$v" < Dockerfile; \
+	else echo "dockerfile-lint: needs hadolint $$v or a running Docker"; exit 1; fi
+
 # --- documents and scripts ---------------------------------------------------
 
 docs-check: ## Verify links, paths and the index in Markdown (scripts/check-docs.sh)
@@ -95,5 +124,5 @@ shell-lint: ## shellcheck the scripts (install: apt install shellcheck, or brew 
 actions-lint: ## actionlint the GitHub workflows, with a local actionlint or the pinned image
 	@v=$$(awk '$$1 == "actionlint" { print $$2 }' .tool-versions); \
 	if command -v actionlint >/dev/null; then actionlint; \
-	elif command -v docker >/dev/null; then docker run --rm -v "$$PWD:/repo" -w /repo "rhysd/actionlint:$$v"; \
-	else echo "actions-lint: needs actionlint $$v or docker"; exit 1; fi
+	elif docker info >/dev/null 2>&1; then docker run --rm -v "$$PWD:/repo" -w /repo "rhysd/actionlint:$$v"; \
+	else echo "actions-lint: needs actionlint $$v or a running Docker"; exit 1; fi
