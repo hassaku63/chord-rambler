@@ -8,7 +8,7 @@
 - ドミナントの強さは、導音を含むか（属七では三全音を含むか）で述べる。導音のない和音を、V と同じ強さのドミナントとは言わない。
 - **別の立場**: 4 つに分け、vi・iii と IV → I の IV を「トニックの延長」とする（Hutchinson）。iii を前後関係で D と読む（世界大百科事典、SoundQuest）。S を、ドミナントの前に置く和音として「プレドミナント」と呼ぶ（英語圏の教科書）。
 - **出どころ**:
-  - ヤマハ Music Pal: https://jp.yamaha.com/services/music_pal/study/chord/cadence/index.html
+  - ヤマハ Music Pal: https://jp.yamaha.com/services/music-pal/study/chord/cadence/index.html
   - 洗足オンラインスクール: https://www.senzoku-online.jp/theory/chord/ch01_03.html
   - 世界大百科事典「和声」: https://kotobank.jp/word/%E5%92%8C%E5%A3%B0-154108
   - Open Music Theory 第 1 版: https://openmusictheory.github.io/harmonicFunctions.html
