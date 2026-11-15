@@ -1,7 +1,7 @@
 name: knowledge review
 
 # Monthly report of the knowledge this repository keeps that may have gone
-# stale (ADR-0007, docs/dev/knowledge-review.md). It depends on the date and
+# stale (ADR-0007, ADR-0015, docs/dev/knowledge-review.md). It depends on the date and
 # the network, so it is not part of `make check`. A pull request that changes
 # the script or this file runs the report without touching any issue.
 on:

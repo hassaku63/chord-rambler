@@ -73,13 +73,14 @@ CI の `required (make check)` は `make check` をそのまま呼ぶ。必須�
 | --- | --- | --- | --- |
 | PR の大きさの予算（足した行と消した行の和。lockfile、`*.gen.ts`、バイナリは数えない。600 行を超えると警告、1000 行を超えると失敗。比べる先が要るので `make check` には入れない） | 読みきれない大きさの PR | `make pr-size`（比べる先は `PR_BASE`、既定は `origin/main`） | CI の必須のジョブ（PR のときだけ。マージの結果のコミットの 1 つ目の親と比べる） |
 
-## 知識の鮮度（ADR-0007）
+## 知識の鮮度（ADR-0007、ADR-0015）
 
 | 検査 | 防ぐもの | 個別実行 | 場所 |
 | --- | --- | --- | --- |
 | プラクティスの索引の項目の形（欄の欠け、出どころ・ソース・対象・確認の書き方、40 項目の上限） | 出どころや確認日のない項目、増えすぎて引かれない索引 | `make practices-check` | `make check` |
 | プラクティスの索引の版と依存の対応（項目の「対象」の版と、`frontend/package-lock.json` の大きな版・`.tool-versions` の Go の major.minor と Node の大きな版の食い違い。`frontend/package.json` の直接の依存と Go・Node が、どれかの項目の「対象」か「対象外の依存」の表のどちらか一方にあること。引けない名前は落とす。node が要る） | 依存の大きな版を上げても、関係する項目が古いまま残ること。依存を足したのに、当たるべき知識を持っているかを問わないこと | `make practices-check` | `make check` |
-| 知識の鮮度の報告（プラクティスの索引の見直しの期限、出どころのリンク切れと移動、記録したコミットのあとのソースの変更。`docs/architecture/theory-conventions.md` の出どころのリンクも見る。日付とネットワークに依るので `make check` には入れない） | 手元に持った知識が古くなったことに気づけない | `bash scripts/knowledge-staleness.sh`（期限だけなら `--offline`） | 月次 `knowledge review`（指摘があれば `knowledge-review` の Issue。スクリプトかワークフローを変えた PR では、報告だけを走らせる） |
+| 標準の索引の項目の形（欄の欠けと空の欄、一次情報の URL、確認の書き方） | 一次情報や確認日のない項目 | `make standards-check` | `make check` |
+| 知識の鮮度の報告（プラクティスの索引と標準の索引の見直しの期限、出どころのリンク切れと移動、記録したコミットのあとのソースの変更。`docs/architecture/theory-conventions.md` の出どころのリンクも見る。日付とネットワークに依るので `make check` には入れない） | 手元に持った知識が古くなったことに気づけない | `bash scripts/knowledge-staleness.sh`（期限だけなら `--offline`） | 月次 `knowledge review`（指摘があれば `knowledge-review` の Issue。スクリプトかワークフローを変えた PR では、報告だけを走らせる） |
 
 ## 構造と規約（スクリプトとワークフロー）
 
