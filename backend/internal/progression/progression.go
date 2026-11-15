@@ -11,6 +11,10 @@ import (
 // ErrIndex reports a slot index outside the progression.
 var ErrIndex = errors.New("slot index is outside the progression")
 
+// ErrRangeLength reports a range replaced by slots whose total length differs
+// from that of the range.
+var ErrRangeLength = errors.New("slots do not add up to the length of the range")
+
 // ErrCrossesPhrase reports an operation whose result would have a slot that
 // crosses the boundary of a phrase. A slot may cross the boundary of a bar,
 // but not of a phrase (#91).
@@ -118,6 +122,32 @@ func (p Progression) Delete(i int) (Progression, error) {
 		return Progression{}, fmt.Errorf("delete slot %d of %d: %w", i, len(p.slots), ErrIndex)
 	}
 	return p.with(slices.Delete(slices.Clone(p.slots), i, i+1))
+}
+
+// ReplaceRange returns the progression with the slots from index i up to but
+// not including index j replaced, in one step, by the slots given. The slots
+// given must add up to the same number of beats as the range, so every slot
+// outside the range starts where it did. This splits a slot, joins slots and
+// shares beats out between them in any phrase. It fails for a range outside
+// the progression or an empty one, that is unless 0 <= i < j <= Len()
+// (ErrIndex), for slots of another total length (ErrRangeLength), and when a
+// slot given would cross the boundary of a phrase (ErrCrossesPhrase).
+func (p Progression) ReplaceRange(i, j int, slots ...Slot) (Progression, error) {
+	if i < 0 || j > len(p.slots) || i >= j {
+		return Progression{}, fmt.Errorf("replace slots %d to %d of %d: %w", i, j, len(p.slots), ErrIndex)
+	}
+	if have, give := totalBeats(p.slots[i:j]), totalBeats(slots); have != give {
+		return Progression{}, fmt.Errorf("replace %d beats with %d: %w", have, give, ErrRangeLength)
+	}
+	return p.with(slices.Concat(p.slots[:i], slots, p.slots[j:]))
+}
+
+func totalBeats(slots []Slot) int {
+	sum := 0
+	for _, s := range slots {
+		sum += s.Beats()
+	}
+	return sum
 }
 
 // with returns the progression with the slots, which the caller does not
