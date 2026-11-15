@@ -21,6 +21,9 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # On a pull request HEAD is the merge commit; its first parent is the base.
+          fetch-depth: 2
       - name: Tool versions from .tool-versions
         id: tv
         run: echo "lint=v$(awk '$1 == "golangci-lint" { print $2 }' .tool-versions)" >> "$GITHUB_OUTPUT"
@@ -57,6 +60,10 @@ jobs:
       # Needs hadolint or Docker, so it is not part of `make check`; the runner has Docker.
       - name: Dockerfile lint
         run: make dockerfile-lint
+      # Needs a base to compare with, so it is not part of `make check`.
+      - name: PR size budget (warn over 600 lines, fail over 1000)
+        if: github.event_name == 'pull_request'
+        run: make pr-size PR_BASE=HEAD^1
 
   # Builds the two images and runs them together, as `make up` does, then
   # smoke tests the stack (ADR-0010). Not a required check: it needs Docker
