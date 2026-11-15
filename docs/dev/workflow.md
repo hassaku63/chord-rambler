@@ -117,3 +117,22 @@ ready の Issue を 1 つ → 受け入れ条件を確認 → テストを書く
 - Conventional Commits。1 PR = 1 Issue = 1 スライス。
 - PR 本文は `.github/pull_request_template.md` に従う。
 - `main` に直接 push しない。`git push --force` をしない。
+
+## マージ（ADR-0014）
+
+エージェントが自分で開いた PR は、次のすべてを満たせば、エージェントがマージしてよい。
+
+- CI の必須のチェック（`required (make check)`）が緑。
+- 新しい判断を含まない。ADR、Issue のコメントの所有者の判断、`docs/` の規則で決まっていることを形にするだけ。
+- 下の「所有者の OK を待つもの」に当たらない。
+
+所有者の OK を待つもの:
+
+- ADR を足す・変える。所有者の判断を新しく要する。
+- 検査、CI、依存、ビルドとコンテナ、API の契約（`docs/api/openapi.yaml`）を変える。
+- 音楽理論の立場（`docs/architecture/theory-conventions.md`）や、説明の文の規則（`docs/architecture/explanations.md`）を変える。
+- 別のセッションや人が開いた PR。
+- 差分が、lockfile と生成物を除いて 600 行を超える（#7 で決めた、PR の大きさの警告の線）。
+- 当たるかどうか迷う。
+
+エージェントがマージしたら、PR に、エージェントがマージしたことと、上の条件に当たる理由を 1 行で書く。
