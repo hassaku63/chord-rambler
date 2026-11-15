@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Lists the knowledge this repository keeps that may have gone stale (ADR-0007):
-#   1. Practice index entries past their review date (確認 date + 間隔).
+#   1. Entries of the practice index and the standards index past their review
+#      date (確認 date + 間隔).
 #   2. Source URLs that no longer open, or that now answer from another place
-#      (practice index, docs/architecture/theory-conventions.md).
+#      (both indexes, docs/architecture/theory-conventions.md).
 #   3. Practice index entries whose recorded Git source file has changed since
 #      the recorded commit.
 #
@@ -20,7 +21,8 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 index=.claude/skills/practices/index.md
-url_files=("$index" docs/architecture/theory-conventions.md)
+standards=.claude/skills/standards/index.md
+url_files=("$index" "$standards" docs/architecture/theory-conventions.md)
 offline=0
 [ "${1:-}" = "--offline" ] && offline=1
 
@@ -33,7 +35,8 @@ findings=$(mktemp)
 trap 'rm -f "$findings"' EXIT
 section() { printf '\n## %s\n\n' "$1" >> "$findings"; }
 
-# Entries of the practice index as "name<TAB>field<TAB>value" lines.
+# Entries of an index (the practice index by default) as
+# "name<TAB>field<TAB>value" lines.
 entries() {
   awk '
     /^## / { entry = ""; skipped = ($0 ~ /^## 外したもの/); next }
@@ -45,18 +48,22 @@ entries() {
       if (name == "欄" || name ~ /^-+$/) next
       printf "%s\t%s\t%s\n", entry, name, value
     }
-  ' "$index"
+  ' "${1:-$index}"
 }
 
 # --- 1. review dates ---------------------------------------------------------
-overdue=$(entries | awk -F '\t' '$2 == "確認" { print $1 "\t" $3 }' | while IFS=$'\t' read -r name value; do
-  checked=${value%% *}
-  days=$(printf '%s' "$value" | sed -E 's/.*間隔 ([0-9]+) 日.*/\1/')
-  due=$(( $(epoch "$checked") + days * 86400 ))
-  if [ "$now" -gt "$due" ]; then
-    printf -- '- %s（確認日 %s、間隔 %s 日）\n' "$name" "$checked" "$days"
-  fi
-done)
+# Prints "- [label]name（…）" for each entry of the index in $1 past its date.
+overdue_in() { # file label
+  entries "$1" | awk -F '\t' '$2 == "確認" { print $1 "\t" $3 }' | while IFS=$'\t' read -r name value; do
+    checked=${value%% *}
+    days=$(printf '%s' "$value" | sed -E 's/.*間隔 ([0-9]+) 日.*/\1/')
+    due=$(( $(epoch "$checked") + days * 86400 ))
+    if [ "$now" -gt "$due" ]; then
+      printf -- '- %s%s（確認日 %s、間隔 %s 日）\n' "$2" "$name" "$checked" "$days"
+    fi
+  done
+}
+overdue=$(overdue_in "$index" ""; overdue_in "$standards" "標準の索引: ")
 if [ -n "$overdue" ]; then
   section "見直しの期限を過ぎた項目"
   printf '%s\n' "$overdue" >> "$findings"
