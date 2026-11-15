@@ -25,6 +25,7 @@ chord-rambler で作業する人間と AI コーディングエージェント�
 - **スコープを広げない。** 今の Issue に要らない機能・リファクタ・依存追加はしない。Issue にして次に回す。
 - **テストを消す・スキップする・lint を無効化して通す** ことで緑にしない。根本原因を直す。
 - **依存を足すときは ADR を書く。**
+- **API の形を黙って変えない。** `docs/api/openapi.yaml` が正。ハンドラを変えるときは、同じ PR で契約を直す（テストがルートと契約の一致を強制する。ADR-0008）。
 - **秘密情報を扱わない。** `.env` を読まない・コミットしない。鍵をコードに書かない。
 - **`main` に直接 push しない。** `git push --force` をしない。
 - **検査を足したら `docs/dev/harness.md` に 1 行足す。** `make check` にない検査を CI だけに置かない（ADR-0004）。
@@ -39,6 +40,7 @@ chord-rambler で作業する人間と AI コーディングエージェント�
 | `backend/cmd/server` | エントリポイント。配線だけ | ロジックを書かない |
 | `backend/internal/config` | 環境変数からの設定 | 新しい設定は `Load` とテストに足す |
 | `backend/internal/httpapi` | HTTP のハンドラ | decode、エンジンの呼び出し、encode だけ |
+| `docs/api/openapi.yaml` | API の契約 | ハンドラの変更と同じ PR で直す。インデントは空白 2 つ |
 | `backend/internal/material`、`notation`、`progression`、`relation`、`reading`、`catalog`、`query`、`text`、`performance` | エンジン（`docs/architecture/engine.md`） | 標準ライブラリだけ。入出力・時刻・乱数を使わない。下のまとまりは上を読み込まない（lint で強制。向きは `backend/.golangci.yml`） |
 
 - Go: 標準の `net/http`（メソッド付きのパターン）、`log/slog`。フレームワークは使わない。logger は引数で渡す。

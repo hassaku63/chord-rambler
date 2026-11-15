@@ -17,6 +17,7 @@ CI の `required (make check)` は `make check` をそのまま呼ぶ。必須�
 | --- | --- | --- | --- |
 | Go のテスト（race、cover） | 振る舞いの退行 | `make backend-test`（手元の toolchain に coverage の道具がなければ `GOTEST_FLAGS=-race`） | `make check` |
 | `go build` | ビルドできないコード | `make backend-build` | `make check` |
+| ルートと契約の一致のテスト（`docs/api/openapi.yaml` の操作と、サーバーに登録したルート。契約の `paths` の形が崩れていても落ちる） | 契約にないルート、ルートのない操作（ADR-0008） | `cd backend && go test ./internal/httpapi/ -run TestRoutesMatchOpenAPI` | `make check` |
 
 ## 構造と規約（Go）
 
