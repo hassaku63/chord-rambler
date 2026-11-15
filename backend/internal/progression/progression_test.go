@@ -216,3 +216,113 @@ func TestNew(t *testing.T) {
 		t.Errorf("New(E♭ Aeolian) = %v, %d slots; want E♭ Aeolian, none", p.Key(), p.Len())
 	}
 }
+
+// Transposing moves the tonic and every root by the interval and keeps the
+// spelling (the letters move by the interval number). The shapes, the slots
+// with no chord, the lengths and the roles stay.
+func TestTranspose(t *testing.T) {
+	type row struct {
+		tonic material.NoteName
+		mode  material.Mode
+		roots [2]material.NoteName // a minor seventh, a major triad over its third
+	}
+	tests := []struct {
+		name     string
+		from, to row
+		iv       string
+		down     bool
+	}{
+		{"C major up a major second", row{note(material.C, nat), material.Ionian, [2]material.NoteName{note(material.D, nat), note(material.G, nat)}},
+			row{note(material.D, nat), material.Ionian, [2]material.NoteName{note(material.E, nat), note(material.A, nat)}}, "M2", false},
+		{"E major up a minor second: G♯ becomes A, not G𝄪", row{note(material.E, nat), material.Ionian, [2]material.NoteName{note(material.G, sharp), note(material.B, nat)}},
+			row{note(material.F, nat), material.Ionian, [2]material.NoteName{note(material.A, nat), note(material.C, nat)}}, "m2", false},
+		{"C major up an augmented unison", row{note(material.C, nat), material.Ionian, [2]material.NoteName{note(material.D, nat), note(material.G, nat)}},
+			row{note(material.C, sharp), material.Ionian, [2]material.NoteName{note(material.D, sharp), note(material.G, sharp)}}, "A1", false},
+		{"C major up a perfect fifth to G", row{note(material.C, nat), material.Ionian, [2]material.NoteName{note(material.D, nat), note(material.G, nat)}},
+			row{note(material.G, nat), material.Ionian, [2]material.NoteName{note(material.A, nat), note(material.D, nat)}}, "P5", false},
+		{"C major up an augmented fourth to F♯: the spelling is kept", row{note(material.C, nat), material.Ionian, [2]material.NoteName{note(material.D, nat), note(material.G, nat)}},
+			row{note(material.F, sharp), material.Ionian, [2]material.NoteName{note(material.G, sharp), note(material.C, sharp)}}, "A4", false},
+		{"A Aeolian down a perfect fourth", row{note(material.A, nat), material.Aeolian, [2]material.NoteName{note(material.B, flat), note(material.E, nat)}},
+			row{note(material.E, nat), material.Aeolian, [2]material.NoteName{note(material.F, nat), note(material.B, nat)}}, "P4", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			from, want := progressionOf(t, tt.from.tonic, tt.from.mode, tt.from.roots), progressionOf(t, tt.to.tonic, tt.to.mode, tt.to.roots)
+			move := from.Transpose
+			if tt.down {
+				move = from.TransposeDown
+			}
+			got, err := move(ivs(tt.iv)[0])
+			if err != nil || got.Key() != want.Key() || !slices.Equal(got.Slots(), want.Slots()) {
+				t.Errorf("got %v %v, %v; want %v %v", got.Key(), got.Slots(), err, want.Key(), want.Slots())
+			}
+		})
+	}
+}
+
+// progressionOf returns a progression in the key with a minor seventh on the
+// first root, no chord, a major triad over its third on the second root with
+// a role, and a slot none chosen yet.
+func progressionOf(t *testing.T, tonic material.NoteName, mode material.Mode, roots [2]material.NoteName) progression.Progression {
+	t.Helper()
+	key, err := material.NewScale(tonic, mode)
+	if err != nil {
+		t.Fatal(err)
+	}
+	withRole, err := slot(progression.ChordOf(chord(roots[1], "M3 P5", "M3")), 8).WithRole(progression.RoleRise)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := progression.New(key, progression.Meter{})
+	for _, s := range []progression.Slot{
+		slot(progression.ChordOf(chord(roots[0], "m3 P5 m7", "")), 4),
+		slot(progression.NoChord(), 2),
+		withRole,
+		slot(progression.Unchosen(), 2),
+	} {
+		if p, err = p.Append(s); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return p
+}
+
+// A transposition that would need more than a double sharp or a double flat
+// fails with the error of the materials.
+func TestTransposeOutOfRange(t *testing.T) {
+	cMajorWith := func(c material.Chord) progression.Progression {
+		p, err := progression.Progression{}.Append(slot(progression.ChordOf(c), 4))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	key, err := material.NewScale(note(material.F, 2), material.Ionian)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name string
+		p    progression.Progression
+		iv   string
+	}{
+		// B𝄪 up a major second would be C with three sharps.
+		{"a root", cMajorWith(chord(note(material.B, 2), "", "")), "M2"},
+		// E♯ G𝄪 B𝄪 up a major second would have C with three sharps.
+		{"a member", cMajorWith(chord(note(material.E, sharp), "M3 A5", "")), "M2"},
+		// F𝄪 up an augmented fourth is B𝄪, and B𝄪 major would have F with
+		// four sharps.
+		{"the key", progression.New(key, progression.Meter{}), "A4"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			key, before := tt.p.Key(), tt.p.Slots()
+			if _, err := tt.p.Transpose(ivs(tt.iv)[0]); !errors.Is(err, material.ErrAlterOutOfRange) {
+				t.Errorf("err = %v; want ErrAlterOutOfRange", err)
+			}
+			if tt.p.Key() != key || !slices.Equal(tt.p.Slots(), before) {
+				t.Errorf("the original is now %v %v; want %v %v", tt.p.Key(), tt.p.Slots(), key, before)
+			}
+		})
+	}
+}
