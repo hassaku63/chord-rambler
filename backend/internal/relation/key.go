@@ -10,7 +10,7 @@ import (
 
 // ErrNotMajor reports a key that is not a major scale (Ionian). A position is
 // counted from the major scale of the key, and the first scope of this package
-// takes major keys only.
+// takes major keys only. PositionOf and SecondaryDominantShape return it.
 var ErrNotMajor = errors.New("key is not a major scale")
 
 // ErrNoPosition reports a chord whose root is two or more half steps away from

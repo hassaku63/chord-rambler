@@ -302,10 +302,10 @@ func TestDominantSeventhInMajorKeys(t *testing.T) {
 	}
 }
 
-// Only the position is limited to major keys. The other four facts do not
-// look at the mode, so in C Aeolian (C D E♭ F G A♭ B♭) Fm is in the scale and
-// its parallel modes are those on C whose scale holds F, A♭ and C: Phrygian,
-// Aeolian and Locrian. The leading tone is the seventh degree of the major
+// Of the facts of one chord in a key, only the position is limited to major
+// keys. The other four do not look at the mode, so in C Aeolian
+// (C D E♭ F G A♭ B♭) Fm is in the scale and its parallel modes are those on C
+// whose scale holds F, A♭ and C: Phrygian, Aeolian and Locrian. The leading tone is the seventh degree of the major
 // scale on the tonic, B, whatever the mode.
 func TestKeyOtherThanIonian(t *testing.T) {
 	cAeolian, err := material.NewScale(note(material.C, nat), material.Aeolian)
