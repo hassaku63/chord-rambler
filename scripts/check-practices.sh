@@ -45,8 +45,8 @@ problems=$(awk -v budget="$budget" '
     seen[name] = 1
     if (value == "") report(entry ": empty field -> " name)
     if (name == "出どころ" && value !~ /https?:\/\//) report(entry ": 出どころ has no URL")
-    if (name == "ソース" && value != "なし" && value !~ /^`[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+:[^@`]+@[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]+`$/)
-      report(entry ": ソース must be `owner/repo:path@commit` or なし -> " value)
+    if (name == "ソース" && value != "なし" && value !~ /^`[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+:[^@`]+@[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]+`(, `[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+:[^@`]+@[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]+`)*$/)
+      report(entry ": ソース must be `owner/repo:path@commit` (comma separated) or なし -> " value)
     if (name == "対象" && value != "なし" && value !~ /^`[^`@]+@[0-9]+`(, *`[^`@]+@[0-9]+`)*$/)
       report(entry ": 対象 must be `name@major` (comma separated) or なし -> " value)
     if (name == "確認" && value !~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] \/ 間隔 [0-9]+ 日$/)
