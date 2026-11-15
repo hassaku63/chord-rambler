@@ -10,3 +10,4 @@
 | [0004](0004-one-gate-make-check.md) | 検査は `make check` に集め、CI は同じターゲットを呼ぶ |
 | [0005](0005-engine-structure-by-kind-of-knowledge.md) | エンジンは知識の種類でまとまりを分ける |
 | [0006](0006-progression-of-slots-with-absolute-chords.md) | 進行は、絶対の和音を持つ枠の列として保存する |
+| [0007](0007-rules-in-three-tiers-and-a-dated-practice-index.md) | 規則は 3 段で持ち、索引は出どころと確認日で鮮度を見る |
