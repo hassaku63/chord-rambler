@@ -53,3 +53,15 @@
 | 当たるべき場面 | 音名の綴りの持ち方を決める・変えるとき。楽譜の形式を読み書きするとき。表記のまとまりで、和音の根音やバスの綴りを書くとき |
 | chord-rambler との接点 | `backend/internal/material` の音名（`NoteName`）が、幹音と変化の組で綴りを持つ（`docs/architecture/domain-model.md`）。食い違い: MusicXML の `alter` は小数（微分音）を許すが、音名の変化は −2〜+2 の整数に限る。音名はオクターブを持たない |
 | 確認 | 2026-11-15 / 間隔 365 日 |
+
+### MusicXML の和音の種類（`harmony` の `kind`）
+
+| 欄 | 内容 |
+| --- | --- |
+| 発行元 | W3C Music Notation Community Group（MusicXML 4.0。W3C の標準ではなく、Community Group の Final Report） |
+| 何を決めているか | 和音記号を、根音（`root`）、種類（`kind`）、バス（`bass`）、種類からの足し引きと変化（`degree`）で表す。`kind` の値は、三和音、七の和音、6・9・11・13 の和音、sus、パワーコード、機能和声の和音（ナポリ、増六）などの決まった語彙で、多くは根音からの音程で定義される |
+| 一次情報 | `kind` の値は https://www.w3.org/2021/06/musicxml40/musicxml-reference/data-types/kind-value/ 、要素は https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/harmony/ 、`kind` は https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/kind/ 、`degree` は https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/degree/ 、`bass` は https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/bass/ 。どれも登録なしで読める |
+| 状態 | 現行。確かめた版は 4.0（Final Community Group Report、2021-06-01）。`function` の要素は 4.0 で非推奨 |
+| 当たるべき場面 | 和音名の読み書きを作る・変えるとき（表記のまとまり）。和音の種類の語彙や、テンションと変化の書き方を決めるとき。楽譜の形式と和音を交換するとき |
+| chord-rambler との接点 | `backend/internal/material` の和音（`Chord`）は、種類の名前を持たず、根音からの音程の集合で持つ（`docs/architecture/domain-model.md`）。種類は見方として導く。食い違い: MusicXML のバスは音名（`bass-step` と `bass-alter`）で、和音のバスは根音からの音程 |
+| 確認 | 2026-11-15 / 間隔 365 日 |
