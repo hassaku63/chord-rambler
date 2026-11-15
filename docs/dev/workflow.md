@@ -14,6 +14,8 @@ ready の Issue を 1 つ → 受け入れ条件を確認 → テストを書く
 
 上の段は、何を作るかが決まっていないときだけ通る。所有者がすでに決めたことは、`ready` の Issue から始めてよい。
 
+次の `ready` の Issue を規則で選んで着手するところは、スキル `/next-issue`（`.claude/skills/next-issue/SKILL.md`）で行える。
+
 ## Issue の使い方（ADR-0003）
 
 | ラベル | 意味 | 誰が付けるか |
