@@ -2,7 +2,7 @@
 
 `make check` と CI が行う検査の全リスト（ADR-0004）。**検査を足すときは必ずここに 1 行足す。** 長いあいだ何も捕まえず費用だけがある検査は、削除の候補にする（四半期の総点検で見る。`docs/dev/knowledge-review.md`）。
 
-CI の `required (make check)` は `make check` をそのまま呼ぶ。必須チェックはこの 1 つ。CI はそれに加えて、ネットワークが要る検査（`make backend-deps-check`、`make frontend-deps-check`）と、Docker が要る検査（`make dockerfile-lint`）と、比べる先が要る PR の大きさの予算（`make pr-size`）を、必須のジョブで走らせる。必須でない `image` のジョブが、イメージのビルドとスモークを走らせる。
+CI の `required (make check)` は `make check` をそのまま呼ぶ。必須チェックはこの 1 つ。CI はそれに加えて、ネットワークが要る検査（`make backend-deps-check`、`make frontend-deps-check`）と、Docker が要る検査（`make dockerfile-lint`）と、比べる先が要る PR の大きさの予算（`make pr-size`）を、必須のジョブで走らせる。必須でない `image` のジョブが、イメージのビルドとスモークを走らせる。リポジトリの設定の CodeQL（既定の設定）が、ワークフローを置かずに静的解析を走らせる。
 
 ## 文書（ADR-0002）
 
@@ -51,6 +51,12 @@ CI の `required (make check)` は `make check` をそのまま呼ぶ。必須�
 | `go mod tidy -diff`（ネットワークが要るので `make check` には入れない） | `go.mod` と `go.sum` の不整合、要らない依存 | `make backend-deps-check` | CI |
 | `npm audit --omit=dev --audit-level=high`（ネットワークが要るので `make check` には入れない） | 本番の依存の既知の脆弱性 | `make frontend-deps-check` | CI |
 | Dependabot（週次。GitHub Actions、Go のモジュール、npm、Dockerfile の実行用のイメージ（digest）。`typescript` と `@types/node` の大きな版、`@vitest/eslint-plugin` の 1.6.28 以降は上げない。理由は ADR-0009） | 依存と、SHA で固定したアクションの陳腐化 | — | GitHub |
+
+## 静的解析
+
+| 検査 | 防ぐもの | 個別実行 | 場所 |
+| --- | --- | --- | --- |
+| CodeQL の既定の設定（Go、JavaScript/TypeScript、GitHub Actions。リポジトリの設定で有効にし、ワークフローのファイルは置かない。手元では走らせられない） | 入力の検証漏れや、ワークフローの危うい書き方のような、既知の型のセキュリティの欠陥 | — | GitHub（main への push と PR。結果は Security の画面） |
 
 ## 道具の版
 
