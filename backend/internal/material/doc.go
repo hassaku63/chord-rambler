@@ -1,5 +1,5 @@
 // Package material defines the musical materials: spelled note names and
-// intervals, pitch-class sets, chords (a root, a set of degrees above it and an
+// intervals, pitch-class sets, chords (a root, a set of intervals above it and an
 // optional bass), scales, and transposition that keeps spelling. A chord
 // carries no key. This is knowledge by definition.
 //
