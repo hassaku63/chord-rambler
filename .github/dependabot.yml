@@ -1,0 +1,7 @@
+version: 2
+updates:
+  # Actions are pinned to commit SHAs (docs/dev/harness.md); Dependabot moves the SHA and the version note together.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
