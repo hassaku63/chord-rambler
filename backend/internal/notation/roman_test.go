@@ -10,8 +10,8 @@ import (
 )
 
 // position builds a position for a test table. A target of 0 means none.
-func position(degree int, alter notation.Alteration, intervals string, target int) notation.Position {
-	p, err := notation.NewPosition(degree, alter, notation.ShapeOf(chord(material.NoteName{}, intervals, "")))
+func position(degree int, alter material.Alteration, intervals string, target int) material.Position {
+	p, err := material.NewPosition(degree, alter, material.ShapeOf(chord(material.NoteName{}, intervals, "")))
 	if err != nil {
 		panic(err)
 	}
@@ -24,7 +24,7 @@ func position(degree int, alter notation.Alteration, intervals string, target in
 }
 
 // describePosition shows a position in a failure message.
-func describePosition(p notation.Position) string {
+func describePosition(p material.Position) string {
 	target, _ := p.Target()
 	return fmt.Sprintf("degree %d alter %d %v target %d", p.Degree(), p.Alteration(), p.Shape().Intervals(), target)
 }
@@ -40,11 +40,11 @@ func describePosition(p notation.Position) string {
 // the target. The chords in C major are the major scale C D E F G A B with the
 // members of each kind.
 func TestRomanNumerals(t *testing.T) {
-	n, flat, sharp := notation.Natural, notation.Flat, notation.Sharp
+	n, flat, sharp := material.Natural, material.Flat, material.Sharp
 	tests := []struct {
 		roman     string
 		degree    int
-		alter     notation.Alteration
+		alter     material.Alteration
 		intervals string
 		target    int
 		inC       string
@@ -172,19 +172,19 @@ func TestRomanInMajorKeys(t *testing.T) {
 // without each target, is written and read back to the same position, and the
 // text read back is written the same.
 func TestRomanRoundTrip(t *testing.T) {
-	var shapes []notation.Shape
+	var shapes []material.Shape
 	for _, name := range displayNames("C", nil) {
 		c, err := notation.ParseChord(name)
 		if err != nil {
 			t.Fatalf("ParseChord(%q): %v", name, err)
 		}
-		shapes = append(shapes, notation.ShapeOf(c))
+		shapes = append(shapes, material.ShapeOf(c))
 	}
 	for _, shape := range shapes {
 		for degree := 1; degree <= 7; degree++ {
-			for _, alter := range []notation.Alteration{notation.Flat, notation.Natural, notation.Sharp} {
+			for _, alter := range []material.Alteration{material.Flat, material.Natural, material.Sharp} {
 				for _, target := range []int{0, 2, 3, 4, 5, 6} {
-					p, err := notation.NewPosition(degree, alter, shape)
+					p, err := material.NewPosition(degree, alter, shape)
 					if err == nil && target != 0 {
 						p, err = p.WithTarget(target)
 					}
@@ -257,13 +257,13 @@ func TestParseRomanRejects(t *testing.T) {
 		{"♭viisus4", notation.ErrRomanCase, "viisus4"},
 		{"♯ivsus4", notation.ErrRomanCase, "ivsus4"},
 		// One target: ii, iii, IV, V or vi.
-		{"V7/", notation.ErrTarget, ""},
-		{"V/I", notation.ErrTarget, "I"},
-		{"V/vii", notation.ErrTarget, "vii"},
-		{"V/II", notation.ErrTarget, "II"},
-		{"V/iv", notation.ErrTarget, "iv"},
-		{"V/♭VII", notation.ErrTarget, "♭VII"},
-		{"V/B", notation.ErrTarget, "B"},
+		{"V7/", material.ErrTarget, ""},
+		{"V/I", material.ErrTarget, "I"},
+		{"V/vii", material.ErrTarget, "vii"},
+		{"V/II", material.ErrTarget, "II"},
+		{"V/iv", material.ErrTarget, "iv"},
+		{"V/♭VII", material.ErrTarget, "♭VII"},
+		{"V/B", material.ErrTarget, "B"},
 		{"V7/V/V", notation.ErrTrailing, "/V"},
 		{"V7/Vx", notation.ErrTrailing, "x"},
 	}
@@ -279,18 +279,18 @@ func TestParseRomanRejects(t *testing.T) {
 }
 
 func TestFormatRomanRejects(t *testing.T) {
-	withBass, err := notation.NewPosition(5, notation.Natural, notation.ShapeOf(chord(material.NoteName{}, "M3 P5", "M3")))
+	withBass, err := material.NewPosition(5, material.Natural, material.ShapeOf(chord(material.NoteName{}, "M3 P5", "M3")))
 	if err != nil {
 		t.Fatal(err)
 	}
 	tests := []struct {
 		name string
-		p    notation.Position
+		p    material.Position
 		want error
 	}{
 		{"a bass (V with the third in the bass)", withBass, notation.ErrRomanBass},
-		{"the zero value (the root alone)", notation.Position{}, notation.ErrNoName},
-		{"a sixth (C6 on I)", position(1, notation.Natural, "M3 P5 M6", 0), notation.ErrNoName},
+		{"the zero value (the root alone)", material.Position{}, notation.ErrNoName},
+		{"a sixth (C6 on I)", position(1, material.Natural, "M3 P5 M6", 0), notation.ErrNoName},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -301,62 +301,15 @@ func TestFormatRomanRejects(t *testing.T) {
 	}
 }
 
-func TestNewPositionRejects(t *testing.T) {
-	var shape notation.Shape
-	tests := []struct {
-		degree int
-		alter  notation.Alteration
-		want   error
-	}{
-		{0, notation.Natural, notation.ErrDegree},
-		{8, notation.Natural, notation.ErrDegree},
-		{1, notation.Alteration(2), notation.ErrAlteration},
-		{1, notation.Alteration(-2), notation.ErrAlteration},
-	}
-	for _, tt := range tests {
-		if _, err := notation.NewPosition(tt.degree, tt.alter, shape); !errors.Is(err, tt.want) {
-			t.Errorf("NewPosition(%d, %d) = %v; want %v", tt.degree, tt.alter, err, tt.want)
-		}
-	}
-	p, err := notation.NewPosition(5, notation.Natural, shape)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, target := range []int{0, 1, 7, 8} {
-		if _, err := p.WithTarget(target); !errors.Is(err, notation.ErrTarget) {
-			t.Errorf("WithTarget(%d) = %v; want %v", target, err, notation.ErrTarget)
-		}
-	}
-}
-
 // The bass of the shape comes with the chord: V with the third in the bass is
-// G/B in C. A root, a member or the root of the target beyond a double sharp
-// fails. In G♯ major the seventh degree is F𝄪, so ♯VII is beyond it. The
-// augmented fifth of C𝄪 would be G with three sharps. The fifth degree of B𝄪
-// major would be F with three sharps.
-func TestPositionChord(t *testing.T) {
-	withBass, err := notation.NewPosition(5, notation.Natural, notation.ShapeOf(chord(material.NoteName{}, "M3 P5", "M3")))
+// G/B in C. The chord is checked in material; here the name is written.
+func TestFormatChordOfPositionWithBass(t *testing.T) {
+	withBass, err := material.NewPosition(5, material.Natural, material.ShapeOf(chord(material.NoteName{}, "M3 P5", "M3")))
 	if err != nil {
 		t.Fatal(err)
 	}
 	c, err := withBass.Chord(note(material.C, 0))
 	if got, fmtErr := notation.FormatChord(c); err != nil || fmtErr != nil || got != "G/B" {
 		t.Errorf("V with the third in the bass in C = %q, %v, %v; want G/B", got, err, fmtErr)
-	}
-	tests := []struct {
-		name  string
-		tonic material.NoteName
-		p     notation.Position
-	}{
-		{"♯VII in G♯ (beyond F𝄪)", note(material.G, 1), position(7, notation.Sharp, "M3 P5", 0)},
-		{"I+ in C𝄪 (the fifth)", note(material.C, 2), position(1, notation.Natural, "M3 A5", 0)},
-		{"V/V in B𝄪 (the target)", note(material.B, 2), position(5, notation.Natural, "M3 P5", 5)},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got, err := tt.p.Chord(tt.tonic); !errors.Is(err, material.ErrAlterOutOfRange) {
-				t.Errorf("Chord(%s) = %s, %v; want error %v", tt.tonic, describe(got), err, material.ErrAlterOutOfRange)
-			}
-		})
 	}
 }
