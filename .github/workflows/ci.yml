@@ -54,3 +54,34 @@ jobs:
         run: make backend-deps-check
       - name: production npm dependencies have no high vulnerabilities
         run: make frontend-deps-check
+      # Needs hadolint or Docker, so it is not part of `make check`; the runner has Docker.
+      - name: Dockerfile lint
+        run: make dockerfile-lint
+
+  # Builds the two images and runs them together, as `make up` does, then
+  # smoke tests the stack (ADR-0010). Not a required check: it needs Docker
+  # and takes longer. The stack's logs are printed either way.
+  image:
+    name: image (build and smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # BuildKit's build checks: rules hadolint does not have, such as
+      # undefined variables and secrets in ARG or ENV. A violation fails.
+      - name: Build checks
+        run: |
+          go_version=$(awk '$1 == "golang" { print $2 }' .tool-versions)
+          node_version=$(awk '$1 == "nodejs" { print $2 }' .tool-versions)
+          for target in api web; do
+            docker buildx build --check --target "$target" \
+              --build-arg GO_VERSION="$go_version" --build-arg NODE_VERSION="$node_version" .
+          done
+      - run: make up
+      - run: make smoke
+      - name: Stack logs
+        if: always()
+        run: make logs
+      - name: Stop the stack
+        if: always()
+        run: make down

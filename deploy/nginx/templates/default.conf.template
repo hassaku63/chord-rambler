@@ -1,0 +1,32 @@
+# The web container (ADR-0010): serves the built screen and passes /api to
+# the api container on the same origin. The nginx image renders this
+# template into conf.d at start, filling ${PORT}, ${API_UPSTREAM} (a URL
+# such as http://api:8081, the name the Vite dev server reads too) and
+# ${RESOLVER} from the environment. scripts/smoke.sh checks the rules below
+# against a running stack.
+
+server {
+    listen ${PORT};
+    server_tokens off;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Resolve API_UPSTREAM per request (cached 10 s), so nginx starts before
+    # the api container answers and follows it when it is recreated.
+    resolver ${RESOLVER} valid=10s ipv6=off;
+
+    # The API, unchanged: its answers, errors included, pass through.
+    location ~ ^/api(/|$) {
+        set $api_upstream ${API_UPSTREAM};
+        proxy_pass $api_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    # The built files. A missing file is a 404, not the page: the screen
+    # has no client-side routes to fall back to.
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}

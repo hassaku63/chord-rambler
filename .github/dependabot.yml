@@ -37,3 +37,10 @@ updates:
       # 1.6.28 and later need TypeScript 6; held at 1.6.27 while TypeScript is 5.9.
       - dependency-name: "@vitest/eslint-plugin"
         versions: [">=1.6.28"]
+  # The runtime images of the Dockerfile, pinned by digest (ADR-0010). The Go
+  # and Node build images take their versions from .tool-versions as build
+  # arguments, which Dependabot cannot resolve; .tool-versions moves them.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly

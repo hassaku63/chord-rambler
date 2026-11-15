@@ -1,0 +1,32 @@
+# Runs the two images together (ADR-0010): the web container on
+# http://localhost:${WEB_PORT:-8080} passes /api to the api container, which
+# is not published. Start it with `make up`, which passes the Go and Node
+# versions from .tool-versions; stop it with `make down`.
+# The development loop stays native (`make dev-backend`, `make dev-frontend`).
+services:
+  web:
+    build:
+      context: .
+      target: web
+      args:
+        NODE_VERSION: ${NODE_VERSION:?run through make (make up), which reads .tool-versions}
+    image: chord-rambler-web:${TAG:-local}
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    environment:
+      PORT: "8080"
+      API_UPSTREAM: http://api:8081
+    depends_on:
+      - api
+  api:
+    build:
+      context: .
+      target: api
+      args:
+        GO_VERSION: ${GO_VERSION:?run through make (make up), which reads .tool-versions}
+        VERSION: ${VERSION:-compose}
+    image: chord-rambler-api:${TAG:-local}
+    expose:
+      - "8081"
+    environment:
+      PORT: "8081"
