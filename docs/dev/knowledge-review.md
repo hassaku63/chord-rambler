@@ -1,12 +1,14 @@
 # 知識の点検
 
-手元に持っている知識（プラクティスの索引、標準の索引、流儀の出どころ）が古くなったことに気づき、確かめ直す手順。決定は ADR-0007 と ADR-0015。
+手元に持っている知識（プラクティスの索引、標準の索引、流儀の出どころ）と、依存・ベースイメージ・検査が古くなったことに気づき、確かめ直す手順。決定は ADR-0007 と ADR-0015。
 
 対象:
 
 - `.claude/skills/practices/index.md`（プラクティスの索引）
 - `.claude/skills/standards/index.md`（標準の索引。期限を過ぎた項目は、報告で「標準の索引: 」を前に付けて挙がる）
 - `docs/architecture/theory-conventions.md`（読みと表記の流儀の出どころ）
+- 依存（`frontend/package.json`、`backend/go.mod`）と、`Dockerfile` の実行用のベースイメージ（総点検だけで見る）
+- `docs/dev/harness.md` の検査（総点検だけで見る）
 
 ## 月次の報告
 
@@ -46,4 +48,8 @@ bash scripts/knowledge-staleness.sh --offline  # 期限だけ
 2. 索引の全項目について、PR の「当たった索引の項目」に一度も挙がらなかったものを一覧にする。削る候補として所有者に示す。
 3. 索引の節ごとに、「この半年のレビューで繰り返し出た指摘で、項目にないもの」を挙げる。項目にするか、lint にするかを決める。
 4. `docs/architecture/theory-conventions.md` の「確かめていないこと」を読み、確かめられるようになったものを確かめる。
-5. 結果を 1 つの PR にし、`knowledge-review` の Issue を閉じる。
+5. 依存とベースイメージの陳腐化を挙げる。
+   - `frontend/package.json` の直接の依存と Go のモジュールのうち、非推奨になったもの（npm の deprecated の表示など）と、長く公開のないもの。版の遅れは Dependabot が受け持つので、ここでは見ない。
+   - `Dockerfile` の実行用のベースイメージのタグが、出どころのサポートの一覧に載っているか（distroless は README と SUPPORT_POLICY.md、nginx の像は公開元の案内）。Dependabot は同じタグの中の digest しか更新しないので、タグのサポートが終わっても PR は来ない。
+6. `docs/dev/harness.md` の各行を見直し、前回の総点検からあとに何も捕まえていない検査を、削る候補として所有者に示す。
+7. 結果を 1 つの PR にし、`knowledge-review` の Issue を閉じる。
