@@ -10,6 +10,12 @@ import (
 // given as a member is a duplicate too.
 var ErrDuplicateNumber = errors.New("chord has two intervals of the same number")
 
+// ErrOctaveMember reports a chord member or bass that repeats another number
+// an octave higher: an 8th, 10th or 12th as a member, or any compound interval
+// as the bass. Such a member would sound a third or a fifth that the views do
+// not see (a sus4 with a tenth sounds a third).
+var ErrOctaveMember = errors.New("chord member repeats a number an octave higher")
+
 // Chord is a chord without a key: a root, the intervals of the other members
 // above the root (at most one per interval number), and an optional bass as an
 // interval above the root. The root is always a member, as the unison. Kinds
@@ -28,14 +34,19 @@ type member struct {
 }
 
 // NewChord returns the chord on the root with the members the intervals above
-// it. The order of the intervals does not matter. It fails for two intervals
-// of the same number (ErrDuplicateNumber) and for a member that would need
-// more than a double sharp or a double flat (ErrAlterOutOfRange).
+// it. Members are 2nds to 7ths and the tensions 9, 11 and 13. The order of the
+// intervals does not matter. It fails for two intervals of the same number
+// (ErrDuplicateNumber), for an 8th, 10th or 12th (ErrOctaveMember) and for a
+// member that would need more than a double sharp or a double flat
+// (ErrAlterOutOfRange).
 func NewChord(root NoteName, intervals ...Interval) (Chord, error) {
 	c := Chord{root: root}
 	for _, iv := range intervals {
 		if iv.steps == 0 || c.members[iv.steps].present {
 			return Chord{}, fmt.Errorf("chord on %s with %s: %w", root, iv, ErrDuplicateNumber)
+		}
+		if n := iv.Number(); n == 8 || n == 10 || n == 12 {
+			return Chord{}, fmt.Errorf("chord on %s with %s: %w", root, iv, ErrOctaveMember)
 		}
 		if _, err := root.Transpose(iv); err != nil {
 			return Chord{}, fmt.Errorf("chord on %s: %w", root, err)
@@ -45,10 +56,14 @@ func NewChord(root NoteName, intervals ...Interval) (Chord, error) {
 	return c, nil
 }
 
-// WithBass returns the chord with the bass the interval above the root. The
-// bass need not be a member. It fails when the bass would need more than a
+// WithBass returns the chord with the bass the interval above the root, a
+// simple interval (1 to 7). The bass need not be a member. It fails for a
+// compound interval (ErrOctaveMember) and when the bass would need more than a
 // double sharp or a double flat.
 func (c Chord) WithBass(bass Interval) (Chord, error) {
+	if bass.Number() > 7 {
+		return Chord{}, fmt.Errorf("bass %s of the chord on %s: %w", bass, c.root, ErrOctaveMember)
+	}
 	if _, err := c.root.Transpose(bass); err != nil {
 		return Chord{}, fmt.Errorf("bass of the chord on %s: %w", c.root, err)
 	}
@@ -97,9 +112,22 @@ func (c Chord) PitchClasses() PitchClassSet {
 	return s
 }
 
-// Transpose returns the chord with the root moved up by the interval. The
-// intervals and the bass stay, so the spelling is kept: F major up a major
-// second is G major, and E♭ minor up a minor second is F♭ minor. It fails
+// SoundingPitchClasses returns the pitch classes that sound: the members and
+// the bass. Compare a chord with a key or a scale, and play it, with this set;
+// a bass that is not a member (C/B♭) can change the answer.
+func (c Chord) SoundingPitchClasses() PitchClassSet {
+	s := c.PitchClasses()
+	if bass, ok := c.Bass(); ok {
+		// WithBass checked that the bass is in range.
+		n, _ := c.root.Transpose(bass)
+		s = s.Union(NewPitchClassSet(n.PitchClass()))
+	}
+	return s
+}
+
+// Transpose returns the chord with the root moved up by the interval
+// (down by a half step for the diminished unison). The intervals and the bass
+// stay, so the spelling is kept: F major up a major second is G major, and E♭ minor up a minor second is F♭ minor. It fails
 // when the root, a member or the bass would need more than a double sharp or
 // a double flat.
 func (c Chord) Transpose(iv Interval) (Chord, error) {

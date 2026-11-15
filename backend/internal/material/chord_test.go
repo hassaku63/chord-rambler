@@ -110,6 +110,8 @@ func TestChordViewsOutsideTheVocabulary(t *testing.T) {
 		{"augmented fourth for sus", "A4 P5", material.TriadOther, material.NoSeventh, nil},
 		{"augmented seventh", "M3 P5 A7", material.TriadMajor, material.SeventhOther, nil},
 		{"diminished eleventh", "M3 P5 m7 d11", material.TriadMajor, material.SeventhMinor, []material.Tension{material.TensionOther}},
+		// A sixth has no view: C6 reads like the C major triad.
+		{"sixth", "M3 P5 M6", material.TriadMajor, material.NoSeventh, nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -141,6 +143,10 @@ func TestNewChordRejects(t *testing.T) {
 		{"the same interval twice", note(material.C, nat), "M3 P5 P5", material.ErrDuplicateNumber},
 		{"a unison besides the root", note(material.C, nat), "P1 M3 P5", material.ErrDuplicateNumber},
 		{"a member beyond a double sharp", note(material.B, sharp2), "M3 P5", material.ErrAlterOutOfRange},
+		// A sus4 with a tenth would sound a third that Triad does not see.
+		{"a tenth", note(material.C, nat), "P4 P5 M10", material.ErrOctaveMember},
+		{"an octave", note(material.C, nat), "M3 P5 P8", material.ErrOctaveMember},
+		{"a twelfth", note(material.C, nat), "m3 P12", material.ErrOctaveMember},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -152,6 +158,9 @@ func TestNewChordRejects(t *testing.T) {
 	if _, err := chord(note(material.D, sharp2), "P5").WithBass(interval(3, material.Major)); !errors.Is(err, material.ErrAlterOutOfRange) {
 		t.Errorf("D♯♯ chord WithBass(M3) error = %v, want %v", err, material.ErrAlterOutOfRange)
 	}
+	if _, err := chord(note(material.C, nat), "M3 P5").WithBass(interval(10, material.Major)); !errors.Is(err, material.ErrOctaveMember) {
+		t.Errorf("C major WithBass(M10) error = %v, want %v", err, material.ErrOctaveMember)
+	}
 }
 
 func TestChordBass(t *testing.T) {
@@ -159,12 +168,16 @@ func TestChordBass(t *testing.T) {
 	if _, ok := c.Bass(); ok {
 		t.Errorf("C major without a bass: Bass() reports one")
 	}
+	// C/B♭ sounds B♭ as well: only C Mixolydian among the seven modes on C
+	// holds that set (the members alone fit Ionian, Lydian and Mixolydian).
 	tests := []struct {
-		name string
-		bass material.Interval
+		name     string
+		bass     material.Interval
+		sounding string
 	}{
-		{"a member (C/E)", interval(3, material.Major)},
-		{"not a member (C/D)", interval(2, material.Major)},
+		{"a member (C/E)", interval(3, material.Major), "C E G"},
+		{"not a member (C/D)", interval(2, material.Major), "C D E G"},
+		{"not a member (C/B♭)", interval(7, material.Minor), "C E G B♭"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -179,6 +192,9 @@ func TestChordBass(t *testing.T) {
 			if !slices.Equal(slash.Notes(), c.Notes()) || slash.PitchClasses() != c.PitchClasses() {
 				t.Errorf("with bass %s: Notes() = %v, PitchClasses() = %s; want %v, %s",
 					tt.bass, slash.Notes(), slash.PitchClasses(), c.Notes(), c.PitchClasses())
+			}
+			if got, want := slash.SoundingPitchClasses(), pitchClassesOf(notes(tt.sounding)); got != want {
+				t.Errorf("with bass %s: SoundingPitchClasses() = %s, want %s", tt.bass, got, want)
 			}
 		})
 	}
@@ -257,6 +273,14 @@ func TestChordTransposeTurnsPitchClasses(t *testing.T) {
 					continue
 				}
 				checked++
+				for i, n := range c.Notes() {
+					if want, err := n.Transpose(iv); err != nil || moved.Notes()[i] != want {
+						t.Errorf("chord on %s (%s).Transpose(%s): member %d is %s, want %s moved (%v, %v)", root, shape, iv, i, moved.Notes()[i], n, want, err)
+					}
+				}
+				if got, want := moved.SoundingPitchClasses(), c.SoundingPitchClasses().Transpose(iv.Semitones()); got != want {
+					t.Errorf("chord on %s (%s).Transpose(%s): sounding pitch classes %s, want %s", root, shape, iv, got, want)
+				}
 				if got, want := moved.PitchClasses(), c.PitchClasses().Transpose(iv.Semitones()); got != want {
 					t.Errorf("chord on %s (%s).Transpose(%s): pitch classes %s, want %s", root, shape, iv, got, want)
 				}

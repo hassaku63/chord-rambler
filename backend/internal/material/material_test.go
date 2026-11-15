@@ -75,6 +75,15 @@ func notes(s string) []material.NoteName {
 	return out
 }
 
+// pitchClassesOf returns the pitch-class set of the note names.
+func pitchClassesOf(ns []material.NoteName) material.PitchClassSet {
+	var s material.PitchClassSet
+	for _, n := range ns {
+		s = s.Union(material.NewPitchClassSet(n.PitchClass()))
+	}
+	return s
+}
+
 // ivs parses intervals for a test table, such as "M3 P5 m7".
 func ivs(s string) []material.Interval {
 	qualities := map[byte]material.Quality{
