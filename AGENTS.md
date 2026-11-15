@@ -47,7 +47,7 @@ chord-rambler で作業する人間と AI コーディングエージェント�
 | `frontend/src/app` | アプリの枠 | |
 | `frontend/src/features/<name>` | 機能ごとの縦の切り方（UI、hooks、状態） | 機能どうしで直接読み込まない。共有は `shared` へ（lint で強制） |
 | `frontend/src/shared` | API のクライアント、共通の UI | API の型は `schema.gen.ts`（契約から生成）を使い、手で書かない |
-| `Dockerfile`、`compose.yaml`、`deploy/nginx/templates/` | コンテナ（ADR-0010） | Go と Node の版は `.tool-versions` から渡し、Dockerfile に書かない。配信の規則を変えたら `scripts/smoke.sh` も同じ PR で直す |
+| `Dockerfile`、`compose.yaml`、`deploy/nginx/templates/` | コンテナ（ADR-0010） | 配備するイメージは distroless を基本にする（ADR-0016）。Go と Node の版は `.tool-versions` から渡し、Dockerfile に書かない。配信の規則を変えたら `scripts/smoke.sh` も同じ PR で直す |
 | `frontend/src/**/*.tsx` | コンポーネント | 通信・音・保存・タイマーを直接使わず、hook に置く（lint で強制） |
 
 - Go: 標準の `net/http`（メソッド付きのパターン）、`log/slog`。フレームワークは使わない。logger は引数で渡す。

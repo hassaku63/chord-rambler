@@ -19,3 +19,4 @@
 | [0013](0013-agents-pick-by-rule-and-stop-at-three-prs.md) | エージェントは規則で Issue を選び、未マージの PR が 3 本で止まる |
 | [0014](0014-agents-merge-small-settled-prs.md) | 小さく、決まった判断に従うだけの PR は、エージェントがマージしてよい |
 | [0015](0015-standards-index.md) | 業界標準の索引を、プラクティスの索引と分けて置く |
+| [0016](0016-deployed-images-are-distroless.md) | 配備するイメージは distroless を基本にする |

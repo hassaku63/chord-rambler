@@ -30,6 +30,8 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
       -o /out/server ./cmd/server
 
 # --- web: nginx and the built screen -------------------------------------------
+# For development and local checks until a deployment target is chosen: it is
+# not distroless, as ADR-0016 asks of deployed images.
 # At start the image renders /etc/nginx/templates into conf.d from PORT,
 # API_UPSTREAM (a URL such as http://api:8081) and RESOLVER (the DNS that
 # resolves it). The image runs nginx as a non-root user.
