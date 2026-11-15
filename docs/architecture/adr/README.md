@@ -15,3 +15,4 @@
 | [0009](0009-frontend-supporting-dependencies.md) | フロントエンドの道具を支える依存 |
 | [0010](0010-container-images.md) | コンテナは、distroless の API と nginx の画面の 2 つのイメージ |
 | [0011](0011-models-by-stage.md) | 段階ごとにモデルを使い分け、`ready` の Issue を引き継ぎの文書にする |
+| [0012](0012-explanations-refine-without-retraction.md) | 説明の文は、取り消さずに詳しくできる単純化だけを許す |
