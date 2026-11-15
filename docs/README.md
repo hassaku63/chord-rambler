@@ -5,7 +5,6 @@
 ## プロダクト
 
 - [product/concept.md](product/concept.md) — コンセプト、体験の基本原則、扱う情報、未決定事項
-
 - [glossary.md](glossary.md) — 画面と文書で使う語の定義
 
 ## 設計
