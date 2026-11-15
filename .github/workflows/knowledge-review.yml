@@ -1,0 +1,53 @@
+name: knowledge review
+
+# Monthly report of the knowledge this repository keeps that may have gone
+# stale (ADR-0007, docs/dev/knowledge-review.md). It depends on the date and
+# the network, so it is not part of `make check`. A pull request that changes
+# the script or this file runs the report without touching any issue.
+on:
+  schedule:
+    - cron: '17 3 1 * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - scripts/knowledge-staleness.sh
+      - .github/workflows/knowledge-review.yml
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: knowledge staleness report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Report
+        id: report
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          status=0
+          bash scripts/knowledge-staleness.sh > report.md || status=$?
+          # In the log as well as the summary, so the report can be read from the job log.
+          tee -a "$GITHUB_STEP_SUMMARY" < report.md
+          # 3 means "there is something to review"; anything else is a failure of the script.
+          if [ "$status" -ne 0 ] && [ "$status" -ne 3 ]; then exit "$status"; fi
+          if [ "$status" -eq 3 ]; then echo "findings=true" >> "$GITHUB_OUTPUT"; fi
+      - name: Open or update the issue
+        if: steps.report.outputs.findings == 'true' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create knowledge-review --color BFD4F2 \
+            --description "確かめ直す知識の一覧（月次の報告）" 2>/dev/null || true
+          number=$(gh issue list --label knowledge-review --state open --json number --jq '.[0].number // empty')
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --body-file report.md
+          else
+            gh issue create --title "知識の点検: 確かめ直す項目がある" --label knowledge-review --body-file report.md
+          fi

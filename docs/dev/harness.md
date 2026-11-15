@@ -16,6 +16,7 @@ CI の `required (make check)` は `make check` をそのまま呼ぶ。必須�
 | 検査 | 防ぐもの | 個別実行 | 場所 |
 | --- | --- | --- | --- |
 | プラクティスの索引の項目の形（欄の欠け、出どころ・ソース・対象・確認の書き方、40 項目の上限） | 出どころや確認日のない項目、増えすぎて引かれない索引 | `make practices-check` | `make check` |
+| 知識の鮮度の報告（プラクティスの索引の見直しの期限、出どころのリンク切れと移動、記録したコミットのあとのソースの変更。`docs/architecture/theory-conventions.md` の出どころのリンクも見る。日付とネットワークに依るので `make check` には入れない） | 手元に持った知識が古くなったことに気づけない | `bash scripts/knowledge-staleness.sh`（期限だけなら `--offline`） | 月次 `knowledge review`（指摘があれば `knowledge-review` の Issue。スクリプトかワークフローを変えた PR では、報告だけを走らせる） |
 
 ## 構造と規約
 
@@ -36,3 +37,4 @@ CI の `required (make check)` は `make check` をそのまま呼ぶ。必須�
 | --- | --- | --- |
 | `docs-sync` 自己点検 | 差分で言及が変わる文書の修正 | PR 前（`docs/dev/docs-hygiene.md`） |
 | 自己レビュー | 人間のレビュー負荷の低減 | PR 前 |
+| 知識の総点検（出どころを開き直す、当たられなかった項目を削る、足りない項目を拾う） | 出どころが変わらないまま古くなった知識、手元に無い知識 | 四半期。所有者が始める（`docs/dev/knowledge-review.md`） |
