@@ -43,6 +43,8 @@ ready の Issue を 1 つ → 受け入れ条件を確認 → テストを書く
 | エンジン（`backend/internal/` のまとまり） | テーブル駆動の単体テスト。既知の理論の事実をデータとして並べ、出どころをコメントに書く。不変量には性質によるテスト | C major のダイアトニックの三和音、移調して戻すと元に戻る |
 | `backend/internal/httpapi` | `httptest` のレコーダーで、JSON の形とステータスを確かめる | 存在しないパスが problem の文書を返す |
 | `backend/internal/config` | テーブル駆動。環境変数を読む関数を差し替える | 範囲の外の `PORT` がエラーになる |
+| 画面のロジック（hook、純粋な関数） | Vitest。DOM なしで書けるものは DOM なしで | API の応答を境界で検証する関数 |
+| 画面の UI | Testing Library。role と文で確かめる。スナップショットは使わない | サーバーが答えると、版が状態の行に出る |
 
 判断に迷ったら、プラクティスの索引（`.claude/skills/practices/index.md`）の 1 節を引く。
 

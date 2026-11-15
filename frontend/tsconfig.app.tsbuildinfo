@@ -1,0 +1,1 @@
+{"root":["./src/main.tsx","./src/app/App.test.tsx","./src/app/App.tsx","./src/app/useBackendHealth.ts","./src/shared/api/client.test.ts","./src/shared/api/client.ts","./src/shared/api/schema.gen.ts","./src/test/setup.ts"],"version":"5.9.3"}
