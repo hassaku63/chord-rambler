@@ -6,8 +6,12 @@
 
 - [product/concept.md](product/concept.md) — コンセプト、体験の基本原則、扱う情報、未決定事項
 
+- [glossary.md](glossary.md) — 画面と文書で使う語の定義
+
 ## 設計
 
+- [architecture/engine.md](architecture/engine.md) — エンジンの構成（土台のデータ、まとまりと責務）
+- [architecture/theory-conventions.md](architecture/theory-conventions.md) — 読みと表記が従う流儀と、その出どころ
 - [architecture/adr/README.md](architecture/adr/README.md) — 設計判断の記録（ADR）の索引
 
 ## 開発
