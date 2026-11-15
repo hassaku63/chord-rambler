@@ -15,10 +15,11 @@ func build(t *testing.T, beats ...int) progression.Progression {
 	t.Helper()
 	p := progression.Progression{}
 	for _, b := range beats {
-		var err error
-		if p, err = p.Append(slot(progression.Unchosen(), b)); err != nil {
+		q, err := p.Append(slot(progression.Unchosen(), b))
+		if err != nil {
 			t.Fatalf("Append(%d beats) after %v: %v", b, lengths(p.Slots()), err)
 		}
+		p = q
 	}
 	return p
 }
@@ -101,12 +102,18 @@ func TestOperationsKeepTheBoundaries(t *testing.T) {
 		{"replace with a longer slot", []int{4, 4, 4, 4}, func(p progression.Progression) (progression.Progression, error) {
 			return p.Replace(3, slot(progression.Unchosen(), 6))
 		}, nil},
+		{"replace the first bar with two beats, moving a later slot across", []int{4, 4, 4, 4, 4}, func(p progression.Progression) (progression.Progression, error) {
+			return p.Replace(0, slot(progression.Unchosen(), 2))
+		}, nil},
 		{"replace with a slot of two bars", []int{4, 4, 4, 4}, func(p progression.Progression) (progression.Progression, error) {
 			return p.Replace(2, slot(progression.Unchosen(), 8))
 		}, []int{4, 4, 8, 4}},
 		{"delete, moving a later slot across", []int{2, 4, 4, 4, 2, 8}, func(p progression.Progression) (progression.Progression, error) {
 			return p.Delete(4)
 		}, nil},
+		{"delete a slot in the middle", []int{1, 2, 3, 4}, func(p progression.Progression) (progression.Progression, error) {
+			return p.Delete(1)
+		}, []int{1, 3, 4}},
 		{"delete the first bar", []int{4, 4, 4, 4, 4}, func(p progression.Progression) (progression.Progression, error) {
 			return p.Delete(0)
 		}, []int{4, 4, 4, 4}},
@@ -158,7 +165,10 @@ func TestOperationsOutsideTheProgression(t *testing.T) {
 func TestOperationsReturnNewProgressions(t *testing.T) {
 	a, b, c := slot(progression.NoChord(), 1), slot(progression.Unchosen(), 2), slot(progression.ChordOf(material.Chord{}), 3)
 	p := build(t, 4, 4, 4)
-	p, _ = p.Delete(2) // a slice with room after its end
+	p, err := p.Delete(2) // a slice with room after its end
+	if err != nil {
+		t.Fatal(err)
+	}
 	first, err1 := p.Append(a)
 	second, err2 := p.Append(b)
 	inserted, err3 := p.Insert(1, c)

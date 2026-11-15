@@ -24,7 +24,8 @@ const phraseBars = 4
 // phrases of slots. Phrases are cut every four bars from the start, and the
 // last phrase may be shorter. No slot crosses the boundary of a phrase.
 // Operations return a new progression and leave the one they are called on as
-// it was. The zero value is C major (C Ionian), 4/4, with no slots. Build
+// it was. When an operation fails, do not use the progression it returns.
+// The zero value is C major (C Ionian), 4/4, with no slots. Build
 // other values with New and the operations.
 type Progression struct {
 	key   material.Scale
