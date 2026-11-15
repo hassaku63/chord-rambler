@@ -11,3 +11,4 @@
 | [0005](0005-engine-structure-by-kind-of-knowledge.md) | エンジンは知識の種類でまとまりを分ける |
 | [0006](0006-progression-of-slots-with-absolute-chords.md) | 進行は、絶対の和音を持つ枠の列として保存する |
 | [0007](0007-rules-in-three-tiers-and-a-dated-practice-index.md) | 規則は 3 段で持ち、索引は出どころと確認日で鮮度を見る |
+| [0008](0008-tech-stack.md) | エンジンは Go の API、画面は React と TypeScript |
