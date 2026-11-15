@@ -4,8 +4,8 @@ import "fmt"
 
 // Transpose returns the note name the interval above n. The letter moves by
 // the interval number, so the spelling is kept: E up a major third is G♯, not
-// A♭. It fails when the result needs more than a double sharp or a double
-// flat.
+// A♭. The diminished unison is the one interval that moves down (C to C♭).
+// It fails when the result needs more than a double sharp or a double flat.
 func (n NoteName) Transpose(iv Interval) (NoteName, error) {
 	return n.moveBy(iv.steps, iv.Semitones(), iv, "up")
 }

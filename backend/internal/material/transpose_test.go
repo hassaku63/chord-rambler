@@ -67,12 +67,15 @@ func TestTransposeRejects(t *testing.T) {
 // Every note name and every interval: no generator is needed, and the inputs
 // are exactly the range the package accepts.
 
-func TestTransposeKeepsPitchClass(t *testing.T) {
+func TestTransposeMovesPitchClassBySemitones(t *testing.T) {
 	checked := 0
 	for _, n := range allNotes() {
 		for _, iv := range allIntervals() {
 			got, err := n.Transpose(iv)
 			if err != nil {
+				if !errors.Is(err, material.ErrAlterOutOfRange) {
+					t.Errorf("%s.Transpose(%s): unexpected error %v", n, iv, err)
+				}
 				continue
 			}
 			checked++
@@ -91,16 +94,19 @@ func TestTransposeRoundTrip(t *testing.T) {
 	checked := 0
 	for _, n := range allNotes() {
 		for _, iv := range allIntervals() {
-			if iv.Number() > 7 {
-				continue
-			}
 			up, err := n.Transpose(iv)
 			if err != nil {
+				if !errors.Is(err, material.ErrAlterOutOfRange) {
+					t.Errorf("%s.Transpose(%s): unexpected error %v", n, iv, err)
+				}
 				continue
 			}
 			checked++
 			if back, err := up.TransposeDown(iv); err != nil || back != n {
 				t.Errorf("%s.Transpose(%s) = %s, then TransposeDown = %v, %v; want %s", n, iv, up, back, err, n)
+			}
+			if iv.Number() > 7 {
+				continue // IntervalBetween gives simple intervals only.
 			}
 			if between, err := material.IntervalBetween(n, up); err != nil || between != iv {
 				t.Errorf("IntervalBetween(%s, %s) = %v, %v; want %s", n, up, between, err, iv)

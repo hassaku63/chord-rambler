@@ -73,8 +73,9 @@ func NewInterval(number int, quality Quality) (Interval, error) {
 
 // IntervalBetween returns the simple interval (1 to 7) from the lower note
 // name up to the upper one. The number comes from the letters, so C to D♯ is
-// an augmented second and C to E♭ a minor third. It fails when the distance
-// has none of the five qualities (C♯ to E♭♭).
+// an augmented second and C to E♭ a minor third. On the same letter the
+// "upper" note may sound lower: C♯ to C is a diminished unison. It fails when
+// the distance has none of the five qualities (C♯ to E♭♭).
 func IntervalBetween(lower, upper NoteName) (Interval, error) {
 	steps := mod(int(upper.letter)-int(lower.letter), letters)
 	semitones := naturalAt(int(lower.letter)+steps) + upper.alter - lower.semitones()

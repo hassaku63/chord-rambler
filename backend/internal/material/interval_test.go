@@ -23,13 +23,16 @@ func TestIntervalSemitones(t *testing.T) {
 	//   - 5.2: half steps of m2 (1) through P8 (12).
 	//     https://musictheory.pugetsound.edu/mt21c/HowToIdentifyIntervals.html
 	//   - 5.5: augmented is a half step larger than perfect or major,
-	//     diminished a half step smaller than perfect or minor; any number can
-	//     be augmented or diminished.
+	//     diminished a half step smaller than perfect or minor.
 	//     https://musictheory.pugetsound.edu/mt21c/AugmentedAndDiminishedIntervals.html
 	//   - 31.1: 9 is 2, 11 is 4 and 13 is 6 an octave higher.
 	//     https://musictheory.pugetsound.edu/mt21c/JazzChordBasics.html
 	// Derived from those definitions, not stated on the pages: P1 = 0, and the
 	// 10th and 12th as the 3rd and 5th an octave higher.
+	// A convention of this project, not a cited fact: the diminished unison
+	// (-1) exists, as the inverse of the augmented unison, so that moving down
+	// by a half step on the same letter (C♯ to C) has a name. Some textbooks
+	// say a unison cannot be diminished (docs/architecture/domain-model.md).
 	tests := []struct {
 		number  int
 		quality material.Quality
