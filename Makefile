@@ -1,13 +1,15 @@
 .DEFAULT_GOAL := help
 
 BACKEND := backend
+FRONTEND := frontend
 # Override when the local toolchain lacks the coverage tools: make check GOTEST_FLAGS=-race
 GOTEST_FLAGS ?= -race -cover
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
-.PHONY: help check doctor fmt fmt-check lint test build dev-backend \
+.PHONY: help setup check doctor fmt fmt-check lint test build dev-backend dev-frontend \
         docs-check practices-check shell-lint actions-lint \
-        backend-fmt backend-fmt-check backend-lint backend-test backend-build backend-deps-check
+        backend-fmt backend-fmt-check backend-lint backend-test backend-build backend-deps-check \
+        frontend-fmt frontend-fmt-check frontend-typecheck frontend-lint frontend-test frontend-build frontend-deps-check
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -15,14 +17,18 @@ help: ## Show this help
 # Every gate. CI calls this same target (ADR-0004); each check is listed in docs/dev/harness.md.
 check: fmt-check lint test build docs-check practices-check ## Run every gate
 
-doctor: ## Compare local Go / golangci-lint / actionlint with .tool-versions
+setup: ## Install the dependencies (Go modules, npm packages)
+	cd $(BACKEND) && go mod download
+	cd $(FRONTEND) && npm ci
+
+doctor: ## Compare local Go / Node / golangci-lint / actionlint with .tool-versions
 	bash scripts/doctor.sh
 
-fmt: backend-fmt ## Format all code in place
-fmt-check: backend-fmt-check ## Verify formatting without changing files
-lint: backend-lint shell-lint actions-lint ## Run every linter
-test: backend-test ## Run every test
-build: backend-build ## Build the API server (backend/bin/server)
+fmt: backend-fmt frontend-fmt ## Format all code in place
+fmt-check: backend-fmt-check frontend-fmt-check ## Verify formatting without changing files
+lint: backend-lint frontend-lint shell-lint actions-lint ## Run every linter
+test: backend-test frontend-test ## Run every test
+build: backend-build frontend-build ## Build the API server (backend/bin/server) and the screen (frontend/dist)
 
 dev-backend: ## Run the API server on PORT (default 8080); settings come only from the environment
 	cd $(BACKEND) && go run ./cmd/server
@@ -46,6 +52,33 @@ backend-build: ## Compile the API server to backend/bin/server
 
 backend-deps-check: ## go.mod / go.sum are tidy (needs the network; CI runs it)
 	cd $(BACKEND) && go mod tidy -diff
+
+# --- frontend ----------------------------------------------------------------
+
+dev-frontend: ## Run the Vite dev server on :5173; /api goes to API_UPSTREAM (default http://localhost:8080)
+	cd $(FRONTEND) && npm run dev
+
+frontend-fmt: ## prettier --write
+	cd $(FRONTEND) && npm run format
+
+frontend-fmt-check: ## prettier --check
+	cd $(FRONTEND) && npm run format:check
+
+frontend-typecheck: ## tsc -b, after checking that the generated API types match the contract
+	bash scripts/check-api-types.sh
+	cd $(FRONTEND) && npm run typecheck
+
+frontend-lint: frontend-typecheck ## eslint, after the type check
+	cd $(FRONTEND) && npm run lint
+
+frontend-test: ## vitest
+	cd $(FRONTEND) && npm test
+
+frontend-build: ## Type check and build the screen to frontend/dist
+	cd $(FRONTEND) && npm run build
+
+frontend-deps-check: ## Production npm dependencies have no high vulnerabilities (needs the network; CI runs it)
+	cd $(FRONTEND) && npm audit --omit=dev --audit-level=high
 
 # --- documents and scripts ---------------------------------------------------
 

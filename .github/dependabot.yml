@@ -16,3 +16,24 @@ updates:
       go-major:
         patterns: ["*"]
         update-types: ["major"]
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+      npm-major:
+        patterns: ["*"]
+        update-types: ["major"]
+    ignore:
+      # openapi-typescript needs TypeScript 5 (ADR-0008); lift this when it supports a newer major.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      # Types must track the Node major in .tool-versions, not the newest Node.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # 1.6.28 and later need TypeScript 6; held at 1.6.27 while TypeScript is 5.9.
+      - dependency-name: "@vitest/eslint-plugin"
+        versions: [">=1.6.28"]

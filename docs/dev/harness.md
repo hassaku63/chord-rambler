@@ -2,7 +2,7 @@
 
 `make check` と CI が行う検査の全リスト（ADR-0004）。**検査を足すときは必ずここに 1 行足す。** 長いあいだ何も捕まえず費用だけがある検査は、削除の候補にする。
 
-CI の `required (make check)` は `make check` をそのまま呼ぶ。必須チェックはこの 1 つ。CI はそれに加えて、ネットワークが要る検査（`make backend-deps-check`）を走らせる。
+CI の `required (make check)` は `make check` をそのまま呼ぶ。必須チェックはこの 1 つ。CI はそれに加えて、ネットワークが要る検査（`make backend-deps-check`、`make frontend-deps-check`）を走らせる。
 
 ## 文書（ADR-0002）
 
@@ -18,6 +18,10 @@ CI の `required (make check)` は `make check` をそのまま呼ぶ。必須�
 | Go のテスト（race、cover） | 振る舞いの退行 | `make backend-test`（手元の toolchain に coverage の道具がなければ `GOTEST_FLAGS=-race`） | `make check` |
 | `go build` | ビルドできないコード | `make backend-build` | `make check` |
 | ルートと契約の一致のテスト（`docs/api/openapi.yaml` の操作と、サーバーに登録したルート。契約の `paths` の形が崩れていても落ちる） | 契約にないルート、ルートのない操作（ADR-0008） | `cd backend && go test ./internal/httpapi/ -run TestRoutesMatchOpenAPI` | `make check` |
+| Vitest と Testing Library | 画面の振る舞いの退行 | `make frontend-test` | `make check` |
+| `tsc -b` | 型の矛盾 | `make frontend-typecheck` | `make check` |
+| 生成した API の型の鮮度（`docs/api/openapi.yaml` から `frontend/src/shared/api/schema.gen.ts`） | 画面の型と契約のずれ。YAML や OpenAPI として壊れた契約 | `bash scripts/check-api-types.sh`（直すときは `cd frontend && npm run gen:api`） | `make check` |
+| `vite build` | ビルドできない画面 | `make frontend-build` | `make check` |
 
 ## 構造と規約（Go）
 
@@ -29,19 +33,31 @@ CI の `required (make check)` は `make check` をそのまま呼ぶ。必須�
 | `depguard`（まとまりの向き） | 下のまとまりが上を読み込むこと（material、notation、progression、relation、reading、catalog、query、text の順）。performance が読みを読み込むこと | `make backend-lint` | `make check` |
 | `funlen` 80 行、`gocognit` 20、`gocyclo` 15 | 肥大した関数（テストは除く） | `make backend-lint` | `make check` |
 
+## 構造と規約（TypeScript）
+
+| 検査 | 防ぐもの | 個別実行 | 場所 |
+| --- | --- | --- | --- |
+| Prettier | 書式のばらつき | `make fmt-check` | `make check` |
+| ESLint（typescript-eslint の型つきの strict と stylistic、react-hooks。設定は `frontend/eslint.config.js`） | 典型的なバグ、要らない条件、非推奨の API、書き方の不統一 | `make frontend-lint` | `make check` |
+| ESLint の機能の境界 | 機能どうしの読み込み、`../` での越境 | `make frontend-lint` | `make check` |
+| ESLint のコンポーネントの純粋さ | `*.tsx` での API の呼び出し、`fetch`・`AudioContext`・保存・タイマー | `make frontend-lint` | `make check` |
+| ESLint の Testing Library と Vitest の規則、スナップショットの禁止 | 実装の細部に結びついたテスト、待たない非同期、消し忘れの `.only` | `make frontend-lint` | `make check` |
+| ESLint の `max-lines` 400、`max-lines-per-function` 120、`complexity` 15 | 肥大したファイルと関数（テストの関数の長さは除く） | `make frontend-lint` | `make check` |
+
 ## 依存
 
 | 検査 | 防ぐもの | 個別実行 | 場所 |
 | --- | --- | --- | --- |
 | `go mod tidy -diff`（ネットワークが要るので `make check` には入れない） | `go.mod` と `go.sum` の不整合、要らない依存 | `make backend-deps-check` | CI |
-| Dependabot（週次。GitHub Actions、Go のモジュール） | 依存と、SHA で固定したアクションの陳腐化 | — | GitHub |
+| `npm audit --omit=dev --audit-level=high`（ネットワークが要るので `make check` には入れない） | 本番の依存の既知の脆弱性 | `make frontend-deps-check` | CI |
+| Dependabot（週次。GitHub Actions、Go のモジュール、npm。`typescript` と `@types/node` の大きな版、`@vitest/eslint-plugin` の 1.6.28 以降は上げない。理由は ADR-0009） | 依存と、SHA で固定したアクションの陳腐化 | — | GitHub |
 
 ## 道具の版
 
 | 検査 | 防ぐもの | 個別実行 | 場所 |
 | --- | --- | --- | --- |
-| `.tool-versions` を CI の setup-go と golangci-lint の導入が読む | CI と手元の版ずれ | — | CI |
-| `make doctor` | 手元の Go、golangci-lint、actionlint の major.minor のずれ | `make doctor` | CI、手元 |
+| `.tool-versions` を CI の setup-go、setup-node、golangci-lint の導入が読む | CI と手元の版ずれ | — | CI |
+| `make doctor` | 手元の Go、Node、golangci-lint、actionlint の major.minor のずれ | `make doctor` | CI、手元 |
 
 ## 知識の鮮度（ADR-0007）
 

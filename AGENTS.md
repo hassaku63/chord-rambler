@@ -42,14 +42,23 @@ chord-rambler で作業する人間と AI コーディングエージェント�
 | `backend/internal/httpapi` | HTTP のハンドラ | decode、エンジンの呼び出し、encode だけ |
 | `docs/api/openapi.yaml` | API の契約 | ハンドラの変更と同じ PR で直す。インデントは空白 2 つ |
 | `backend/internal/material`、`notation`、`progression`、`relation`、`reading`、`catalog`、`query`、`text`、`performance` | エンジン（`docs/architecture/engine.md`） | 標準ライブラリだけ。入出力・時刻・乱数を使わない。下のまとまりは上を読み込まない（lint で強制。向きは `backend/.golangci.yml`） |
+| `frontend/src/app` | アプリの枠 | |
+| `frontend/src/features/<name>` | 機能ごとの縦の切り方（UI、hooks、状態） | 機能どうしで直接読み込まない。共有は `shared` へ（lint で強制） |
+| `frontend/src/shared` | API のクライアント、共通の UI | API の型は `schema.gen.ts`（契約から生成）を使い、手で書かない |
+| `frontend/src/**/*.tsx` | コンポーネント | 通信・音・保存・タイマーを直接使わず、hook に置く（lint で強制） |
 
 - Go: 標準の `net/http`（メソッド付きのパターン）、`log/slog`。フレームワークは使わない。logger は引数で渡す。
+- TypeScript: `strict` と `noUncheckedIndexedAccess`。`any` を使わない。型の読み込みは `import type`。外から来た値は境界で検証する。
 
 ```bash
 make check        # すべての検査（CI は同じターゲットを呼ぶ）
 make doctor       # 手元の道具の版が .tool-versions と合っているか
 make fmt          # 自動整形
+make setup        # 依存を入れる（Go のモジュール、npm のパッケージ）
 make dev-backend  # API サーバー（:8080。PORT で変える）
+make dev-frontend # 画面の開発サーバー（:5173。/api は API サーバーへ中継）
+cd frontend && npm run gen:api   # 契約を変えたあと、型を生成し直す
+cd frontend && npx vitest run src/app   # 単体で回す例
 cd backend && go test ./internal/httpapi/ -run TestHealth -v   # 単体で回す例
 ```
 
