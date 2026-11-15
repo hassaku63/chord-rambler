@@ -32,11 +32,23 @@ chord-rambler で作業する人間と AI コーディングエージェント�
 - 設計・実装・レビューで、機械で検出できない判断（テストの書き方、モックを使うか、抽象を足すか、型と境界、変更の分け方）をするときは、プラクティスの索引 `.claude/skills/practices/index.md` を引き、当たった項目を PR に書く（ADR-0007）。
 - ファイル形式・記法・プロトコルを決めるときは、該当する業界標準の一次情報に当たる。採用する技術の書き方は、その公式の文書に従う。
 
-## 4. コマンド
+## 4. 配置とコマンド
+
+| 場所 | 役割 | 守ること |
+| --- | --- | --- |
+| `backend/cmd/server` | エントリポイント。配線だけ | ロジックを書かない |
+| `backend/internal/config` | 環境変数からの設定 | 新しい設定は `Load` とテストに足す |
+| `backend/internal/httpapi` | HTTP のハンドラ | decode、エンジンの呼び出し、encode だけ |
+| `backend/internal/material`、`notation`、`progression`、`relation`、`reading`、`catalog`、`query`、`text`、`performance` | エンジン（`docs/architecture/engine.md`） | 標準ライブラリだけ。入出力・時刻・乱数を使わない。下のまとまりは上を読み込まない（lint で強制。向きは `backend/.golangci.yml`） |
+
+- Go: 標準の `net/http`（メソッド付きのパターン）、`log/slog`。フレームワークは使わない。logger は引数で渡す。
 
 ```bash
 make check        # すべての検査（CI は同じターゲットを呼ぶ）
-make docs-check   # 文書の検査だけ
+make doctor       # 手元の道具の版が .tool-versions と合っているか
+make fmt          # 自動整形
+make dev-backend  # API サーバー（:8080。PORT で変える）
+cd backend && go test ./internal/httpapi/ -run TestHealth -v   # 単体で回す例
 ```
 
 ## 5. コミットと PR
