@@ -5,6 +5,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/hassaku63/chord-rambler/backend/internal/material"
 	"github.com/hassaku63/chord-rambler/backend/internal/progression"
 )
 
@@ -145,5 +146,144 @@ func TestOperationsKeepTheBoundaryRule(t *testing.T) {
 	}
 	if succeeded == 0 || failed == 0 {
 		t.Errorf("%d operations succeeded and %d failed; want some of each", succeeded, failed)
+	}
+}
+
+var transposeShapes = []struct{ intervals, bass string }{
+	{"", ""}, {"M3 P5", ""}, {"m3 d5 m7", ""}, {"M3 P5 m7 M9", ""}, {"M3 P5", "M3"}, {"M3 P5", "m7"},
+}
+
+// transposeCases calls f with a progression in every key of the 35 tonics and
+// seven modes, holding a chord of each shape above on one root, no chord and
+// none chosen yet. The root steps through the 35 note names from key to key,
+// so every root comes up in several keys. Only the failure the materials
+// document is skipped: a scale or a chord beyond a double sharp or a double
+// flat (material.ErrAlterOutOfRange).
+func transposeCases(t *testing.T, f func(p progression.Progression, c material.Chord)) {
+	t.Helper()
+	var notes []material.NoteName
+	for l := material.C; l <= material.B; l++ {
+		for a := -2; a <= 2; a++ {
+			notes = append(notes, note(l, a))
+		}
+	}
+	keys := 0
+	for _, tonic := range notes {
+		for mode := material.Ionian; mode <= material.Locrian; mode++ {
+			key, err := material.NewScale(tonic, mode)
+			if errors.Is(err, material.ErrAlterOutOfRange) {
+				continue
+			}
+			if err != nil {
+				t.Fatalf("NewScale(%s, %s): %v", tonic, mode, err)
+			}
+			root := notes[keys%len(notes)]
+			keys++
+			for _, s := range transposeShapes {
+				c, err := material.NewChord(root, ivs(s.intervals)...)
+				if err == nil && s.bass != "" {
+					c, err = c.WithBass(ivs(s.bass)[0])
+				}
+				if errors.Is(err, material.ErrAlterOutOfRange) {
+					continue
+				}
+				if err != nil {
+					t.Fatalf("chord on %s %v: %v", root, s, err)
+				}
+				f(transposeProgression(t, key, c), c)
+			}
+		}
+	}
+	if keys < len(notes) {
+		t.Errorf("%d keys; want at least one for each of the %d roots", keys, len(notes))
+	}
+}
+
+func transposeProgression(t *testing.T, key material.Scale, c material.Chord) progression.Progression {
+	t.Helper()
+	unchosen, err := slot(progression.Unchosen(), 4).WithRole(progression.RoleFloat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := progression.New(key, progression.Meter{})
+	for _, s := range []progression.Slot{slot(progression.ChordOf(c), 6), slot(progression.NoChord(), 2), unchosen} {
+		if p, err = p.Append(s); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return p
+}
+
+// allIntervals returns every interval of the five qualities, simple and
+// compound.
+func allIntervals() []material.Interval {
+	var out []material.Interval
+	for number := 1; number <= 13; number++ {
+		for _, q := range []material.Quality{material.Perfect, material.Major, material.Minor, material.Augmented, material.Diminished} {
+			if iv, err := material.NewInterval(number, q); err == nil {
+				out = append(out, iv)
+			}
+		}
+	}
+	return out
+}
+
+func pitchClassPlus(n material.NoteName, semitones int) int {
+	return ((n.PitchClass().Int()+semitones)%12 + 12) % 12
+}
+
+// Transposing up and back down by the same interval gives the progression
+// back. Up, the tonic and the root move by the half steps of the interval,
+// the shape, the mode, the lengths and the roles stay, and the slots with no
+// chord stay. Only the failure up that the materials document is skipped
+// (material.ErrAlterOutOfRange); going back never fails.
+func TestTransposeThereAndBack(t *testing.T) {
+	ivList := allIntervals()
+	back := 0
+	transposeCases(t, func(p progression.Progression, c material.Chord) {
+		for _, iv := range ivList {
+			up, err := p.Transpose(iv)
+			if errors.Is(err, material.ErrAlterOutOfRange) {
+				continue
+			}
+			if err != nil {
+				t.Fatalf("%s in %v up %s: %v", c.Root(), p.Key(), iv, err)
+			}
+			checkMoved(t, p, up, iv)
+			down, err := up.TransposeDown(iv)
+			if err != nil || down.Key() != p.Key() || !slices.Equal(down.Slots(), p.Slots()) {
+				t.Errorf("%v %v up and down %s = %v %v, %v", p.Key(), p.Slots(), iv, down.Key(), down.Slots(), err)
+				continue
+			}
+			back++
+		}
+	})
+	if back == 0 {
+		t.Error("every transposition failed; want some to go there and back")
+	}
+}
+
+func checkMoved(t *testing.T, from, to progression.Progression, iv material.Interval) {
+	t.Helper()
+	semitones := iv.Semitones()
+	if to.Key().Mode() != from.Key().Mode() || to.Key().Tonic().PitchClass().Int() != pitchClassPlus(from.Key().Tonic(), semitones) {
+		t.Errorf("%v up %s is %v", from.Key(), iv, to.Key())
+	}
+	fs, ts := from.Slots(), to.Slots()
+	for i := range fs {
+		if fs[i].Beats() != ts[i].Beats() || fs[i].Role() != ts[i].Role() {
+			t.Errorf("slot %d up %s: %v; want the length and the role of %v", i, iv, ts[i], fs[i])
+		}
+		fc, ok := fs[i].Content().Chord()
+		if !ok {
+			if ts[i].Content() != fs[i].Content() {
+				t.Errorf("slot %d up %s: %v; want %v", i, iv, ts[i].Content(), fs[i].Content())
+			}
+			continue
+		}
+		tc, ok := ts[i].Content().Chord()
+		if !ok || material.ShapeOf(tc) != material.ShapeOf(fc) || tc.Root().PitchClass().Int() != pitchClassPlus(fc.Root(), semitones) {
+			t.Errorf("slot %d: %v up %s is %v", i, fc, iv, tc)
+		}
 	}
 }
