@@ -1,0 +1,221 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - misspell
+    - revive
+    - gocritic
+    - depguard
+    # Size and complexity budgets: generous on purpose. Hitting one is a
+    # signal to split, not a style nit.
+    - funlen
+    - gocognit
+    - gocyclo
+    - bodyclose
+    - contextcheck
+    - copyloopvar
+    - dupl
+    - errname
+    - exhaustive
+    - forcetypeassert
+    - gosec
+    - intrange
+    - nakedret
+    - nilerr
+    - noctx
+    - nolintlint
+    - perfsprint
+    - sloglint
+    - unparam
+    - usestdlibvars
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters: [funlen, gocognit, gocyclo, dupl]
+  settings:
+    funlen:
+      lines: 80
+      statements: 50
+    gocognit:
+      min-complexity: 20
+    gocyclo:
+      min-complexity: 15
+    # Architecture boundaries (ADR-0005, ADR-0008). Rules, not conventions.
+    # The engine packages, lowest first: material, notation, progression,
+    # relation, reading, catalog, query, text. A package never imports one
+    # above it. performance sits beside them and reads no readings.
+    depguard:
+      rules:
+        engine-is-pure:
+          # The engine depends on the standard library and itself, and does
+          # no I/O: no files, network, clock or randomness.
+          list-mode: strict
+          files:
+            - "**/internal/material/**"
+            - "**/internal/notation/**"
+            - "**/internal/progression/**"
+            - "**/internal/relation/**"
+            - "**/internal/reading/**"
+            - "**/internal/catalog/**"
+            - "**/internal/query/**"
+            - "**/internal/text/**"
+            - "**/internal/performance/**"
+          allow:
+            - $gostd
+            - github.com/hassaku63/chord-rambler/backend/internal/material
+            - github.com/hassaku63/chord-rambler/backend/internal/notation
+            - github.com/hassaku63/chord-rambler/backend/internal/progression
+            - github.com/hassaku63/chord-rambler/backend/internal/relation
+            - github.com/hassaku63/chord-rambler/backend/internal/reading
+            - github.com/hassaku63/chord-rambler/backend/internal/catalog
+            - github.com/hassaku63/chord-rambler/backend/internal/query
+            - github.com/hassaku63/chord-rambler/backend/internal/text
+          deny:
+            - pkg: os
+              desc: the engine must not touch the OS
+            - pkg: net
+              desc: the engine must not do networking
+            - pkg: io/fs
+              desc: the engine must not read files (catalogues are embedded)
+            - pkg: time
+              desc: the engine must not read the clock
+            - pkg: math/rand
+              desc: the engine must be deterministic
+            - pkg: log
+              desc: the engine returns values; logging belongs to the caller
+        material-is-the-bottom:
+          list-mode: lax
+          files: ["**/internal/material/**"]
+          deny:
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/notation
+              desc: material is below notation
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/progression
+              desc: material is below progression
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/relation
+              desc: material is below relation
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/reading
+              desc: material is below reading
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/catalog
+              desc: material is below catalog
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/query
+              desc: material is below query
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/text
+              desc: material is below text
+        notation-layer:
+          list-mode: lax
+          files: ["**/internal/notation/**"]
+          deny:
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/progression
+              desc: notation is below progression
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/relation
+              desc: notation is below relation
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/reading
+              desc: notation is below reading
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/catalog
+              desc: notation is below catalog
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/query
+              desc: notation is below query
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/text
+              desc: notation is below text
+        progression-layer:
+          list-mode: lax
+          files: ["**/internal/progression/**"]
+          deny:
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/notation
+              desc: progression holds chords, not their names
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/relation
+              desc: progression is below relation
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/reading
+              desc: progression is below reading
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/catalog
+              desc: progression is below catalog
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/query
+              desc: progression is below query
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/text
+              desc: progression is below text
+        relation-layer:
+          list-mode: lax
+          files: ["**/internal/relation/**"]
+          deny:
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/notation
+              desc: relation computes facts, not names
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/reading
+              desc: relation is below reading
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/catalog
+              desc: relation is below catalog
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/query
+              desc: relation is below query
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/text
+              desc: relation is below text
+        reading-layer:
+          list-mode: lax
+          files: ["**/internal/reading/**"]
+          deny:
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/notation
+              desc: reading names facts; writing them out is notation's job
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/catalog
+              desc: reading is below catalog
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/query
+              desc: reading is below query
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/text
+              desc: reading is below text
+        catalog-layer:
+          list-mode: lax
+          files: ["**/internal/catalog/**"]
+          deny:
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/query
+              desc: catalog is below query
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/text
+              desc: catalog is below text
+        query-layer:
+          list-mode: lax
+          files: ["**/internal/query/**"]
+          deny:
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/text
+              desc: query returns facts; sentences are text's job
+        performance-reads-no-readings:
+          list-mode: lax
+          files: ["**/internal/performance/**"]
+          deny:
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/relation
+              desc: performance plays the progression as it is
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/reading
+              desc: performance plays the progression as it is
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/catalog
+              desc: performance plays the progression as it is
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/query
+              desc: performance plays the progression as it is
+            - pkg: github.com/hassaku63/chord-rambler/backend/internal/text
+              desc: performance plays the progression as it is
+    # Loggers are injected, never the global one.
+    sloglint:
+      no-global: default
+      forbidden-keys: [err]
+    # A switch with a default covers the rest on purpose.
+    exhaustive:
+      default-signifies-exhaustive: true
+    # Listing rules replaces revive's defaults, so each rule kept is named.
+    revive:
+      rules:
+        - name: exported
+          arguments: ["disableStutteringCheck"]
+        - name: error-strings
+        - name: errorf
+        - name: error-naming
+        - name: error-return
+        - name: indent-error-flow
+
+# Show every finding, not the first 3 of each kind.
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/hassaku63/chord-rambler

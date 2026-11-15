@@ -18,7 +18,30 @@ jobs:
   check:
     name: required (make check)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Tool versions from .tool-versions
+        id: tv
+        run: echo "lint=v$(awk '$1 == "golangci-lint" { print $2 }' .tool-versions)" >> "$GITHUB_OUTPUT"
+      # CI uses the Go the application is built with, not the runner's.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: .tool-versions
+          cache-dependency-path: backend/go.mod # module and build cache
+      - name: golangci-lint binary cache
+        id: lint-bin
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.local/golangci-lint
+          key: golangci-lint-${{ runner.os }}-${{ runner.arch }}-${{ steps.tv.outputs.lint }}
+      - name: Install golangci-lint (cache miss only)
+        if: steps.lint-bin.outputs.cache-hit != 'true'
+        working-directory: backend
+        run: bash ../scripts/install-golangci-lint.sh "${{ steps.tv.outputs.lint }}" "$HOME/.local/golangci-lint"
+      - run: echo "$HOME/.local/golangci-lint" >> "$GITHUB_PATH"
+      - run: make doctor
       - run: make check
+      # Needs the network, so it is not part of `make check` (docs/dev/harness.md).
+      - name: go.mod / go.sum are tidy
+        run: make backend-deps-check
