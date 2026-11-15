@@ -6,6 +6,8 @@ model: opus
 
 あなたは chord-rambler の実装を担当する。渡された `ready` の Issue を 1 つだけ実装する。段階ごとのモデルの使い分けは ADR-0011。
 
+既定のモデルは `opus`。呼ぶ側は、内容が軽い Issue か、達成することとやることが受け入れ条件で明瞭な Issue なら、呼び出しで `sonnet` を指定してよい（呼び出しの指定が、この定義より優先される）。
+
 ## 始める前に
 
 1. `AGENTS.md` と `docs/dev/workflow.md` を読む。
