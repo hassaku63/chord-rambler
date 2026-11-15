@@ -109,10 +109,16 @@ func TestSecondaryDominantShapeInCMajor(t *testing.T) {
 		// The fifth below is judged by spelling: C♭ sounds like B, but F♭ is
 		// not E.
 		{"C♭7: F♭ is not a root of the key", chord(note(material.C, flat), seventh, ""), 0},
-		// What sounds is compared with the key, so a bass or a tension outside the
-		// key counts.
+		// Only the root, the third, the fifth, the minor seventh and a bass a
+		// minor seventh above the root are compared with the key (the owner's
+		// call on PR #90). C/B♭ sounds as C7 does.
 		{"C/B♭ is V/IV", chord(note(material.C, nat), triad, "m7"), 4},
-		{"C(♯11): only the tension F♯ is outside the key", chord(note(material.C, nat), triad+" A11", ""), 4},
+		{"C(♯11): the tension F♯ is not looked at", chord(note(material.C, nat), triad+" A11", ""), 0},
+		{"C/F♯: a bass that is not a minor seventh is not looked at", chord(note(material.C, nat), triad, "A4"), 0},
+		{"C/A♭: a bass that is not a minor seventh is not looked at", chord(note(material.C, nat), triad, "m6"), 0},
+		// The minor seventh of the bass is judged by spelling: A♯ sounds like
+		// B♭, but is an augmented sixth.
+		{"C/A♯: an augmented sixth, not a minor seventh", chord(note(material.C, nat), triad, "A6"), 0},
 		{"G/C♯: C is I", chord(note(material.G, nat), triad, "A4"), 0},
 	}
 	for _, tt := range tests {

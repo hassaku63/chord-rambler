@@ -41,7 +41,11 @@ func CommonTones(a, b material.Chord) material.PitchClassSet {
 //
 //   - it is a major triad or a dominant seventh: the triad is major and the
 //     seventh is none or minor, whatever the tensions;
-//   - what sounds (the members and the bass) is not in the scale of the key;
+//   - a note it is judged by is not in the scale of the key, by pitch class:
+//     the root, the third, the fifth, the minor seventh if any, and a bass a
+//     minor seventh above the root by spelling, member or not (C/B♭ sounds as
+//     C7). The tensions and any other bass are not looked at, so C(♯11),
+//     C/F♯ and C/A♭ are not V/IV in C. This is the owner's call on PR #90;
 //   - a perfect fifth below the root, by spelling, is the root of a major or a
 //     minor triad of the key other than I. In a major key these are ii, iii,
 //     IV, V and vi; vii° is diminished.
@@ -58,7 +62,7 @@ func SecondaryDominantShape(c material.Chord, key material.Scale) (target int, o
 	if s := c.Seventh(); s != material.NoSeventh && s != material.SeventhMinor {
 		return 0, false, nil
 	}
-	if InScale(c, key) {
+	if key.Contains(judgedPitchClasses(c)) {
 		return 0, false, nil
 	}
 	notes := key.Notes()
@@ -78,10 +82,39 @@ func SecondaryDominantShape(c material.Chord, key material.Scale) (target int, o
 	return 0, false, nil
 }
 
+// judgedPitchClasses returns the pitch classes a major triad or a dominant
+// seventh is compared with the key by: the root, the third, the fifth and the
+// seventh, and a bass a minor seventh above the root. Other members, such as
+// the tensions, and any other bass are left out.
+func judgedPitchClasses(c material.Chord) material.PitchClassSet {
+	var pcs []material.PitchClass
+	notes := c.Notes()
+	for i, iv := range c.Intervals() {
+		switch iv.Number() {
+		case 1, 3, 5, 7:
+			pcs = append(pcs, notes[i].PitchClass())
+		}
+	}
+	if bass, ok := c.Bass(); ok && bass == minorSeventh() {
+		// WithBass checked that the bass is in range.
+		n, _ := c.Root().Transpose(bass)
+		pcs = append(pcs, n.PitchClass())
+	}
+	return material.NewPitchClassSet(pcs...)
+}
+
 func perfectFifth() material.Interval {
 	iv, err := material.NewInterval(5, material.Perfect)
 	if err != nil {
 		panic(err) // a perfect fifth is a valid interval
+	}
+	return iv
+}
+
+func minorSeventh() material.Interval {
+	iv, err := material.NewInterval(7, material.Minor)
+	if err != nil {
+		panic(err) // a minor seventh is a valid interval
 	}
 	return iv
 }

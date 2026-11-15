@@ -22,6 +22,7 @@
 - **別の立場**: 5 度下の和音へ進んだときだけセカンダリー・ドミナントと呼び、進まなければ別の名前（クオリティ・チェンジ）で呼ぶ（SoundQuest）。
 - **出どころ**:
   - Hutchinson（判定の手順）: https://musictheory.pugetsound.edu/mt21c/AnalyzingSecondaryDominants.html
+  - Hutchinson（減三和音はトニック化しない）: https://musictheory.pugetsound.edu/mt21c/Tonicization.html
   - Hutchinson（変則的な解決）: https://musictheory.pugetsound.edu/mt21c/IrregularResoltionsOfSecondaryDominants.html
   - SoundQuest: https://soundquest.jp/quest/chord/chord-mv2/secondary-dominant/3/
 
@@ -91,7 +92,6 @@
 
 ## 確かめていないこと
 
-- セカンダリー・ドミナントの向かう先から減三和音（vii°）を除くことの出どころ。
 - ローマ数字の減の `°` と半減 7 の `ø7` の出どころ（開いた RomanText の論文は `o` と `/o`）。
 - Open Music Theory 第 2 版の記述（サイトが取得を拒む）。
 - Levine、Nettles & Graf、Berklee Book of Jazz Harmony の原文（書評と教材サイトの引用で読んだ）。
