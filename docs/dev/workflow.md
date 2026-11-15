@@ -25,6 +25,7 @@ ready の Issue を 1 つ → 受け入れ条件を確認 → テストを書く
 | `priority:high` | `ready` の中で、先に着手する | 所有者 |
 
 - 企画は実装しない。決めてほしいことを所有者にしか決められないものに絞り、答えは Issue のコメントで受ける。
+- 判断待ちの問いを所有者に出し、答えを記録して `ready` の Issue にするまでは、スキル `/grill`（`.claude/skills/grill/SKILL.md`）で行える。
 - Issue と PR の本文は現在の状態に保つ。見解の変化や訂正はコメントで足す。
 - コンセプトの未決定事項（`docs/product/concept.md` の 8 章）は、1 つずつ企画の Issue で検討し、決まったら ADR に記録して文書を直す。
 
