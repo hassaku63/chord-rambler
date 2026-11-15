@@ -101,7 +101,8 @@ func readNoteName(s string) (material.NoteName, string, error) {
 // flat, C♭ and F♭ become the neighbouring letter that sounds the same (B♭♭ is
 // A, C♭ is B, F♭ is E, B𝄪 is C♯). Other note names come back as they are
 // (docs/architecture/theory-conventions.md, 6). Only the shown text changes;
-// the engine keeps its own spelling.
+// the engine keeps its own spelling. It is only for a chord name shown without
+// a key; chord names in a key keep their spelling (FormatChord).
 func DisplaySpelling(n material.NoteName) material.NoteName {
 	// A diminished second keeps the pitch and moves the letter by one.
 	d2, _ := material.NewInterval(2, material.Diminished)

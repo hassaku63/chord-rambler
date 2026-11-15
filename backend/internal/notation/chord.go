@@ -213,8 +213,9 @@ func readBass(c material.Chord, s string) (material.Chord, string, error) {
 
 // FormatChord writes the chord name in the display form, keeping the spelling
 // of the root and the bass (B𝄫m stays B𝄫m), so that ParseChord reads it back
-// to the same chord. It fails with ErrNoName for a chord outside the
-// vocabulary.
+// to the same chord. Chord names in a key, shown with Roman numerals, are
+// written with it (♭VII on D♭ is C♭), so that the letter follows the degree. It
+// fails with ErrNoName for a chord outside the vocabulary.
 func FormatChord(c material.Chord) (string, error) {
 	return formatChord(c, false)
 }
@@ -223,7 +224,9 @@ func FormatChord(c material.Chord) (string, error) {
 // root respelled by DisplaySpelling (B♭♭m is Am). When the root is respelled,
 // the bass is written from the new root at the same interval, so the bass keeps
 // its interval to the root (B♭♭/D♭ is A/C♯); otherwise the bass is respelled on
-// its own. The name may read back to a different spelling of the chord.
+// its own. The name may read back to a different spelling of the chord. It is
+// only for a chord shown without a key; in a key, use FormatChord
+// (docs/architecture/theory-conventions.md, 6).
 func FormatChordForDisplay(c material.Chord) (string, error) {
 	return formatChord(c, true)
 }

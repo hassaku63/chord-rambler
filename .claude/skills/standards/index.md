@@ -77,3 +77,15 @@
 | 当たるべき場面 | 和音名の読み書きを作る・変えるとき（表記のまとまり）。和音名の文法や、足す音の書き方、バスの書き方を決めるとき。和音の注釈のデータと和音を交換するとき |
 | chord-rambler との接点 | `backend/internal/notation` の和音名（`docs/architecture/theory-conventions.md` の 6）。同じところ: 根音と、根音からの音程で和音を持つ（`backend/internal/material`）。足す音を括弧の中にコンマで並べる。`B` と `b` を大文字・小文字で分ける。食い違い: 和音名に `:` を書かない。バスは音名で書く（Harte は度）。変化記号に `♯`・`♭` も使う（Harte は `#`・`b` だけ）。種類は短い名前（`m`、`dim`）で書く（Harte は打ち間違いを見つけやすいように長い名前を選ぶ）。Harte の短縮名には sus2 と add9 がない |
 | 確認 | 2026-11-15 / 間隔 365 日 |
+
+### RomanText（Tymoczko、Gotham、Cuthbert、Ariza、ISMIR 2019）
+
+| 欄 | 内容 |
+| --- | --- |
+| 発行元 | D. Tymoczko（Princeton）、M. Gotham（Cornell）、M. S. Cuthbert（MIT）、C. Ariza。ISMIR 2019 の論文「The RomanText format: a flexible and standard method for representing Roman numeral analyses」。読み書きの実装は music21 |
+| 何を決めているか | ローマ数字の和声分析を平文で書く形式。小節と拍、調の切り替え（`C:`、`c:`）、和音の書き方。和音は、大文字が長・小文字が短、増の `+`、減の `o`、半減 7 の `/o`、根音を上げ下げする前置の `#`・`b`、転回形の数字（`6`、`6/4`、`6/5`、`4/3`、`2`）、角括弧の足し引きと変化（`[no5]`、`[add#6]`、`[b5]`）、`/` のあとの向かう先（`V/V`。`V7/V/V` のように重ねてよい）、増六とナポリの略記（`Ger`、`It`、`Fr`、`N`）。短調の 6・7 度の扱いを設定で変えられる |
+| 一次情報 | https://archives.ismir.net/ismir2019/paper/000012.pdf （登録なしで読める PDF） |
+| 状態 | 2019 年の論文。開いたのはこの版だけで、のちの改訂は確かめていない |
+| 当たるべき場面 | ローマ数字の読み書きを作る・変えるとき（表記のまとまり）。転回形、足し引き、向かう先の書き方を決めるとき。分析のデータとローマ数字を交換するとき |
+| chord-rambler との接点 | `backend/internal/notation` のローマ数字と主音から見た位置（`docs/architecture/theory-conventions.md` の 6）。同じところ: 大文字・小文字で長・短を分ける。増の `+`。調の音でない根音に前置の変化記号。`/` のあとの向かう先。食い違い: 減は `°`、半減 7 は `ø7`（RomanText は `o` と `/o`）。変化記号は `♭`・`♯`（RomanText は `b`・`#`）。七度とテンションは和音名の書き方（`Imaj7`、`V7(9)`）で、角括弧の足し引きを使わない。転回形と、重ねた向かう先を書かない。調を書かない（位置は調を持たない）。sus の書き方は、論文の和音の一覧にない |
+| 確認 | 2026-11-15 / 間隔 365 日 |
