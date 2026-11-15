@@ -16,9 +16,10 @@ var ErrDegree = errors.New("degree is not 1 to 7")
 // a sharp.
 var ErrAlteration = errors.New("alteration of a degree is not a flat, none or a sharp")
 
-// ErrTarget reports a target that Roman numerals do not write: a degree
-// outside 2 to 6, written in the case of its triad in the major key (ii, iii,
-// IV, V, vi), and only one of them.
+// ErrTarget reports a target that Roman numerals do not write: anything after
+// "/" other than a degree 2 to 6 without an accidental, written in the case of
+// its triad in the major key (ii, iii, IV, V, vi). Text after the one target,
+// as in V7/V/V, is ErrTrailing.
 var ErrTarget = errors.New("target is not one of ii, iii, IV, V and vi")
 
 // ErrRomanBass reports a position with a bass. Roman numerals here do not
@@ -34,14 +35,9 @@ var ErrNumeral = errors.New("not a Roman numeral I to VII, after at most one ♭
 var ErrRomanKind = errors.New("unknown chord kind for the case of the numeral")
 
 // ErrRomanCase reports a chord without a third (sus2, sus4, 7sus4) whose
-// numeral is not in the case of the triad of its degree in the major key, such
-// as "vsus4".
-var ErrRomanCase = errors.New("a chord without a third takes the case of the triad of its degree")
-
-// ErrAlteredSus reports a chord without a third on an altered degree, such as
-// ♭VII with sus4. Its case is not decided (the triad of its degree is not in
-// the major key).
-var ErrAlteredSus = errors.New("a chord without a third on an altered degree has no Roman numeral")
+// numeral is not in its case: the case of the triad of its degree in the major
+// key, or uppercase on an altered degree. Examples are "vsus4" and "♭viisus4".
+var ErrRomanCase = errors.New("a chord without a third takes the case of the triad of its degree, or uppercase on an altered degree")
 
 // Alteration is how far the root of a position is moved from the degree of
 // the major scale: a flat, none or a sharp. Build positions with NewPosition,
@@ -151,7 +147,8 @@ var majorIntervals = [7]material.Interval{
 	iv(5, material.Perfect), iv(6, material.Major), iv(7, material.Major),
 }
 
-// Chord returns the chord of the position in the major key on the tonic. The
+// Chord returns the chord of the position in the major key on the tonic. Write
+// its name with FormatChord, which keeps the spelling (♭VII on D♭ is C♭). The
 // root is the note of the degree in the major scale, moved by the alteration
 // with its letter kept (♭VII on C is B♭), so the spelling follows
 // transposition. With a target, the degree is counted from the root of the
@@ -196,27 +193,52 @@ type letterCase int
 const (
 	upper    letterCase = iota // major and augmented triads
 	lower                      // minor and diminished triads
-	byDegree                   // no third: the case of the triad of the degree
+	byDegree                   // no third: see noThirdCase
 )
 
 // romanForm is how a chord kind is written after the numeral.
 type romanForm struct {
-	kind string // the name of the kind in kinds
+	kind int // the index of the kind in kinds
 	text string
 	c    letterCase
 }
 
 // romanForms is the Roman numeral form of each kind of the vocabulary
-// (docs/architecture/theory-conventions.md, 6; the owner's decision C1 in
-// Issue #78). Longer texts come first, so that "°7" is tried before "°" and
-// "7sus4" before "7".
+// (docs/architecture/theory-conventions.md, 6). The owner's decision C1 in
+// Issue #78: uppercase for major and augmented, lowercase for minor and
+// diminished, °, ø7 and +, and the kinds of chord names without the m. A
+// convention of our own: a chord without a third takes its suffix on the
+// degree (Vsus4) in the case of noThirdCase (byDegree). Decided in the
+// implementation (#80): each kind has one form and no aliases, as only the
+// display forms are read. Building the table checks that
+// every kind in kinds has exactly one form and every form names a kind in
+// kinds, and panics otherwise. Longer texts come first, so that "°7" is tried
+// before "°" and "7sus4" before "7".
 var romanForms = func() []romanForm {
-	forms := []romanForm{
+	byName := []struct {
+		kind, text string
+		c          letterCase
+	}{
 		{"", "", upper}, {"m", "", lower}, {"dim", "°", lower}, {"aug", "+", upper},
 		{"7", "7", upper}, {"maj7", "maj7", upper}, {"m7", "7", lower},
 		{"m7(♭5)", "ø7", lower}, {"dim7", "°7", lower},
 		{"sus2", "sus2", byDegree}, {"sus4", "sus4", byDegree}, {"7sus4", "7sus4", byDegree},
 		{"add9", "add9", upper},
+	}
+	forms := make([]romanForm, 0, len(byName))
+	count := make([]int, len(kinds))
+	for _, f := range byName {
+		i := slices.IndexFunc(kinds, func(k kind) bool { return k.name == f.kind })
+		if i < 0 {
+			panic(fmt.Sprintf("Roman numeral form for %q, which is not a chord kind", f.kind))
+		}
+		count[i]++
+		forms = append(forms, romanForm{kind: i, text: f.text, c: f.c})
+	}
+	for i, n := range count {
+		if n != 1 {
+			panic(fmt.Sprintf("chord kind %q has %d Roman numeral forms, want 1", kinds[i].name, n))
+		}
 	}
 	slices.SortStableFunc(forms, func(a, b romanForm) int { return len(b.text) - len(a.text) })
 	return forms
@@ -229,6 +251,17 @@ var numerals = [7]string{"I", "II", "III", "IV", "V", "VI", "VII"}
 // I ii iii IV V vi vii°.
 var majorKeyCase = [7]letterCase{upper, lower, lower, upper, upper, lower, lower}
 
+// noThirdCase returns the case of a chord without a third on the degree, moved
+// by the alteration: the case of the triad of the degree in the major key, or
+// uppercase on an altered degree, as the major triad on it (♭VIIsus4; the
+// owner's decision in #82).
+func noThirdCase(degree int, alter Alteration) letterCase {
+	if alter != Natural {
+		return upper
+	}
+	return majorKeyCase[degree-1]
+}
+
 func numeral(degree int, c letterCase) string {
 	if c == lower {
 		return strings.ToLower(numerals[degree-1])
@@ -239,11 +272,12 @@ func numeral(degree int, c letterCase) string {
 // FormatRoman writes the position as a Roman numeral: an accidental for an
 // altered degree, the numeral in the case of the chord (uppercase for major
 // and augmented, lowercase for minor and diminished, the case of the triad of
-// the degree in the major key for a chord without a third), the kind and
-// tensions written as in chord names, and "/" with the target. Examples are
-// ii7, Imaj7, viiø7, ♭VII, V7(9), Vsus4 and V7/V. It fails for a position with
-// a bass (ErrRomanBass), a shape outside the vocabulary (ErrNoName) and a
-// chord without a third on an altered degree (ErrAlteredSus).
+// the degree in the major key for a chord without a third, or uppercase on an
+// altered degree), the kind and tensions written as in chord names, and "/"
+// with the target. Examples are ii7, Imaj7, viiø7, ♭VII, V7(9), Vsus4,
+// ♭VIIsus4 and V7/V. A chord name shown with it is written by FormatChord. It
+// fails for a position with a bass (ErrRomanBass) and a shape outside the
+// vocabulary (ErrNoName).
 func FormatRoman(p Position) (string, error) {
 	if _, ok := p.shape.Bass(); ok {
 		return "", ErrRomanBass
@@ -255,10 +289,7 @@ func FormatRoman(p Position) (string, error) {
 	form, tensions := romanFormOf(suffix)
 	c := form.c
 	if c == byDegree {
-		if p.alter != Natural {
-			return "", ErrAlteredSus
-		}
-		c = majorKeyCase[p.index]
+		c = noThirdCase(p.Degree(), p.alter)
 	}
 	s := [...]string{"♭", "", "♯"}[p.alter+1] + numeral(p.Degree(), c) + form.text + tensions
 	if p.target != 0 {
@@ -270,17 +301,19 @@ func FormatRoman(p Position) (string, error) {
 // romanFormOf returns the form of the kind of a chord suffix, and the tensions
 // in parentheses that follow the kind.
 func romanFormOf(suffix string) (romanForm, string) {
-	if i := slices.IndexFunc(romanForms, func(f romanForm) bool { return f.kind == suffix }); i >= 0 {
+	if i := slices.IndexFunc(romanForms, func(f romanForm) bool { return kinds[f.kind].name == suffix }); i >= 0 {
 		return romanForms[i], ""
 	}
 	// Only 7, maj7 and m7 take tensions, and none of them is the start of
 	// another with "(".
 	for _, f := range romanForms {
-		if strings.HasPrefix(suffix, f.kind+"(") {
-			return f, suffix[len(f.kind):]
+		if name := kinds[f.kind].name; strings.HasPrefix(suffix, name+"(") {
+			return f, suffix[len(name):]
 		}
 	}
-	panic("chordSuffix returned " + suffix) // every suffix is a kind, or a kind and tensions
+	// chordSuffix returns a kind, or a kind and tensions, and building
+	// romanForms checked that every kind has a form.
+	panic("chordSuffix returned " + suffix)
 }
 
 // ParseRoman reads a Roman numeral in the form that FormatRoman writes, such
@@ -312,10 +345,7 @@ func readRoman(s string) (Position, string, error) {
 	if err != nil {
 		return Position{}, rest, err
 	}
-	if form.c == byDegree && alter != Natural {
-		return Position{}, s, ErrAlteredSus
-	}
-	if form.c == byDegree && c != majorKeyCase[degree-1] {
+	if form.c == byDegree && c != noThirdCase(degree, alter) {
 		return Position{}, atNumeral, ErrRomanCase
 	}
 	// The intervals are those of the vocabulary on C, so this cannot fail.
@@ -340,7 +370,7 @@ func readRomanKind(s string, c letterCase) (romanForm, []material.Interval, stri
 		return romanForm{}, nil, s, ErrRomanKind
 	}
 	form, rest := romanForms[i], s[len(romanForms[i].text):]
-	k := kinds[slices.IndexFunc(kinds, func(k kind) bool { return k.name == form.kind })]
+	k := kinds[form.kind]
 	intervals := slices.Clone(k.intervals)
 	switch {
 	case strings.HasPrefix(rest, "(") && !k.tensions:

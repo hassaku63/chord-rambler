@@ -29,13 +29,16 @@ func describePosition(p notation.Position) string {
 	return fmt.Sprintf("degree %d alter %d %v target %d", p.Degree(), p.Alteration(), p.Shape().Intervals(), target)
 }
 
-// The forms are the owner's decision C1 in Issue #78
-// (docs/architecture/theory-conventions.md, 6): uppercase for major and
-// augmented, lowercase for minor and diminished, °, ø7 and +, an accidental
-// before an altered degree, the kinds and tensions of chord names, and "/"
-// with the target. A chord without a third takes the case of the triad of its
-// degree in the major key (I ii iii IV V vi vii°). The chords in C major are
-// the major scale C D E F G A B with the members of each kind.
+// The forms are from docs/architecture/theory-conventions.md, 6. The owner's
+// decision C1 in Issue #78: uppercase for major and augmented, lowercase for
+// minor and diminished, °, ø7 and +, an accidental before an altered degree,
+// the kinds and tensions of chord names, and "/" with the target. A convention
+// of our own: a chord without a third takes its suffix on the degree, in the
+// case of the triad of its degree in the major key (I ii iii IV V vi vii°),
+// and in uppercase on an altered degree (the owner's decision in #82). Decided in the implementation (#80): the target is one of
+// ii, iii, IV, V and vi, and the degree before "/" is counted from the root of
+// the target. The chords in C major are the major scale C D E F G A B with the
+// members of each kind.
 func TestRomanNumerals(t *testing.T) {
 	n, flat, sharp := notation.Natural, notation.Flat, notation.Sharp
 	tests := []struct {
@@ -83,6 +86,10 @@ func TestRomanNumerals(t *testing.T) {
 		{"iisus2", 2, n, "M2 P5", 0, "Dsus2"},
 		{"iiisus4", 3, n, "P4 P5", 0, "Esus4"},
 		{"Isus2", 1, n, "M2 P5", 0, "Csus2"},
+		{"♭VIIsus4", 7, flat, "P4 P5", 0, "B♭sus4"},
+		{"♭IIIsus2", 3, flat, "M2 P5", 0, "E♭sus2"},
+		{"♭VIsus4", 6, flat, "P4 P5", 0, "A♭sus4"},
+		{"♭VII7sus4", 7, flat, "P4 P5 m7", 0, "B♭7sus4"},
 		// Tensions as in chord names.
 		{"V7(9)", 5, n, "M3 P5 m7 M9", 0, "G7(9)"},
 		{"V7(♭9,♭13)", 5, n, "M3 P5 m7 m9 m13", 0, "G7(♭9,♭13)"},
@@ -111,40 +118,36 @@ func TestRomanNumerals(t *testing.T) {
 	}
 }
 
-// The chords of I, IV, V7, vi and ♭VII in the twelve major keys (F♯ and G♭
-// both). The notes are those of each major scale; ♭VII lowers the seventh
-// degree a half step with the same letter. The chord names keep the spelling
-// (FormatChord); the shown names respell C♭ and F♭
-// (docs/architecture/theory-conventions.md, 6).
+// The chords of I, IV, V7, vi, ♭VII and ♭VI in the twelve major keys of the
+// app (docs/architecture/engine.md) and G♭. The notes are those of each major
+// scale; ♭VII and ♭VI lower the degree a half step with the same letter. In a
+// key the chord names are not respelled: FormatChord keeps the letter of the
+// degree (on D♭, ♭VII is C♭ and ♭VI is B𝄫; the owner's decision in #82,
+// docs/architecture/theory-conventions.md, 6).
 func TestRomanInMajorKeys(t *testing.T) {
-	romans := [5]string{"I", "IV", "V7", "vi", "♭VII"}
+	romans := [6]string{"I", "IV", "V7", "vi", "♭VII", "♭VI"}
 	tests := []struct {
 		tonic   string
-		spelled [5]string
-		shown   [5]string // when it differs from spelled
+		spelled [6]string
 	}{
-		{"C", [5]string{"C", "F", "G7", "Am", "B♭"}, [5]string{}},
-		{"G", [5]string{"G", "C", "D7", "Em", "F"}, [5]string{}},
-		{"D", [5]string{"D", "G", "A7", "Bm", "C"}, [5]string{}},
-		{"A", [5]string{"A", "D", "E7", "F♯m", "G"}, [5]string{}},
-		{"E", [5]string{"E", "A", "B7", "C♯m", "D"}, [5]string{}},
-		{"B", [5]string{"B", "E", "F♯7", "G♯m", "A"}, [5]string{}},
-		{"F♯", [5]string{"F♯", "B", "C♯7", "D♯m", "E"}, [5]string{}},
-		{"G♭", [5]string{"G♭", "C♭", "D♭7", "E♭m", "F♭"}, [5]string{"G♭", "B", "D♭7", "E♭m", "E"}},
-		{"D♭", [5]string{"D♭", "G♭", "A♭7", "B♭m", "C♭"}, [5]string{"D♭", "G♭", "A♭7", "B♭m", "B"}},
-		{"A♭", [5]string{"A♭", "D♭", "E♭7", "Fm", "G♭"}, [5]string{}},
-		{"E♭", [5]string{"E♭", "A♭", "B♭7", "Cm", "D♭"}, [5]string{}},
-		{"B♭", [5]string{"B♭", "E♭", "F7", "Gm", "A♭"}, [5]string{}},
-		{"F", [5]string{"F", "B♭", "C7", "Dm", "E♭"}, [5]string{}},
+		{"C", [6]string{"C", "F", "G7", "Am", "B♭", "A♭"}},
+		{"G", [6]string{"G", "C", "D7", "Em", "F", "E♭"}},
+		{"D", [6]string{"D", "G", "A7", "Bm", "C", "B♭"}},
+		{"A", [6]string{"A", "D", "E7", "F♯m", "G", "F"}},
+		{"E", [6]string{"E", "A", "B7", "C♯m", "D", "C"}},
+		{"B", [6]string{"B", "E", "F♯7", "G♯m", "A", "G"}},
+		{"F♯", [6]string{"F♯", "B", "C♯7", "D♯m", "E", "D"}},
+		{"G♭", [6]string{"G♭", "C♭", "D♭7", "E♭m", "F♭", "E𝄫"}},
+		{"D♭", [6]string{"D♭", "G♭", "A♭7", "B♭m", "C♭", "B𝄫"}},
+		{"A♭", [6]string{"A♭", "D♭", "E♭7", "Fm", "G♭", "F♭"}},
+		{"E♭", [6]string{"E♭", "A♭", "B♭7", "Cm", "D♭", "C♭"}},
+		{"B♭", [6]string{"B♭", "E♭", "F7", "Gm", "A♭", "G♭"}},
+		{"F", [6]string{"F", "B♭", "C7", "Dm", "E♭", "D♭"}},
 	}
 	for _, tt := range tests {
 		tonic, err := notation.ParseNoteName(tt.tonic)
 		if err != nil {
 			t.Fatalf("ParseNoteName(%q): %v", tt.tonic, err)
-		}
-		shown := tt.shown
-		if shown == [5]string{} {
-			shown = tt.spelled
 		}
 		for i, roman := range romans {
 			t.Run(tt.tonic+" "+roman, func(t *testing.T) {
@@ -159,9 +162,6 @@ func TestRomanInMajorKeys(t *testing.T) {
 				if got, err := notation.FormatChord(c); err != nil || got != tt.spelled[i] {
 					t.Errorf("FormatChord(%s in %s) = %q, %v; want %q", roman, tt.tonic, got, err, tt.spelled[i])
 				}
-				if got, err := notation.FormatChordForDisplay(c); err != nil || got != shown[i] {
-					t.Errorf("FormatChordForDisplay(%s in %s) = %q, %v; want %q", roman, tt.tonic, got, err, shown[i])
-				}
 			})
 		}
 	}
@@ -170,8 +170,7 @@ func TestRomanInMajorKeys(t *testing.T) {
 // Every position on the shapes of the vocabulary (each kind, and 7, maj7 and
 // m7 with each set of tensions), on every degree and alteration, with and
 // without each target, is written and read back to the same position, and the
-// text read back is written the same. The one failure allowed is a chord
-// without a third on an altered degree (ErrAlteredSus), and it must fail.
+// text read back is written the same.
 func TestRomanRoundTrip(t *testing.T) {
 	var shapes []notation.Shape
 	for _, name := range displayNames("C", nil) {
@@ -182,11 +181,6 @@ func TestRomanRoundTrip(t *testing.T) {
 		shapes = append(shapes, notation.ShapeOf(c))
 	}
 	for _, shape := range shapes {
-		onC, err := shape.On(material.NoteName{})
-		if err != nil {
-			t.Fatalf("shape %v on C: %v", shape.Intervals(), err)
-		}
-		noThird := onC.Triad() == material.TriadSus4 || onC.Triad() == material.TriadSus2
 		for degree := 1; degree <= 7; degree++ {
 			for _, alter := range []notation.Alteration{notation.Flat, notation.Natural, notation.Sharp} {
 				for _, target := range []int{0, 2, 3, 4, 5, 6} {
@@ -198,12 +192,6 @@ func TestRomanRoundTrip(t *testing.T) {
 						t.Fatalf("degree %d alter %d target %d: %v", degree, alter, target, err)
 					}
 					s, err := notation.FormatRoman(p)
-					if noThird && alter != notation.Natural {
-						if !errors.Is(err, notation.ErrAlteredSus) {
-							t.Fatalf("FormatRoman(%s) = %q, %v; want error %v", describePosition(p), s, err, notation.ErrAlteredSus)
-						}
-						continue
-					}
 					if err != nil {
 						t.Fatalf("FormatRoman(%s): %v", describePosition(p), err)
 					}
@@ -261,11 +249,13 @@ func TestParseRomanRejects(t *testing.T) {
 		{"V7sus4(9)", notation.ErrNoTensions, "(9)"},
 		{"viiø7(9)", notation.ErrNoTensions, "(9)"},
 		{"V7(13,9)", notation.ErrTensionOrder, "9)"},
-		// No third: the case of the triad of the degree, and no alteration.
+		// No third: the case of the triad of the degree, and uppercase on an
+		// altered degree.
 		{"vsus4", notation.ErrRomanCase, "vsus4"},
 		{"IIsus2", notation.ErrRomanCase, "IIsus2"},
 		{"VIIsus4", notation.ErrRomanCase, "VIIsus4"},
-		{"♭VIIsus4", notation.ErrAlteredSus, "♭VIIsus4"},
+		{"♭viisus4", notation.ErrRomanCase, "viisus4"},
+		{"♯ivsus4", notation.ErrRomanCase, "ivsus4"},
 		// One target: ii, iii, IV, V or vi.
 		{"V7/", notation.ErrTarget, ""},
 		{"V/I", notation.ErrTarget, "I"},
@@ -301,7 +291,6 @@ func TestFormatRomanRejects(t *testing.T) {
 		{"a bass (V with the third in the bass)", withBass, notation.ErrRomanBass},
 		{"the zero value (the root alone)", notation.Position{}, notation.ErrNoName},
 		{"a sixth (C6 on I)", position(1, notation.Natural, "M3 P5 M6", 0), notation.ErrNoName},
-		{"a chord without a third on ♭VII", position(7, notation.Flat, "P4 P5", 0), notation.ErrAlteredSus},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
