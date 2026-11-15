@@ -2,8 +2,6 @@ package progression_test
 
 import (
 	"errors"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/hassaku63/chord-rambler/backend/internal/material"
@@ -11,9 +9,8 @@ import (
 )
 
 const (
-	flat  = -1
-	nat   = 0
-	sharp = 1
+	flat = -1
+	nat  = 0
 )
 
 func note(l material.Letter, alter int) material.NoteName {
@@ -22,42 +19,6 @@ func note(l material.Letter, alter int) material.NoteName {
 		panic(err)
 	}
 	return n
-}
-
-// ivs parses intervals such as "M3 P5 m7".
-func ivs(s string) []material.Interval {
-	var out []material.Interval
-	for _, f := range strings.Fields(s) {
-		q, ok := map[byte]material.Quality{
-			'P': material.Perfect, 'M': material.Major, 'm': material.Minor,
-			'A': material.Augmented, 'd': material.Diminished,
-		}[f[0]]
-		number, err := strconv.Atoi(f[1:])
-		if !ok || err != nil {
-			panic("bad interval in a test table: " + f)
-		}
-		iv, err := material.NewInterval(number, q)
-		if err != nil {
-			panic(err)
-		}
-		out = append(out, iv)
-	}
-	return out
-}
-
-// chord returns the chord on the root with the intervals and, unless empty,
-// the bass.
-func chord(root material.NoteName, intervals, bass string) material.Chord {
-	c, err := material.NewChord(root, ivs(intervals)...)
-	if err != nil {
-		panic(err)
-	}
-	if bass != "" {
-		if c, err = c.WithBass(ivs(bass)[0]); err != nil {
-			panic(err)
-		}
-	}
-	return c
 }
 
 func slot(c progression.Content, beats int) progression.Slot {
@@ -87,7 +48,14 @@ func TestNewMeter(t *testing.T) {
 // No chord and none chosen yet are different values, and neither holds a
 // chord. The zero value is none chosen yet.
 func TestContent(t *testing.T) {
-	c := chord(note(material.C, nat), "M3 P5", "")
+	third, err := material.NewInterval(3, material.Major)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := material.NewChord(note(material.G, nat), third)
+	if err != nil {
+		t.Fatal(err)
+	}
 	tests := []struct {
 		name                 string
 		content              progression.Content
