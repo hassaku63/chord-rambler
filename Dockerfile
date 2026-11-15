@@ -40,7 +40,7 @@ ENV PORT=8080 RESOLVER=127.0.0.11
 EXPOSE 8080
 
 # --- api: the Go server (the default target) ----------------------------------
-FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab AS api
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:aafe993665bf6200db38a02c11a9351e782a84b6a45e7f33b6695638c88e3931 AS api
 WORKDIR /app
 COPY --from=backend /out/server /app/server
 ENV PORT=8080

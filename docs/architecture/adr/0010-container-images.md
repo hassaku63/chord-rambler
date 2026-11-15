@@ -13,7 +13,7 @@ ADR-0008 は、手元のコマンドとコンテナの両方で動かせるよ�
 
 ## 決定
 
-1. **1 つの Dockerfile から 2 つのイメージを作る。** `api` は Go のサーバーを distroless（`static-debian12:nonroot`）に載せる。`web` は nginx（`nginx-unprivileged`）で、ビルドした画面を配信し、`/api` を `api` へ中継する。どちらも root 以外のユーザーで動く。
+1. **1 つの Dockerfile から 2 つのイメージを作る。** `api` は Go のサーバーを distroless の `static` の `nonroot` に載せる（Debian の版と digest は `Dockerfile`）。`web` は nginx（`nginx-unprivileged`）で、ビルドした画面を配信し、`/api` を `api` へ中継する。どちらも root 以外のユーザーで動く。
 2. **ビルドに使う Go と Node の版は、`.tool-versions` から build arg で渡す。** Dockerfile に版を書かない。`make image` と `make up` が渡す。渡さずにビルドすると、イメージが見つからずに止まる。
 3. **実行用のベースイメージ（nginx と distroless）は、タグと digest で固定する。** Dependabot の docker が更新する。
 4. **HEALTHCHECK は置かない。** distroless にはシェルがなく、置くにはサーバーに確かめるためのフラグを足す必要がある。起動の確認は、スモークの検査が `health` を決まった回数だけ待って行う。
