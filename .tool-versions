@@ -1,0 +1,2 @@
+# Single source of truth for tool versions. Read by the Makefile (and so by CI).
+actionlint 1.7.12
