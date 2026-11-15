@@ -39,3 +39,17 @@
 | 当たるべき場面 | `compose.yaml` を書く・変えるとき。手元でコンテナを動かす構成（`make up`）を変えるとき |
 | chord-rambler との接点 | `compose.yaml`（`web` と `api`。`api` は公開しない。ADR-0010）。`version` は書いていない |
 | 確認 | 2026-11-15 / 間隔 180 日 |
+
+## 音楽の表記
+
+### MusicXML の音高（`pitch` の `step` と `alter`）
+
+| 欄 | 内容 |
+| --- | --- |
+| 発行元 | W3C Music Notation Community Group（MusicXML 4.0。W3C の標準ではなく、Community Group の Final Report） |
+| 何を決めているか | 楽譜を交換する形式。音高を、全音階の幹音（`step`。A〜G）、半音の数で書く変化（`alter`）、オクターブの組で表す |
+| 一次情報 | https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/pitch/ 、`step` は https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/step/ 、`alter` は https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/alter/ 。どれも登録なしで読める。編集中の版は https://w3c.github.io/musicxml/ |
+| 状態 | 現行。確かめた版は 4.0（Final Community Group Report、2021-06-01） |
+| 当たるべき場面 | 音名の綴りの持ち方を決める・変えるとき。楽譜の形式を読み書きするとき。表記のまとまりで、和音の根音やバスの綴りを書くとき |
+| chord-rambler との接点 | `backend/internal/material` の音名（`NoteName`）が、幹音と変化の組で綴りを持つ（`docs/architecture/domain-model.md`）。食い違い: MusicXML の `alter` は小数（微分音）を許すが、音名の変化は −2〜+2 の整数に限る。音名はオクターブを持たない |
+| 確認 | 2026-11-15 / 間隔 365 日 |
