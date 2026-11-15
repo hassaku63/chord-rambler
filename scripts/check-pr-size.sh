@@ -19,7 +19,8 @@ fail_over=1000
 excludes=(':(exclude)frontend/package-lock.json' ':(exclude)backend/go.sum' ':(exclude)*.gen.ts')
 
 # "added<TAB>removed<TAB>path"; binary files show "-" and are skipped.
-if ! stat=$(git diff --numstat "$base...$head" -- . "${excludes[@]}"); then
+# quotePath=false keeps non-ASCII file names readable in the list.
+if ! stat=$(git -c core.quotePath=false diff --numstat "$base...$head" -- . "${excludes[@]}"); then
   echo "pr-size: cannot compare $base...$head (is the base fetched?)" >&2
   exit 2
 fi
