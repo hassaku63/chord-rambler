@@ -236,6 +236,38 @@
 | 対象 | なし |
 | 確認 | 2026-11-15 / 間隔 90 日 |
 
+## 対象外の依存
+
+項目を持たない依存（`SKILL.md` の「依存と項目の対応」）。
+
+| 依存 | 種類 | 理由 |
+| --- | --- | --- |
+| `go` | まだない | Go に固有の項目を書く（#39） |
+| `node` | 要らない | 画面のビルドとテストを動かすだけで、判断の要る使い方をしない |
+| `react` | まだない | React に固有の項目を書く（#39） |
+| `react-dom` | 要らない | 描画の入口だけで、使い方は `react` の項目で足りる |
+| `typescript` | まだない | TypeScript に固有の項目を書く（#39） |
+| `vitest` | まだない | テストの道具の項目を書く（#39） |
+| `@testing-library/react` | まだない | テストの道具の項目を書く（#39） |
+| `@testing-library/dom` | 要らない | `@testing-library/react` の土台。使い方はそちらの項目で足りる |
+| `@testing-library/jest-dom` | 要らない | 照合の関数を足すだけ |
+| `vite` | 要らない | ビルドの設定だけで、判断の要る使い方をしない |
+| `@vitejs/plugin-react` | 要らない | Vite で JSX を扱うだけ |
+| `jsdom` | 要らない | テストで DOM を用意するだけ |
+| `eslint` | 要らない | 規則は設定ファイルが正（`frontend/eslint.config.js`） |
+| `typescript-eslint` | 要らない | 同上 |
+| `eslint-plugin-react-hooks` | 要らない | 同上 |
+| `eslint-plugin-testing-library` | 要らない | 同上 |
+| `@vitest/eslint-plugin` | 要らない | 同上 |
+| `@eslint/js` | 要らない | 同上 |
+| `eslint-config-prettier` | 要らない | Prettier と重なる規則を切るだけ |
+| `globals` | 要らない | 大域の名前の一覧 |
+| `prettier` | 要らない | 書式は道具が決める |
+| `openapi-typescript` | 要らない | 契約から型を生成するだけ（ADR-0008） |
+| `@types/node` | 要らない | 型の定義 |
+| `@types/react` | 要らない | 型の定義 |
+| `@types/react-dom` | 要らない | 型の定義 |
+
 ## 外したもの
 
 検討して載せなかった知見。再び提案されたときに、同じ検討を繰り返さないために残す。
