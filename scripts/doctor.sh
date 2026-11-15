@@ -21,7 +21,12 @@ report() { # tool wanted found
 # Run inside backend/ so the go.mod toolchain directive applies (Go may download it).
 report golang "$(want golang)" "$(cd backend && go version 2>/dev/null | awk '{ sub(/^go/, "", $3); print $3 }')"
 report golangci-lint "$(want golangci-lint)" "$(golangci-lint version 2>/dev/null | sed -nE 's/.*version v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')"
-report actionlint "$(want actionlint)" "$(actionlint -version 2>/dev/null | head -1 | sed 's/^v//')"
+# `make actions-lint` falls back to the pinned image, so docker is enough.
+if command -v actionlint >/dev/null 2>&1 || ! command -v docker >/dev/null 2>&1; then
+  report actionlint "$(want actionlint)" "$(actionlint -version 2>/dev/null | head -1 | sed 's/^v//')"
+else
+  echo "- actionlint: not installed; make actions-lint runs the pinned image $(want actionlint) with docker"
+fi
 
 if [ "$status" -ne 0 ]; then
   echo
