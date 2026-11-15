@@ -132,7 +132,7 @@ ready の Issue を 1 つ → 受け入れ条件を確認 → テストを書く
 - 検査、CI、依存、ビルドとコンテナ、API の契約（`docs/api/openapi.yaml`）を変える。
 - 音楽理論の立場（`docs/architecture/theory-conventions.md`）や、説明の文の規則（`docs/architecture/explanations.md`）を変える。
 - 別のセッションや人が開いた PR。
-- 差分が、lockfile と生成物を除いて 600 行を超える（#7 で決めた、PR の大きさの警告の線）。
+- PR の大きさの予算が警告を出す（`make pr-size`。`docs/dev/harness.md`）。
 - 当たるかどうか迷う。
 
 エージェントがマージしたら、PR に、エージェントがマージしたことと、上の条件に当たる理由を 1 行で書く。

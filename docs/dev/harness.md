@@ -2,7 +2,7 @@
 
 `make check` と CI が行う検査の全リスト（ADR-0004）。**検査を足すときは必ずここに 1 行足す。** 長いあいだ何も捕まえず費用だけがある検査は、削除の候補にする。
 
-CI の `required (make check)` は `make check` をそのまま呼ぶ。必須チェックはこの 1 つ。CI はそれに加えて、ネットワークが要る検査（`make backend-deps-check`、`make frontend-deps-check`）と、Docker が要る検査（`make dockerfile-lint`）を、必須のジョブで走らせる。必須でない `image` のジョブが、イメージのビルドとスモークを走らせる。
+CI の `required (make check)` は `make check` をそのまま呼ぶ。必須チェックはこの 1 つ。CI はそれに加えて、ネットワークが要る検査（`make backend-deps-check`、`make frontend-deps-check`）と、Docker が要る検査（`make dockerfile-lint`）と、比べる先が要る PR の大きさの予算（`make pr-size`）を、必須のジョブで走らせる。必須でない `image` のジョブが、イメージのビルドとスモークを走らせる。
 
 ## 文書（ADR-0002）
 
@@ -66,6 +66,12 @@ CI の `required (make check)` は `make check` をそのまま呼ぶ。必須�
 | hadolint（`Dockerfile`。版は `.tool-versions`。hadolint か動いている Docker が要るので `make check` には入れない） | Dockerfile の典型的な誤りと、`RUN` の中のシェルの誤り | `make dockerfile-lint` | CI の必須のジョブ |
 | BuildKit のビルドチェック（`docker buildx build --check`、`api` と `web`） | hadolint にない規則: 定義されていない変数、`ARG`・`ENV` の秘密情報など | （CI の手順を参照） | CI の `image` |
 | イメージのビルドと、スモークの検査（`scripts/smoke.sh`: `health` が渡した版を返す、`/` が画面の HTML を返す、存在しないファイルが 404、API の存在しないパスが problem の文書の 404） | Dockerfile と compose の腐敗、配信と中継の退行 | `make up`、`make smoke`、`make down`（Docker が要る） | CI の `image`（必須ではない。ログを必ず出す） |
+
+## 変更の大きさ
+
+| 検査 | 防ぐもの | 個別実行 | 場所 |
+| --- | --- | --- | --- |
+| PR の大きさの予算（足した行と消した行の和。lockfile、`*.gen.ts`、バイナリは数えない。600 行を超えると警告、1000 行を超えると失敗。比べる先が要るので `make check` には入れない） | 読みきれない大きさの PR | `make pr-size`（比べる先は `PR_BASE`、既定は `origin/main`） | CI の必須のジョブ（PR のときだけ。マージの結果のコミットの 1 つ目の親と比べる） |
 
 ## 知識の鮮度（ADR-0007）
 

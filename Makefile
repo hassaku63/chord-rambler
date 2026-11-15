@@ -12,7 +12,7 @@ WEB_PORT ?= 8080
 COMPOSE := GO_VERSION=$(GO_VERSION) NODE_VERSION=$(NODE_VERSION) VERSION=$(VERSION) WEB_PORT=$(WEB_PORT) docker compose
 
 .PHONY: help setup check doctor fmt fmt-check lint test build dev-backend dev-frontend \
-        image up down logs smoke dockerfile-lint \
+        image up down logs smoke dockerfile-lint pr-size \
         docs-check practices-check shell-lint actions-lint \
         backend-fmt backend-fmt-check backend-lint backend-test backend-build backend-deps-check \
         frontend-fmt frontend-fmt-check frontend-typecheck frontend-lint frontend-test frontend-build frontend-deps-check
@@ -108,6 +108,12 @@ dockerfile-lint: ## hadolint the Dockerfile, with a local hadolint or the pinned
 	if command -v hadolint >/dev/null; then hadolint Dockerfile; \
 	elif docker info >/dev/null 2>&1; then docker run --rm -i "hadolint/hadolint:v$$v" < Dockerfile; \
 	else echo "dockerfile-lint: needs hadolint $$v or a running Docker"; exit 1; fi
+
+# --- size of the change ------------------------------------------------------
+
+PR_BASE ?= origin/main
+pr-size: ## Count the lines this branch changes against PR_BASE (default origin/main); warn over 600, fail over 1000
+	bash scripts/check-pr-size.sh $(PR_BASE)
 
 # --- documents and scripts ---------------------------------------------------
 
