@@ -88,6 +88,7 @@ ready の Issue を 1 つ → 受け入れ条件を確認 → テストを書く
 - `make check` が通り、CI の `required (make check)` が緑。
 - 振る舞いの変更にテストがある。
 - 言及が変わる文書を直してある。
+- 説明の文の型や、カタログの文を足した・変えたなら、`docs/architecture/explanations.md` の基準と誤りの表に照らしてある。
 - PR に、スコープ外にしたことが書いてある。
 
 ## コミットと PR

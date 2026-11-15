@@ -11,6 +11,7 @@
 
 - [architecture/engine.md](architecture/engine.md) — エンジンの構成（土台のデータ、まとまりと責務）
 - [architecture/theory-conventions.md](architecture/theory-conventions.md) — 読みと表記が従う流儀と、その出どころ
+- [architecture/explanations.md](architecture/explanations.md) — 説明の文の規則（許す単純化、許さない誤り、止め方）
 - [api/openapi.yaml](api/openapi.yaml) — API の契約（OpenAPI）。サーバーのルートと、画面の型の正
 - [architecture/adr/README.md](architecture/adr/README.md) — 設計判断の記録（ADR）の索引
 
