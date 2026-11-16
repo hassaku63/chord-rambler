@@ -1,42 +1,12 @@
 package catalog
 
 import (
-	"bytes"
 	_ "embed" // the catalogue is embedded in the binary (ADR-0008, 6)
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/hassaku63/chord-rambler/backend/internal/reading"
 )
-
-// ErrInvalid is wrapped by every error from loading a catalogue that is not
-// well formed.
-var ErrInvalid = errors.New("invalid catalogue")
-
-// Grounds is the kind of knowledge an entry of a catalogue rests on
-// (docs/architecture/explanations.md, "根拠の種類ごとの言い方"). The zero value
-// is never returned by a loader.
-type Grounds int
-
-// The kinds of grounds a catalogue may hold.
-const (
-	// Convention is a preference of a style: said as a frequency, never as
-	// right or wrong.
-	Convention Grounds = iota + 1
-)
-
-// String returns the name of the constant, for tests and logs.
-func (g Grounds) String() string {
-	switch g {
-	case Convention:
-		return "Convention"
-	default:
-		return fmt.Sprintf("Grounds(%d)", int(g))
-	}
-}
 
 // Preference is how often the source says one function moves to another. The
 // zero value is never returned by a loader.
@@ -49,7 +19,7 @@ const (
 	// LessCommon is a move the source says tends to be less common.
 	LessCommon
 	// Unstated is a move the source says nothing about how often it is
-	// made. It is not a frequency, so no label of convention is shown for it.
+	// made. It is not a statement of frequency.
 	Unstated
 )
 
@@ -65,13 +35,6 @@ func (p Preference) String() string {
 	default:
 		return fmt.Sprintf("Preference(%d)", int(p))
 	}
-}
-
-// Source is where the data of a catalogue comes from: the address of the
-// document and the version of it that was read.
-type Source struct {
-	URL     string
-	Version string
 }
 
 // Transition is one entry of the catalogue of function transitions: how often
@@ -128,10 +91,7 @@ var (
 )
 
 type transitionsDoc struct {
-	Source *struct {
-		URL     string `json:"url"`
-		Version string `json:"version"`
-	} `json:"source"`
+	Source      *sourceDoc `json:"source"`
 	Transitions []struct {
 		From       string `json:"from"`
 		To         string `json:"to"`
@@ -140,32 +100,36 @@ type transitionsDoc struct {
 	} `json:"transitions"`
 }
 
+// transitionsNames are the names of the members of the document.
+var transitionsNames = []string{
+	"source", "url", "version", "style",
+	"transitions", "from", "to", "preference", "grounds",
+}
+
 // ParseFunctionTransitions parses a catalogue of function transitions and
-// checks it: the source has an address and a version, every value is known,
-// and each of the nine pairs of functions appears exactly once. Fields that
-// are not part of the catalogue are errors too. Every error wraps ErrInvalid.
+// checks it: the source has an address, a version and a known style, every
+// value is known, and each of the nine pairs of functions appears exactly
+// once. Names of members are matched exactly; a name that is not part of the
+// catalogue, or one repeated in an object, is an error too. Every error wraps
+// ErrInvalid, and only ErrInvalid.
 func ParseFunctionTransitions(data []byte) (FunctionTransitions, error) {
 	out, err := parseFunctionTransitions(data)
 	if err != nil {
-		return FunctionTransitions{}, fmt.Errorf("%w: function transitions: %w", ErrInvalid, err)
+		return FunctionTransitions{}, fmt.Errorf("%w: function transitions: %v", ErrInvalid, err)
 	}
 	return out, nil
 }
 
 func parseFunctionTransitions(data []byte) (FunctionTransitions, error) {
 	var doc transitionsDoc
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&doc); err != nil {
+	if err := decodeStrict(data, &doc, transitionsNames...); err != nil {
 		return FunctionTransitions{}, err
 	}
-	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
-		return FunctionTransitions{}, errors.New("data after the document")
+	source, err := parseSource(doc.Source)
+	if err != nil {
+		return FunctionTransitions{}, err
 	}
-	if doc.Source == nil || strings.TrimSpace(doc.Source.URL) == "" || strings.TrimSpace(doc.Source.Version) == "" {
-		return FunctionTransitions{}, errors.New("the source needs a url and a version")
-	}
-	out := FunctionTransitions{source: Source{URL: doc.Source.URL, Version: doc.Source.Version}}
+	out := FunctionTransitions{source: source}
 	var seen [3][3]bool
 	for n, e := range doc.Transitions {
 		t := Transition{

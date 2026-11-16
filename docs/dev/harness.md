@@ -18,7 +18,7 @@ CI の `required (make check)` は `make check` をそのまま呼ぶ。必須�
 | Go のテスト（race、cover） | 振る舞いの退行 | `make backend-test`（手元の toolchain に coverage の道具がなければ `GOTEST_FLAGS=-race`） | `make check` |
 | `go build` | ビルドできないコード | `make backend-build` | `make check` |
 | ルートと契約の一致のテスト（`docs/api/openapi.yaml` の操作と、サーバーに登録したルート。契約の `paths` の形が崩れていても落ちる） | 契約にないルート、ルートのない操作（ADR-0008） | `cd backend && go test ./internal/httpapi/ -run TestRoutesMatchOpenAPI` | `make check` |
-| 埋め込んだカタログの読み込みと検証のテスト（項目の欠けと重複、知らない値、空の出どころ） | 壊れたカタログを埋め込んだまま出すこと（ADR-0008 の 6） | `cd backend && go test ./internal/catalog/ -run TestEveryCatalogueLoads` | `make check` |
+| 埋め込んだカタログの読み込みと検証のテスト（項目の欠けと重複、知らない値と項目名、空の出どころと様式の範囲。JSON のファイルの一覧と、登録した読み込む関数の一覧の一致） | 壊れたカタログや、検証されないカタログを埋め込んだまま出すこと（ADR-0008 の 6） | `cd backend && go test ./internal/catalog/` | `make check` |
 | Vitest と Testing Library | 画面の振る舞いの退行 | `make frontend-test` | `make check` |
 | `tsc -b` | 型の矛盾 | `make frontend-typecheck` | `make check` |
 | 生成した API の型の鮮度（`docs/api/openapi.yaml` から `frontend/src/shared/api/schema.gen.ts`） | 画面の型と契約のずれ。YAML や OpenAPI として壊れた契約 | `bash scripts/check-api-types.sh`（直すときは `cd frontend && npm run gen:api`） | `make check` |

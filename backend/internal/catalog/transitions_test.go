@@ -21,6 +21,9 @@ import (
 //     cycle, so S → T is LessCommon too (#114);
 //   - the page says nothing about how often a function follows itself; it
 //     only speaks of zones of one function: Unstated (#114).
+//
+// The page limits only the sentence on the less common moves to classical
+// music; the catalogue keeps the limit for the whole of it, as Style (#114).
 func TestEmbeddedFunctionTransitions(t *testing.T) {
 	c, err := catalog.LoadFunctionTransitions()
 	if err != nil {
@@ -29,6 +32,7 @@ func TestEmbeddedFunctionTransitions(t *testing.T) {
 	wantSource := catalog.Source{
 		URL:     "https://github.com/openmusictheory/openmusictheory.github.io/blob/a907aa015f7ec54b925ddb070d2d36aecd0dc705/harmonicSyntax1.md",
 		Version: "a907aa015f7ec54b925ddb070d2d36aecd0dc705",
+		Style:   catalog.Classical,
 	}
 	if got := c.Source(); got != wantSource {
 		t.Errorf("Source() = %+v; want %+v", got, wantSource)
@@ -92,7 +96,7 @@ var validEntries = []string{
 	`{"from": "D", "to": "D", "preference": "unstated", "grounds": "convention"}`,
 }
 
-const validSource = `{"url": "https://example.org/a", "version": "v1"}`
+const validSource = `{"url": "https://example.org/a", "version": "v1", "style": "classical"}`
 
 // doc writes a catalogue with the source and the entries.
 func doc(source string, entries ...string) string {
@@ -110,53 +114,49 @@ func TestParseFunctionTransitions(t *testing.T) {
 	if _, err := catalog.ParseFunctionTransitions([]byte(doc(validSource, validEntries...))); err != nil {
 		t.Fatalf("ParseFunctionTransitions(valid) error = %v", err)
 	}
+	// want is part of the message the package writes, or empty when the
+	// decoder of the standard library finds the error.
 	tests := []struct {
 		name string
 		data string
-		want string // in the error
+		want string
 	}{
-		{"not JSON", `{"source": `, "unexpected EOF"},
+		{"not JSON", `{"source": `, ""},
+		{"null", `null`, "the source needs"},
+		{"an array", `[]`, ""},
 		{"data after the document", doc(validSource, validEntries...) + ` {}`, "data after the document"},
-		{"a closing brace after the document", doc(validSource, validEntries...) + ` }`, "data after the document"},
+		{"a closing brace after the document", doc(validSource, validEntries...) + ` }`, ""},
 		{"no source", `{"transitions": [` + strings.Join(validEntries, ", ") + `]}`, "the source needs"},
-		{"empty url", doc(`{"url": "", "version": "v1"}`, validEntries...), "the source needs"},
-		{"blank version", doc(`{"url": "https://example.org/a", "version": " "}`, validEntries...), "the source needs"},
-		{"no version", doc(`{"url": "https://example.org/a"}`, validEntries...), "the source needs"},
+		{"empty url", doc(`{"url": "", "version": "v1", "style": "classical"}`, validEntries...), "the source needs"},
+		{"blank version", doc(`{"url": "https://example.org/a", "version": " ", "style": "classical"}`, validEntries...), "the source needs"},
+		{"no version", doc(`{"url": "https://example.org/a", "style": "classical"}`, validEntries...), "the source needs"},
+		{"no style", doc(`{"url": "https://example.org/a", "version": "v1"}`, validEntries...), "unknown style"},
+		{"empty style", doc(`{"url": "https://example.org/a", "version": "v1", "style": ""}`, validEntries...), "unknown style"},
+		{"unknown style", doc(`{"url": "https://example.org/a", "version": "v1", "style": "pop"}`, validEntries...), "unknown style"},
 		{"no entries", doc(validSource), "missing Tonic → Tonic"},
 		{"a pair missing", doc(validSource, validEntries[1:]...), "missing Tonic → Tonic"},
-		{"a pair twice", doc(validSource, replaced(0, validEntries[1])...), "appears twice"},
+		{"a pair twice", doc(validSource, replaced(0, validEntries[1])...), "T → S appears twice"},
 		{"unknown function", doc(validSource, replaced(0, `{"from": "X", "to": "T", "preference": "unstated", "grounds": "convention"}`)...), "unknown function"},
 		{"no function", doc(validSource, replaced(0, `{"to": "T", "preference": "unstated", "grounds": "convention"}`)...), "unknown function"},
 		{"function in lower case", doc(validSource, replaced(0, `{"from": "t", "to": "T", "preference": "unstated", "grounds": "convention"}`)...), "unknown function"},
+		{"function with a space", doc(validSource, replaced(0, `{"from": " T", "to": "T", "preference": "unstated", "grounds": "convention"}`)...), "unknown function"},
 		{"unknown preference", doc(validSource, replaced(1, `{"from": "T", "to": "S", "preference": "often", "grounds": "convention"}`)...), "unknown preference"},
 		{"no preference", doc(validSource, replaced(1, `{"from": "T", "to": "S", "grounds": "convention"}`)...), "unknown preference"},
 		{"unknown grounds", doc(validSource, replaced(1, `{"from": "T", "to": "S", "preference": "common", "grounds": "association"}`)...), "unknown grounds"},
 		{"no grounds", doc(validSource, replaced(1, `{"from": "T", "to": "S", "preference": "common"}`)...), "unknown grounds"},
-		{"unknown field", doc(validSource, replaced(1, `{"from": "T", "to": "S", "preference": "common", "grounds": "convention", "weight": 1}`)...), "unknown field"},
+		{"unknown name in an entry", doc(validSource, replaced(1, `{"from": "T", "to": "S", "preference": "common", "grounds": "convention", "weight": 1}`)...), "unknown name \"weight\""},
+		{"unknown name at the top", `{"source": ` + validSource + `, "transitions": [` + strings.Join(validEntries, ", ") + `], "notes": "x"}`, "unknown name \"notes\""},
+		{"unknown name in the source", doc(`{"url": "https://example.org/a", "version": "v1", "style": "classical", "license": "x"}`, validEntries...), "unknown name \"license\""},
+		{"name in another case", doc(validSource, replaced(1, `{"FROM": "T", "to": "S", "preference": "common", "grounds": "convention"}`)...), "unknown name \"FROM\""},
+		{"name in the wrong place", doc(validSource, replaced(1, `{"from": "T", "to": "S", "preference": "common", "grounds": "convention", "url": "x"}`)...), ""},
+		{"name twice in an entry", doc(validSource, replaced(1, `{"from": "T", "to": "S", "preference": "common", "grounds": "convention", "from": "D"}`)...), "name \"from\" appears twice"},
+		{"name twice at the top", `{"source": ` + validSource + `, "source": ` + validSource + `, "transitions": [` + strings.Join(validEntries, ", ") + `]}`, "name \"source\" appears twice"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := catalog.ParseFunctionTransitions([]byte(tt.data))
 			if !errors.Is(err, catalog.ErrInvalid) || !strings.Contains(err.Error(), tt.want) {
 				t.Errorf("ParseFunctionTransitions(%s) error = %v; want one wrapping ErrInvalid, saying %q", tt.data, err, tt.want)
-			}
-		})
-	}
-}
-
-// TestEveryCatalogueLoads loads and checks every catalogue embedded in the
-// binary (ADR-0008, 6). A new catalogue adds its loader here.
-func TestEveryCatalogueLoads(t *testing.T) {
-	loaders := []struct {
-		name string
-		load func() error
-	}{
-		{"function transitions", func() error { _, err := catalog.LoadFunctionTransitions(); return err }},
-	}
-	for _, l := range loaders {
-		t.Run(l.name, func(t *testing.T) {
-			if err := l.load(); err != nil {
-				t.Errorf("load %s: %v", l.name, err)
 			}
 		})
 	}

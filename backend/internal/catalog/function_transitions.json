@@ -1,7 +1,8 @@
 {
   "source": {
     "url": "https://github.com/openmusictheory/openmusictheory.github.io/blob/a907aa015f7ec54b925ddb070d2d36aecd0dc705/harmonicSyntax1.md",
-    "version": "a907aa015f7ec54b925ddb070d2d36aecd0dc705"
+    "version": "a907aa015f7ec54b925ddb070d2d36aecd0dc705",
+    "style": "classical"
   },
   "transitions": [
     { "from": "T", "to": "T", "preference": "unstated", "grounds": "convention" },
