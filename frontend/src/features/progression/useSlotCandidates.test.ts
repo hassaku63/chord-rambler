@@ -114,6 +114,26 @@ describe('useSlotCandidates', () => {
     expect(get).toHaveBeenLastCalledWith(planned, 0, expect.any(AbortSignal));
   });
 
+  it('drops the answer when the slot is let go, so that it does not show for the slot chosen again', async () => {
+    const removed: Progression = { key: 'C', slots: filled.slots.slice(1) };
+    const get = vi
+      .fn()
+      .mockReturnValueOnce(Promise.resolve(answerOf('F')))
+      .mockReturnValue(new Promise(() => undefined));
+    const initialProps: { p: Progression; slot: number | null } = { p: planned, slot: 1 };
+    const { result, rerender } = renderHook(({ p, slot }) => useSlotCandidates(p, slot, get), {
+      initialProps,
+    });
+    await waitFor(() => expect(result.current.busy).toBe(false));
+
+    rerender({ p: planned, slot: null });
+    rerender({ p: removed, slot: null });
+    rerender({ p: removed, slot: 1 });
+
+    expect(result.current).toEqual({ candidates: { state: 'waiting' }, busy: true });
+    expect(get).toHaveBeenLastCalledWith(removed, 1, expect.any(AbortSignal));
+  });
+
   it('gives none when the server refuses', async () => {
     const get = vi.fn(() =>
       Promise.resolve<SlotCandidatesAnswer>({

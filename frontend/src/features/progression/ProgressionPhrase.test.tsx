@@ -1,39 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Progression } from '@/shared/api/client';
+import { stubServer, world } from '@/test/standInServer';
 import { ProgressionScreen } from './ProgressionScreen';
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status });
-}
-
-const diatonic = {
-  basis: 'school',
-  kind: 'diatonic',
-  function: 'subdominant',
-  modes: [],
-  fromParallelMinor: false,
-};
-
-/** A stand-in server: a slot reads as its chord's name, and F is the one candidate. */
-function standInServer(url: string, init?: RequestInit): Promise<Response> {
-  const body = JSON.parse(init?.body as string) as { progression?: Progression } & Progression;
-  if (url.endsWith('/progressions/next-candidates')) {
-    const f = {
-      chord: { basis: 'definition', name: 'F' },
-      roman: { basis: 'computation', numeral: 'IV' },
-      reading: diatonic,
-    };
-    return Promise.resolve(json({ groups: [{ kind: 'diatonic', candidates: [f] }] }));
-  }
-  if (url.endsWith('/progressions/notes')) {
-    return Promise.resolve(json({ notes: [] }));
-  }
-  const slots = body.slots.map((slot) =>
-    slot.chord === undefined ? {} : { chord: { basis: 'definition', name: slot.chord } },
-  );
-  return Promise.resolve(json({ slots }));
-}
 
 function addChord(name: string) {
   fireEvent.change(screen.getByRole('textbox', { name: '和音名' }), { target: { value: name } });
@@ -47,7 +15,7 @@ function lengths(select: HTMLElement | undefined): number[] {
 }
 
 describe('ProgressionScreen and the phrase', () => {
-  beforeEach(() => vi.stubGlobal('fetch', vi.fn(standInServer)));
+  beforeEach(() => stubServer());
   afterEach(() => {
     vi.unstubAllGlobals();
     localStorage.clear();
@@ -82,16 +50,14 @@ describe('ProgressionScreen and the phrase', () => {
   it('does not let a candidate be added while the next candidates are awaited', async () => {
     let release: () => void = () => undefined;
     const held = new Promise<void>((resolve) => (release = resolve));
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string, init?: RequestInit) => {
-        const body = init?.body as string;
-        if (url.endsWith('/progressions/next-candidates') && body.includes('"F"')) {
+    stubServer({
+      '/progressions/next-candidates': async (request) => {
+        if (request.progression.slots.some((slot) => slot.chord === 'F')) {
           await held;
         }
-        return standInServer(url, init);
-      }),
-    );
+        return world['/progressions/next-candidates'](request);
+      },
+    });
     render(<ProgressionScreen />);
     addChord('Dm7');
     const add = await screen.findByRole('button', { name: 'F を足す' });

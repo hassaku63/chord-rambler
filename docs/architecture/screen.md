@@ -22,12 +22,13 @@
 | `frontend/src/features/progression/useProgressionReading.ts` | 進行が変わるたびに `POST /progressions/readings` を呼ぶ。古い応答は捨てる |
 | `frontend/src/features/progression/usePlayback.ts` | 進行が変わるたびに `POST /progressions/notes` を呼び（古い応答は捨てる）、テンポを持ち、進行の全体か 1 枠を鳴らす。候補の試聴も、ここから鳴らす。試聴中の候補は、和音名と、試す枠の位置で持つ |
 | `frontend/src/features/progression/useNextCandidates.ts` | 進行が変わるたびに、`nextBeats` の長さで `POST /progressions/next-candidates` を呼ぶ。古い応答は捨てる。新しい応答を待つあいだは、前の答えを返し、待っていることを知らせる |
-| `frontend/src/features/progression/useSlotCandidates.ts` | 選んだ枠（まだ選んでいない枠か、和音のある枠）か進行が変わるたびに、`POST /progressions/slot-candidates` を呼ぶ。古い応答は捨てる。新しい応答を待つあいだは、同じ枠への前の答えだけを返す |
+| `frontend/src/features/progression/useSlotCandidates.ts` | 選んだ枠（まだ選んでいない枠か、和音のある枠）か進行が変わるたびに、`POST /progressions/slot-candidates` を呼ぶ。古い応答は捨てる。新しい応答を待つあいだは、前の答えを返すが、それは同じ枠を選び続けているあいだだけ。枠を替えたり選びを外したりしたら、前の答えを捨てる |
 | `frontend/src/features/progression/CandidateList.tsx` | 候補の一覧。末尾に足す候補と枠を埋める候補が、語（見出し、一覧の名前、ボタン）と、印と札の関数を変えて共有する |
 | `frontend/src/features/progression/schedule.ts` | 音符を発振器の予定（周波数、始まりの秒、長さ、音量）に直す純粋な関数 |
 | `frontend/src/features/progression/usePlayer.ts` | Web Audio で予定を鳴らす。`AudioContext` を作る関数を引数で受ける（テストは `frontend/src/test/fakeAudioContext.ts` を渡す） |
 | `frontend/src/features/progression/terms.ts` | 札と役割の識別子を語にする表。ここ 1 か所に置く。役割の一覧も、ここの表から引く |
 | `frontend/src/shared/api/client.ts` | API の呼び出しと、応答の検証 |
+| `frontend/src/test/standInServer.ts` | 画面のテスト（Testing Library）が `fetch` の代わりに置く仮のサーバー。契約の POST の経路すべてに、生成した型（`schema.gen.ts`）の形で答える。経路の一覧も答えの形も型で縛るので、契約に経路や必ず付く札が増えると、型の検査で落ちる。前後の枠に和音があるときに付く札（`resolution`、`nextResolution`）を縛る型も置く。既定の答え（`world`）を、テストのファイルが経路ごとに差し替える。拒む答えは `refuse` で作る |
 | `frontend/e2e/` | 実ブラウザでの画面の検査（ADR-0017）。通しのシナリオ（`progression.spec.ts`）、アクセシビリティ（`accessibility.spec.ts`）、配置（`layout.spec.ts`）。画面の語や操作を変えたら、ここの問い合わせも直す |
 
 ## 札の語
@@ -58,7 +59,7 @@
 ## 枠を埋める候補
 
 - まだ選んでいない枠か、和音のある枠を選ぶと、その枠の候補を出す。和音なしの枠では出さない。
-- 一覧の部品、まとまりと並び、開け閉め、待つあいだの示し方、フォーカスは、末尾に足す候補（上の「候補」）と同じ。並びはサーバーの順のまま（各まとまりで、役割に合う候補が先）。見出しは「選んだ枠を埋める候補（4 拍）」、一覧の名前は「この枠のダイアトニックの候補」の形にし、末尾に足す候補と区別する。
+- 一覧の部品、まとまりと並び、開け閉め、待つあいだの示し方、フォーカスは、末尾に足す候補（上の「候補」）と同じ。並びはサーバーの順のまま（各まとまりで、役割に合う候補が先）。待つあいだ前の一覧を出したままにするのは、同じ枠を選び続けているあいだだけ。選ぶ枠を替えたときと、選びを外してから選び直したときは、答えが来るまで一覧を出さない（消した枠で番号がずれても、前の枠の候補を出さない）。見出しは「選んだ枠を埋める候補（4 拍）」、一覧の名前は「この枠のダイアトニックの候補」の形にし、末尾に足す候補と区別する。
 - 短い印は、末尾に足す候補の印に、次の枠への解決（「次の枠へ 解決」）、次の枠の終止（「次の枠 正格終止」）、役割に合うかを足す。詳しい札では、前の枠の和音の解決、次の枠への解決、次の枠の終止、役割に合うか、合わない理由を出す。合わない理由は、当たらなかった条件を `docs/architecture/theory-conventions.md` の 7 の表の語で、表の順に並べる。役割なしと色合いの役割の枠では、サーバーが役割に合うかを返さないので、出さない。色合いの役割で候補を絞らない（#124 の C1）。
 - 操作は「この枠に入れる」と「試聴」。「この枠に入れる」は、枠の中身だけを候補の和音に替え、長さと役割は保つ。入れた和音は、末尾に足した候補と同じく、その枠の変形の土台になる。試聴は、候補を枠に入れた進行の音符を問い合わせ、前の枠・候補・次の枠を続けて鳴らす。前後の枠は、和音があるときだけ鳴らす。試聴中の示し方は、末尾に足す候補と同じ。
 

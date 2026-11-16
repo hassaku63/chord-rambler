@@ -1,145 +1,8 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Candidate, Note, Progression, SlotReading } from '@/shared/api/client';
 import { fakeAudio } from '@/test/fakeAudioContext';
+import { stubServer, world } from '@/test/standInServer';
 import { ProgressionScreen } from './ProgressionScreen';
-
-// The readings the stand-in server knows, as the contract writes them.
-const known: Record<string, SlotReading> = {
-  Dm7: {
-    chord: { basis: 'definition', name: 'Dm7' },
-    roman: { basis: 'computation', numeral: 'ii7' },
-    reading: {
-      basis: 'school',
-      kind: 'diatonic',
-      function: 'subdominant',
-      modes: [],
-      fromParallelMinor: false,
-    },
-    resolution: { basis: 'school', resolution: 'none' },
-    cadence: { basis: 'school', cadence: 'none' },
-    tensionCautions: { basis: 'school', cautions: [] },
-  },
-  F: {
-    chord: { basis: 'definition', name: 'F' },
-    roman: { basis: 'computation', numeral: 'IV' },
-  },
-  Fsus4: { chord: { basis: 'definition', name: 'Fsus4' } },
-  Fm: {
-    chord: { basis: 'definition', name: 'Fm' },
-    roman: { basis: 'computation', numeral: 'iv' },
-    reading: {
-      basis: 'school',
-      kind: 'borrowed',
-      function: 'none',
-      modes: ['dorian', 'aeolian'],
-      fromParallelMinor: true,
-    },
-  },
-};
-
-const diatonic = {
-  basis: 'school',
-  kind: 'diatonic',
-  function: 'subdominant',
-  modes: [],
-  fromParallelMinor: false,
-};
-
-/** Answers like POST /progressions/next-candidates: one candidate in each group. */
-function candidatesAfter(progression: Progression) {
-  const last = progression.slots.at(-1);
-  const f: Candidate = {
-    chord: { basis: 'definition', name: 'F' },
-    roman: { basis: 'computation', numeral: 'IV' },
-    reading: diatonic,
-  };
-  if (last?.chord !== undefined) {
-    f.rootMotion = { basis: 'computation', interval: 'm3' };
-    f.commonTones = { basis: 'computation', count: 2 };
-    f.preference = {
-      basis: 'convention',
-      from: 'subdominant',
-      to: 'subdominant',
-      preference: 'less-common',
-      style: 'classical',
-    };
-  }
-  const candidate = (name: string, numeral: string, kind: string): Candidate => ({
-    chord: { basis: 'definition', name },
-    roman: { basis: 'computation', numeral },
-    reading: { ...diatonic, kind, function: 'none' },
-  });
-  return {
-    groups: [
-      { kind: 'diatonic', candidates: [f] },
-      { kind: 'secondary-dominant', candidates: [candidate('D7', 'V7/V', 'secondary-dominant')] },
-      { kind: 'borrowed', candidates: [candidate('Fm', 'iv', 'borrowed')] },
-    ],
-  };
-}
-
-/** Answers like POST /variations: F and Fsus4 for F, a 400 for a chord with no third. */
-function variationsOf(chord: string): Response {
-  if (chord !== 'F') {
-    return json({ title: 'Bad Request', status: 400, detail: 'the chord has no third' }, 400);
-  }
-  const variation = (name: string) => ({
-    chord: { basis: 'definition', name },
-    isInput: name === chord,
-    members: { basis: 'definition', notes: [] },
-    reading: diatonic,
-    tensionCautions: { basis: 'school', cautions: [] },
-    outOfKey: { basis: 'computation', notes: [] },
-  });
-  return json({ variations: [variation('F'), variation('Fsus4')] });
-}
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status });
-}
-
-/** Answers like POST /progressions/notes: one note of middle C for each slot with a chord. */
-function notesOf(progression: Progression): Note[] {
-  let start = 0;
-  const notes: Note[] = [];
-  for (const slot of progression.slots) {
-    if (slot.chord !== undefined) {
-      notes.push({ pitch: 60, start, beats: slot.beats, velocity: 64 });
-    }
-    start += slot.beats;
-  }
-  return notes;
-}
-
-/**
- * Answers like POST /progressions/readings, a 400 naming the first chord it
- * cannot read, and like POST /progressions/notes.
- */
-function standInServer(url: string, init?: RequestInit): Promise<Response> {
-  if (url.endsWith('/variations')) {
-    const { chord } = JSON.parse(init?.body as string) as { chord: string };
-    return Promise.resolve(variationsOf(chord));
-  }
-  if (url.endsWith('/progressions/next-candidates')) {
-    const { progression } = JSON.parse(init?.body as string) as { progression: Progression };
-    return Promise.resolve(json(candidatesAfter(progression)));
-  }
-  const progression = JSON.parse(init?.body as string) as Progression;
-  if (url.endsWith('/progressions/notes')) {
-    return Promise.resolve(json({ notes: notesOf(progression) }));
-  }
-  const slots: SlotReading[] = [];
-  for (const [i, slot] of progression.slots.entries()) {
-    const reading = slot.chord === undefined ? {} : known[slot.chord];
-    if (reading === undefined) {
-      const detail = `slot ${i}: cannot read the chord name "${slot.chord ?? ''}"`;
-      return Promise.resolve(json({ title: 'Bad Request', status: 400, detail }, 400));
-    }
-    slots.push(reading);
-  }
-  return Promise.resolve(json({ slots }));
-}
 
 function addChord(name: string) {
   fireEvent.change(screen.getByRole('textbox', { name: '和音名' }), { target: { value: name } });
@@ -147,7 +10,7 @@ function addChord(name: string) {
 }
 
 describe('ProgressionScreen', () => {
-  beforeEach(() => vi.stubGlobal('fetch', vi.fn(standInServer)));
+  beforeEach(() => stubServer());
   afterEach(() => {
     vi.unstubAllGlobals();
     localStorage.clear();
@@ -322,16 +185,14 @@ describe('ProgressionScreen', () => {
   it('keeps the list, the open groups and the focus while the next candidates come', async () => {
     let release: () => void = () => undefined;
     const held = new Promise<void>((resolve) => (release = resolve));
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string, init?: RequestInit) => {
-        const body = init?.body as string;
-        if (url.endsWith('/progressions/next-candidates') && body.includes('"F"')) {
+    stubServer({
+      '/progressions/next-candidates': async (request) => {
+        if (request.progression.slots.some((slot) => slot.chord === 'F')) {
           await held;
         }
-        return standInServer(url, init);
-      }),
-    );
+        return world['/progressions/next-candidates'](request);
+      },
+    });
     render(<ProgressionScreen />);
     addChord('Dm7');
     const add = await screen.findByRole('button', { name: 'F を足す' });

@@ -1,14 +1,18 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Note, Progression, SlotCandidate } from '@/shared/api/client';
 import { fakeAudio } from '@/test/fakeAudioContext';
+import type { AfterChord, Answers, BeforeChord, Schemas } from '@/test/standInServer';
+import { stubServer } from '@/test/standInServer';
 import { ProgressionScreen } from './ProgressionScreen';
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status });
-}
+type Reading = Schemas['ChordReadingLabel'];
 
-function candidate(name: string, numeral: string, kind: string, fn: string): SlotCandidate {
+function candidate(
+  name: string,
+  numeral: string,
+  kind: Reading['kind'],
+  fn: Reading['function'],
+): Schemas['SlotCandidate'] {
   return {
     chord: { basis: 'definition', name },
     roman: { basis: 'computation', numeral },
@@ -16,81 +20,76 @@ function candidate(name: string, numeral: string, kind: string, fn: string): Slo
   };
 }
 
-const fits = { basis: 'school', fit: 'fits', unmet: [] };
-const misfitsFunction = { basis: 'school', fit: 'misfits', unmet: ['function'] };
+type Fit = Schemas['CandidateRoleFitLabel'];
+type Resolution = Schemas['ResolutionLabel'];
+const fits: Fit = { basis: 'school', fit: 'fits', unmet: [] };
+const misfitsFunction: Fit = { basis: 'school', fit: 'misfits', unmet: ['function'] };
+const none: Resolution = { basis: 'school', resolution: 'none' };
+const expected: Resolution = { basis: 'school', resolution: 'expected' };
 
-/**
- * The candidates the stand-in server gives in C for C | (準備) | G7 (高まり) | C: for
- * the slot of 準備, those that fit first in each group; for the slot of G7,
- * G7 going on to the C that closes the phrase.
- */
-const candidatesFor: Record<number, { kind: string; candidates: SlotCandidate[] }[]> = {
-  1: [
-    {
-      kind: 'diatonic',
-      candidates: [
-        { ...candidate('Dm7', 'ii7', 'diatonic', 'subdominant'), roleFit: fits },
-        { ...candidate('F', 'IV', 'diatonic', 'subdominant'), roleFit: fits },
-        { ...candidate('Em', 'iii', 'diatonic', 'tonic'), roleFit: misfitsFunction },
-      ],
-    },
-    {
-      kind: 'secondary-dominant',
-      candidates: [
-        {
-          ...candidate('D7', 'V7/V', 'secondary-dominant', 'none'),
-          nextResolution: { basis: 'school', resolution: 'expected' },
-          roleFit: misfitsFunction,
-        },
-      ],
-    },
-  ],
-  2: [
-    {
-      kind: 'diatonic',
-      candidates: [
-        {
-          ...candidate('G7', 'V7', 'diatonic', 'dominant'),
-          nextResolution: { basis: 'school', resolution: 'expected' },
-          nextCadence: { basis: 'school', cadence: 'authentic' },
-          roleFit: fits,
-        },
-      ],
-    },
-  ],
+/** For the slot of 準備, between C and G7: those that fit first in each group. */
+const betweenCAndG7: { kind: Schemas['CandidateKind']; candidates: AfterChord<BeforeChord>[] }[] = [
+  {
+    kind: 'diatonic',
+    candidates: [
+      {
+        ...candidate('Dm7', 'ii7', 'diatonic', 'subdominant'),
+        resolution: none,
+        nextResolution: none,
+        roleFit: fits,
+      },
+      {
+        ...candidate('F', 'IV', 'diatonic', 'subdominant'),
+        resolution: none,
+        nextResolution: none,
+        roleFit: fits,
+      },
+      {
+        ...candidate('Em', 'iii', 'diatonic', 'tonic'),
+        resolution: none,
+        nextResolution: none,
+        roleFit: misfitsFunction,
+      },
+    ],
+  },
+  {
+    kind: 'secondary-dominant',
+    candidates: [
+      {
+        ...candidate('D7', 'V7/V', 'secondary-dominant', 'none'),
+        resolution: none,
+        nextResolution: expected,
+        roleFit: misfitsFunction,
+      },
+    ],
+  },
+];
+
+/** For the slot of G7, after the slot not chosen: G7 going on to the C that closes the phrase. */
+const beforeTheLastC: { kind: Schemas['CandidateKind']; candidates: BeforeChord[] }[] = [
+  {
+    kind: 'diatonic',
+    candidates: [
+      {
+        ...candidate('G7', 'V7', 'diatonic', 'dominant'),
+        nextResolution: expected,
+        nextCadence: { basis: 'school', cadence: 'authentic' },
+        roleFit: fits,
+      },
+    ],
+  },
+];
+
+/** The candidates above for the slots 1 and 2 of C | (準備) | G7 (高まり) | C. */
+const slotCandidates: Answers['/progressions/slot-candidates'] = ({ slot }) => ({
+  groups: slot === 1 ? betweenCAndG7 : slot === 2 ? beforeTheLastC : [],
+});
+
+/** The stand-in server's answers: readings with no labels, and the candidates above. */
+const answers: Partial<Answers> = {
+  '/progressions/readings': ({ slots }) => ({ slots: slots.map(() => ({})) }),
+  '/progressions/slot-candidates': slotCandidates,
 };
-
-/** One note of middle C for each slot with a chord, as POST /progressions/notes answers. */
-function notesOf(progression: Progression): Note[] {
-  let start = 0;
-  const notes: Note[] = [];
-  for (const slot of progression.slots) {
-    if (slot.chord !== undefined) {
-      notes.push({ pitch: 60, start, beats: slot.beats, velocity: 64 });
-    }
-    start += slot.beats;
-  }
-  return notes;
-}
-
-/**
- * Answers the readings with no labels, the notes, and the candidates for a
- * slot; refuses the next candidates and the variations, which then show none.
- */
-function standInServer(url: string, init?: RequestInit): Promise<Response> {
-  const body = JSON.parse(init?.body as string) as Record<string, unknown>;
-  if (url.endsWith('/progressions/slot-candidates')) {
-    return Promise.resolve(json({ groups: candidatesFor[body.slot as number] ?? [] }));
-  }
-  const progression = body as Progression;
-  if (url.endsWith('/progressions/readings')) {
-    return Promise.resolve(json({ slots: progression.slots.map(() => ({})) }));
-  }
-  if (url.endsWith('/progressions/notes')) {
-    return Promise.resolve(json({ notes: notesOf(progression) }));
-  }
-  return Promise.resolve(json({ title: 'Bad Request', status: 400 }, 400));
-}
 
 function cards() {
   return within(screen.getByRole('list', { name: '進行' })).getAllByRole('listitem');
@@ -124,7 +123,7 @@ const addName = (item: HTMLElement) =>
     .getAttribute('aria-label');
 
 describe('ProgressionScreen slot fill', () => {
-  beforeEach(() => vi.stubGlobal('fetch', vi.fn(standInServer)));
+  beforeEach(() => stubServer(answers));
   afterEach(() => {
     vi.unstubAllGlobals();
     localStorage.clear();
@@ -219,6 +218,39 @@ describe('ProgressionScreen slot fill', () => {
     expect(within(card(1)).getByRole('combobox', { name: '長さ' })).toHaveValue('2');
     expect(within(card(1)).getByRole('combobox', { name: '役割' })).toHaveValue('prepare');
     expect(cards()).toHaveLength(4);
+  });
+
+  it('does not show the candidates of the slot before for a slot chosen again', async () => {
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    let asked = 0;
+    stubServer({
+      ...answers,
+      '/progressions/slot-candidates': async (request) => {
+        if (++asked > 1) {
+          await held;
+        }
+        return slotCandidates(request);
+      },
+    });
+    render(<ProgressionScreen />);
+    plan();
+    const unchosen = within(card(1)).getByRole('button', { name: 'まだ選んでいない' });
+    fireEvent.click(unchosen);
+    await screen.findByRole('button', { name: 'Dm7 をこの枠に入れる' });
+
+    fireEvent.click(unchosen);
+    fireEvent.click(within(card(0)).getByRole('button', { name: 'C の枠を消す' }));
+    fireEvent.click(within(card(1)).getByRole('button', { name: 'G7' }));
+
+    await screen.findByRole('region', { name: 'G7 の札' });
+    expect(screen.queryByRole('region', { name: /埋める候補/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /をこの枠に入れる$/ })).not.toBeInTheDocument();
+    await act(async () => {
+      release();
+      await held;
+    });
+    await screen.findByRole('region', { name: '選んだ枠を埋める候補（4 拍）' });
   });
 
   it('plays the slot before, a candidate and the slot after on trial', async () => {

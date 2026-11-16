@@ -17,8 +17,10 @@ type Answer = { for: Progression; slot: number; state: SlotCandidatesState };
  * Asks for the candidates for the slot (counted from 0) each time the
  * progression or the slot changes; asks nothing for no slot. An answer to a
  * progression or a slot since changed is thrown away. Until the answer to the
- * latest progression comes, the last answer for the same slot stays and
- * `busy` is true; the answer for another slot never shows.
+ * latest progression comes, the last answer stays and `busy` is true, but only
+ * while the same slot stays chosen: the answer is dropped when the slot
+ * changes or is let go, so that it never shows for another slot, nor for the
+ * slot chosen again after the progression changed.
  */
 export function useSlotCandidates(
   progression: Progression,
@@ -26,6 +28,11 @@ export function useSlotCandidates(
   get: typeof getSlotCandidates = getSlotCandidates,
 ): { candidates: SlotCandidatesState; busy: boolean } {
   const [answer, setAnswer] = useState<Answer | null>(null);
+  const [chosen, setChosen] = useState(slot);
+  if (chosen !== slot) {
+    setChosen(slot);
+    setAnswer(null);
+  }
 
   useEffect(() => {
     if (slot === null) {
