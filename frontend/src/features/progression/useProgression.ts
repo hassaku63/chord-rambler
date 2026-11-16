@@ -22,6 +22,15 @@ export function nextBeats(slots: Slot[]): number {
   return Math.min(DEFAULT_BEATS, PHRASE_BEATS - used);
 }
 
+/**
+ * The most beats the slot at the index can have without crossing into the
+ * next phrase: from its start to the end of its phrase (#171).
+ */
+export function maxBeatsAt(slots: Slot[], index: number): number {
+  const start = slots.slice(0, index).reduce((sum, slot) => sum + slot.beats, 0);
+  return PHRASE_BEATS - (start % PHRASE_BEATS);
+}
+
 /** Where the progression is kept in the browser (the C1 of #110). */
 export const STORAGE_KEY = 'chord-rambler.progression';
 
@@ -194,8 +203,14 @@ export function useProgression(): ProgressionState {
       },
       [append],
     ),
-    addNoChord: useCallback(() => append({ content: 'none', beats: DEFAULT_BEATS }), [append]),
-    addUnchosen: useCallback(() => append({ content: 'unchosen', beats: DEFAULT_BEATS }), [append]),
+    addNoChord: useCallback(
+      () => append((slots) => ({ content: 'none', beats: nextBeats(slots) })),
+      [append],
+    ),
+    addUnchosen: useCallback(
+      () => append((slots) => ({ content: 'unchosen', beats: nextBeats(slots) })),
+      [append],
+    ),
     replaceChord: useCallback(
       (index: number, chord: string) =>
         changeSlots((slot, i) =>

@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Slot } from '@/shared/api/client';
-import { STORAGE_KEY, nextBeats, useProgression } from './useProgression';
+import { STORAGE_KEY, maxBeatsAt, nextBeats, useProgression } from './useProgression';
 
 afterEach(() => localStorage.clear());
 
@@ -19,6 +19,17 @@ describe('nextBeats', () => {
     { name: 'the second phrase with 2 beats left', slots: slotsOf(16, 14), want: 2 },
   ])('gives one bar or the beats left: $name', ({ slots, want }) => {
     expect(nextBeats(slots)).toBe(want);
+  });
+});
+
+describe('maxBeatsAt', () => {
+  it.each([
+    { name: 'the first slot', slots: slotsOf(4), index: 0, want: 16 },
+    { name: 'after 4 beats', slots: slotsOf(4, 4), index: 1, want: 12 },
+    { name: 'after 15 beats', slots: slotsOf(15, 1), index: 1, want: 1 },
+    { name: 'the start of the second phrase', slots: slotsOf(16, 4), index: 1, want: 16 },
+  ])('gives the beats to the end of the phrase: $name', ({ slots, index, want }) => {
+    expect(maxBeatsAt(slots, index)).toBe(want);
   });
 });
 

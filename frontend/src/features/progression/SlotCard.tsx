@@ -2,9 +2,13 @@ import { Fragment } from 'react';
 import type { Slot, SlotReading } from '@/shared/api/client';
 import { cardMarks } from './labels';
 import { ROLE_GROUPS, TERMS } from './terms';
-import { MAX_BEATS, MIN_BEATS } from './useProgression';
+import { MIN_BEATS } from './useProgression';
 
-const BEAT_CHOICES = Array.from({ length: MAX_BEATS - MIN_BEATS + 1 }, (_, i) => MIN_BEATS + i);
+/** The lengths from one beat to the most the slot can have; a stored longer length stays chosen. */
+function beatChoices(max: number, current: number): number[] {
+  const top = Math.max(max, current);
+  return Array.from({ length: top - MIN_BEATS + 1 }, (_, i) => MIN_BEATS + i);
+}
 
 /** The name a slot shows: the chord as the server spells it, or what kind of empty slot it is. */
 export function slotName(slot: Slot, reading: SlotReading | undefined): string {
@@ -16,6 +20,8 @@ export function slotName(slot: Slot, reading: SlotReading | undefined): string {
 
 type Props = {
   slot: Slot;
+  /** The most beats the slot can have without crossing into the next phrase. */
+  maxBeats: number;
   reading: SlotReading | undefined;
   unreadable: boolean;
   selected: boolean;
@@ -34,6 +40,7 @@ type Props = {
  */
 export function SlotCard({
   slot,
+  maxBeats,
   reading,
   unreadable,
   selected,
@@ -79,7 +86,7 @@ export function SlotCard({
       <label>
         長さ
         <select value={slot.beats} onChange={(e) => onBeats(Number(e.target.value))}>
-          {BEAT_CHOICES.map((beats) => (
+          {beatChoices(maxBeats, slot.beats).map((beats) => (
             <option key={beats} value={beats}>
               {beats} 拍
             </option>
