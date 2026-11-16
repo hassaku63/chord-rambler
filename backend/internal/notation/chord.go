@@ -28,7 +28,8 @@ var ErrTension = errors.New("not a tension: 9, ♭9, ♯9, 11, ♯11, 13 or ♭1
 var ErrTensionOrder = errors.New("tensions must each appear once, in ascending order")
 
 // ErrNoName reports a chord that has no name in the vocabulary, such as a
-// fifth alone (C5) or a sixth and a ninth (C6/9).
+// fifth alone (C5) or a sixth and a ninth (C6/9, which ParseChord also
+// refuses with it).
 var ErrNoName = errors.New("chord has no name in the vocabulary")
 
 // kind is one chord kind of the vocabulary: the suffix written after the
@@ -148,6 +149,12 @@ func readChord(s string) (material.Chord, string, error) {
 		}
 	}
 	intervals := slices.Clone(k.intervals)
+	// 6/9 is a common spelling, but the vocabulary has no 6/9 chord
+	// (docs/architecture/domain-model.md); the "/9" is no bass, so it is
+	// refused as a chord with no name rather than as a bad note name.
+	if (k.name == "6" || k.name == "m6") && strings.HasPrefix(rest, "/9") {
+		return material.Chord{}, rest, ErrNoName
+	}
 	if strings.HasPrefix(rest, "(") {
 		if !k.tensions {
 			return material.Chord{}, rest, ErrNoTensions
