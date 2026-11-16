@@ -15,13 +15,13 @@ COMPOSE := GO_VERSION=$(GO_VERSION) NODE_VERSION=$(NODE_VERSION) VERSION=$(VERSI
         image up down logs smoke dockerfile-lint pr-size \
         docs-check practices-check standards-check shell-lint actions-lint \
         backend-fmt backend-fmt-check backend-lint backend-test backend-build backend-deps-check \
-        frontend-fmt frontend-fmt-check frontend-typecheck frontend-lint frontend-test frontend-build frontend-deps-check
+        frontend-fmt frontend-fmt-check frontend-typecheck frontend-lint frontend-test frontend-build frontend-deps-check e2e
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # Every gate. CI calls this same target (ADR-0004); each check is listed in docs/dev/harness.md.
-check: fmt-check lint test build docs-check practices-check standards-check ## Run every gate
+check: fmt-check lint test build e2e docs-check practices-check standards-check ## Run every gate
 
 setup: ## Install the dependencies (Go modules, npm packages)
 	cd $(BACKEND) && go mod download
@@ -85,6 +85,10 @@ frontend-build: ## Type check and build the screen to frontend/dist
 
 frontend-deps-check: ## Production npm dependencies have no high vulnerabilities (needs the network; CI runs it)
 	cd $(FRONTEND) && npm audit --omit=dev --audit-level=high
+
+# Needs Chromium: `cd frontend && npx playwright install chromium`, or PW_CHROMIUM_PATH (docs/dev/harness.md).
+e2e: backend-build ## The screen end to end in Chromium: the scenario, axe-core and the layout (ADR-0017)
+	cd $(FRONTEND) && npx playwright test
 
 # --- containers (need Docker; CI runs them) ------------------------------------
 

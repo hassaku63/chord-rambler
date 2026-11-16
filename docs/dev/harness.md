@@ -2,7 +2,7 @@
 
 `make check` と CI が行う検査の全リスト（ADR-0004）。**検査を足すときは必ずここに 1 行足す。** 長いあいだ何も捕まえず費用だけがある検査は、削除の候補にする（四半期の総点検で見る。`docs/dev/knowledge-review.md`）。
 
-CI の `required (make check)` は `make check` をそのまま呼ぶ。必須チェックはこの 1 つ。CI はそれに加えて、ネットワークが要る検査（`make backend-deps-check`、`make frontend-deps-check`）と、Docker が要る検査（`make dockerfile-lint`）と、比べる先が要る PR の大きさの予算（`make pr-size`）を、必須のジョブで走らせる。必須でない `image` のジョブが、イメージのビルドとスモークを走らせる。リポジトリの設定の CodeQL（既定の設定）が、ワークフローを置かずに静的解析を走らせる。
+CI の `required (make check)` は、Chromium を取ってから `make check` をそのまま呼ぶ。必須チェックはこの 1 つ。CI はそれに加えて、ネットワークが要る検査（`make backend-deps-check`、`make frontend-deps-check`）と、Docker が要る検査（`make dockerfile-lint`）と、比べる先が要る PR の大きさの予算（`make pr-size`）を、必須のジョブで走らせる。必須でない `image` のジョブが、イメージのビルドとスモークを走らせる。リポジトリの設定の CodeQL（既定の設定）が、ワークフローを置かずに静的解析を走らせる。
 
 ## 文書（ADR-0002）
 
@@ -24,6 +24,18 @@ CI の `required (make check)` は `make check` をそのまま呼ぶ。必須�
 | `tsc -b` | 型の矛盾 | `make frontend-typecheck` | `make check` |
 | 生成した API の型の鮮度（`docs/api/openapi.yaml` から `frontend/src/shared/api/schema.gen.ts`） | 画面の型と契約のずれ。YAML や OpenAPI として壊れた契約 | `bash scripts/check-api-types.sh`（直すときは `cd frontend && npm run gen:api`） | `make check` |
 | `vite build` | ビルドできない画面 | `make frontend-build` | `make check` |
+
+## 画面（実ブラウザ。ADR-0017）
+
+`make e2e` は、API をビルドし、Playwright の `webServer` で API と画面の開発サーバーを専用のポート（`frontend/playwright.config.ts`）で起動して、Chromium で `frontend/e2e/` を走らせる。手元の実測（2026-11-16、4 コア。API のビルドが済んだあと）は、`make e2e` が約 12 秒、`make check` の全体が約 40〜70 秒（Go のテストのキャッシュの有無で変わる）。CI での時間はまだ測っていない。
+
+Chromium が要る。手元にないときは `cd frontend && npx playwright install chromium`（Linux で OS のライブラリもないときは `--with-deps`。CI はこれを `make check` の前に走らせる）。取れないときは、手元の Chromium の実行ファイルを渡す: `PW_CHROMIUM_PATH=/path/to/chrome make check`。
+
+| 検査 | 防ぐもの | 個別実行 | 場所 |
+| --- | --- | --- | --- |
+| 通しのシナリオ（和音名で C を足す、候補から G7 を足す、鳴らすと鳴っている枠の印が進む。ヘッドレスの Chromium で `AudioContext` が作れること） | 部品のテストでは見えない、つなぎ目の退行 | `cd frontend && npx playwright test e2e/progression.spec.ts`（先に `make backend-build`） | `make check` |
+| axe-core（WCAG 2.0・2.1・2.2 の A と AA のタグ。空の進行、枠を選んだ状態、候補を開いた状態） | 機械で見えるアクセシビリティの違反（名前の食い違い、小さすぎる操作の的など） | `cd frontend && npx playwright test e2e/accessibility.spec.ts` | `make check` |
+| 配置（幅 360・768・1280 で、ページが横にスクロールしない。調、和音名、再生、候補の「足す」が見えて幅に収まる） | 画面の幅による配置の崩れ | `cd frontend && npx playwright test e2e/layout.spec.ts` | `make check` |
 
 ## 構造と規約（Go）
 

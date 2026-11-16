@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import type { Slot, SlotReading } from '@/shared/api/client';
 import { cardMarks } from './labels';
 import { ROLE_GROUPS, TERMS } from './terms';
@@ -66,10 +67,13 @@ export function SlotCard({
         aria-label={shown.join(' ')}
         onClick={onSelect}
       >
+        {/* The spaces between the lines keep the visible text inside the name
+            (WCAG 2.5.3); the column of lines does not show them. */}
         {shown.map((line, i) => (
-          <span key={i} className={i === 0 ? 'slot-name' : undefined}>
-            {line}
-          </span>
+          <Fragment key={i}>
+            {i > 0 && ' '}
+            <span className={i === 0 ? 'slot-name' : undefined}>{line}</span>
+          </Fragment>
         ))}
       </button>
       <label>

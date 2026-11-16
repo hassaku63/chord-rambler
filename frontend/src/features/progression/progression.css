@@ -55,6 +55,12 @@
   font-weight: bold;
 }
 
+/* Targets at least 24 px high (WCAG 2.5.8): closed groups stack without a gap,
+   and the controls sit close together; a target this high needs no spacing. */
+.progression-screen :is(button, select, input, summary) {
+  min-height: 24px;
+}
+
 .basis {
   font-size: 0.85em;
 }

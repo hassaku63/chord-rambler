@@ -421,6 +421,8 @@
 | `globals` | 要らない | 大域の名前の一覧 |
 | `prettier` | 要らない | 書式は道具が決める |
 | `openapi-typescript` | 要らない | 契約から型を生成するだけ（ADR-0008） |
+| `@playwright/test` | まだない | 実ブラウザの通しのテストの書き方（問い合わせ、待ち方、隔離）は判断が要る。問い合わせは今、Testing Library の項目に倣う（ADR-0017） |
+| `@axe-core/playwright` | 要らない | axe-core を画面に注入して走らせるだけ。検査する規則は WCAG のタグで決める（ADR-0017） |
 | `@types/node` | 要らない | 型の定義 |
 | `@types/react` | 要らない | 型の定義 |
 | `@types/react-dom` | 要らない | 型の定義 |

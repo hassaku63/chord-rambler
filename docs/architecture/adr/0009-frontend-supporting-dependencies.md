@@ -22,6 +22,8 @@ ADR-0008 は、画面の道具を React、TypeScript、Vite、Vitest、Testing L
 | `eslint-plugin-testing-library`、`@vitest/eslint-plugin` | テストの書き方の規則 |
 | `eslint-config-prettier` | Prettier と重なる ESLint の規則を切る |
 | `openapi-typescript` | 契約から型を生成する |
+| `@playwright/test` | 画面を実ブラウザで通しで検査する（ADR-0017） |
+| `@axe-core/playwright` | 実ブラウザの画面のアクセシビリティを axe-core で検査する（ADR-0017） |
 
 - 版の固定: `typescript` は 5.9 系（ADR-0008）。`@vitest/eslint-plugin` は 1.6.27（それより新しい版は TypeScript 6 以上を求める）。Dependabot は、この 2 つと `@types/node` の大きな版を上げない。
 - ここにない依存を足すときは、新しい ADR を書く。

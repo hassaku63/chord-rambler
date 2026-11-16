@@ -28,6 +28,7 @@
 | `frontend/src/features/progression/usePlayer.ts` | Web Audio で予定を鳴らす。`AudioContext` を作る関数を引数で受ける（テストは `frontend/src/test/fakeAudioContext.ts` を渡す） |
 | `frontend/src/features/progression/terms.ts` | 札と役割の識別子を語にする表。ここ 1 か所に置く。役割の一覧も、ここの表から引く |
 | `frontend/src/shared/api/client.ts` | API の呼び出しと、応答の検証 |
+| `frontend/e2e/` | 実ブラウザでの画面の検査（ADR-0017）。通しのシナリオ（`progression.spec.ts`）、アクセシビリティ（`accessibility.spec.ts`）、配置（`layout.spec.ts`）。画面の語や操作を変えたら、ここの問い合わせも直す |
 
 ## 札の語
 
