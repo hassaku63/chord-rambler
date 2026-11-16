@@ -2,6 +2,7 @@ package query_test
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -95,8 +96,9 @@ const (
 // The diatonic group follows the catalogue (function_transitions.json, from
 // Open Music Theory): T → S, S → D and D → T are common, T → D, S → T and
 // D → S less common, and a move within a function unstated. The function of
-// the last chord is its reading (#102): Gsus4 and G7(♭9) are dominant, C6 and
-// C/E tonic.
+// the last chord is its reading (#102): G7(♭9) is dominant, C/E tonic. The
+// preference is used only after a tertian chord (#103, the owner's call on
+// #116), so Gsus4 and C6 keep the order of the degrees.
 func TestNextCandidatesOrder(t *testing.T) {
 	afterTonic := "ii:C ii7:C IV:C IVmaj7:C I Imaj7 iii iii7 V:L V7:L vi vi7 vii°:L viiø7:L"
 	afterDominant := "I:C Imaj7:C iii:C iii7:C vi:C vi7:C ii:L ii7:L IV:L IVmaj7:L V V7 vii° viiø7"
@@ -112,8 +114,8 @@ func TestNextCandidatesOrder(t *testing.T) {
 		{"D7, a secondary dominant", after("D7"), inDegreeOrder},
 		{"Fm, borrowed", after("Fm"), inDegreeOrder},
 		{"B♯, facts only", after("B♯"), inDegreeOrder},
-		{"Gsus4", after("Gsus4"), afterDominant},
-		{"C6", prog(major(note("C")), slot(progression.ChordOf(chord("C", "M3 P5 M6", "")), 4)), afterTonic},
+		{"Gsus4", after("Gsus4"), inDegreeOrder},
+		{"C6", after("C6"), inDegreeOrder},
 		{"C/E", after("C/E"), afterTonic},
 		{"G7(♭9)", after("G7(♭9)"), afterDominant},
 		{"no chord", prog(major(note("C")), slot(progression.ChordOf(parse("G7")), 4), slot(progression.NoChord(), 4)), inDegreeOrder},
@@ -133,6 +135,91 @@ func TestNextCandidatesOrder(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// The preference label keeps the functions it is about: from the last chord
+// to the candidate.
+func TestNextCandidatesPreferenceFunctions(t *testing.T) {
+	tests := []struct {
+		last, candidate string
+		want            query.PreferenceLabel
+	}{
+		{"G7", "I", query.PreferenceLabel{From: reading.Dominant, To: reading.Tonic, Preference: catalog.Common}},
+		{"G7", "IV", query.PreferenceLabel{From: reading.Dominant, To: reading.Subdominant, Preference: catalog.LessCommon}},
+		{"Dm7", "V7", query.PreferenceLabel{From: reading.Subdominant, To: reading.Dominant, Preference: catalog.Common}},
+		{"C/E", "V", query.PreferenceLabel{From: reading.Tonic, To: reading.Dominant, Preference: catalog.LessCommon}},
+	}
+	for _, tt := range tests {
+		tt.want.Style, tt.want.Grounds = catalog.Classical, catalog.Convention
+		got := find(t, candidates(t, after(tt.last), 4), tt.candidate).Preference
+		if got == nil || *got != tt.want {
+			t.Errorf("%s then %s: preference %+v; want %+v", tt.last, tt.candidate, got, tt.want)
+		}
+	}
+}
+
+// With the zero value of the catalogue, which has no entries, the diatonic
+// group keeps the order of the degrees and no candidate has a preference.
+func TestNextCandidatesWithoutCatalogue(t *testing.T) {
+	got, err := query.NextCandidates(after("C", "G7"), 4, catalog.FunctionTransitions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, want := range []string{inDegreeOrder, secondary, borrowed} {
+		if s := romans(got[i].Candidates); s != want {
+			t.Errorf("group %d:\n got %s\nwant %s", i, s, want)
+		}
+	}
+}
+
+// Each candidate in C, read with nothing before it: the kind, the function,
+// the degree it points to and the modes it is borrowed from. A borrowed chord
+// is held by every parallel mode that has its notes.
+func TestNextCandidatesReadingsInC(t *testing.T) {
+	const (
+		dia = reading.Diatonic
+		sec = reading.SecondaryDominant
+		bor = reading.Borrowed
+		T   = reading.Tonic
+		S   = reading.Subdominant
+		D   = reading.Dominant
+		no  = reading.NoFunction
+	)
+	dor, phr, mix, aeo, loc := material.Dorian, material.Phrygian, material.Mixolydian, material.Aeolian, material.Locrian
+	tests := []struct {
+		numeral  string
+		kind     reading.Kind
+		function reading.Function
+		target   int
+		modes    []material.Mode
+	}{
+		{"I", dia, T, 0, nil}, {"Imaj7", dia, T, 0, nil}, {"ii", dia, S, 0, nil}, {"ii7", dia, S, 0, nil},
+		{"iii", dia, T, 0, nil}, {"iii7", dia, T, 0, nil}, {"IV", dia, S, 0, nil}, {"IVmaj7", dia, S, 0, nil},
+		{"V", dia, D, 0, nil}, {"V7", dia, D, 0, nil}, {"vi", dia, T, 0, nil}, {"vi7", dia, T, 0, nil},
+		{"vii°", dia, D, 0, nil}, {"viiø7", dia, D, 0, nil},
+		{"V/ii", sec, no, 2, nil}, {"V7/ii", sec, no, 2, nil}, {"V/iii", sec, no, 3, nil}, {"V7/iii", sec, no, 3, nil},
+		{"V7/IV", sec, no, 4, nil}, {"V/V", sec, no, 5, nil}, {"V7/V", sec, no, 5, nil},
+		{"V/vi", sec, no, 6, nil}, {"V7/vi", sec, no, 6, nil},
+		{"♭III", bor, no, 0, []material.Mode{dor, phr, aeo}},
+		{"♭IIImaj7", bor, no, 0, []material.Mode{dor, aeo}},
+		{"iv", bor, no, 0, []material.Mode{phr, aeo, loc}},
+		{"iv7", bor, no, 0, []material.Mode{phr, aeo, loc}},
+		{"♭VI", bor, no, 0, []material.Mode{phr, aeo, loc}},
+		{"♭VImaj7", bor, no, 0, []material.Mode{phr, aeo}},
+		{"♭VII", bor, no, 0, []material.Mode{dor, mix, aeo}},
+		{"♭VII7", bor, no, 0, []material.Mode{aeo}},
+	}
+	groups := candidates(t, after(), 4)
+	if n := len(groups[0].Candidates) + len(groups[1].Candidates) + len(groups[2].Candidates); n != len(tests) {
+		t.Errorf("%d candidates; want %d", n, len(tests))
+	}
+	for _, tt := range tests {
+		m := find(t, groups, tt.numeral).Reading.Main
+		if m.Kind != tt.kind || m.Function != tt.function || m.Target != tt.target || !slices.Equal(m.Modes, tt.modes) {
+			t.Errorf("%s: %v %v %d %v; want %v %v %d %v",
+				tt.numeral, m.Kind, m.Function, m.Target, m.Modes, tt.kind, tt.function, tt.target, tt.modes)
+		}
 	}
 }
 
@@ -264,10 +351,26 @@ func TestNextCandidatesErrors(t *testing.T) {
 		{"a minor key", progression.New(minor, progression.Meter{}), 4, relation.ErrNotMajor},
 		{"no beats", after("C"), 0, progression.ErrLength},
 		{"across the phrase", prog(major(note("C")), slot(progression.ChordOf(parse("C")), 15)), 4, progression.ErrCrossesPhrase},
+		// V/iii in E♯ is D𝄪, whose third is beyond a double sharp: the whole
+		// query fails.
+		{"a candidate not spelled", prog(major(note("E♯"))), 4, material.ErrAlterOutOfRange},
+		// The farthest candidates, V/iii (F𝄪) in G♯ and ♭VI (D𝄫) in F♭, are
+		// spelled.
+		{"G♯ major", prog(major(note("G♯"))), 4, nil},
+		{"F♭ major", prog(major(note("F♭"))), 4, nil},
 	}
 	for _, tt := range tests {
-		if _, err := query.NextCandidates(tt.p, tt.beats, transitions(t)); !errors.Is(err, tt.want) {
+		got, err := query.NextCandidates(tt.p, tt.beats, transitions(t))
+		if !errors.Is(err, tt.want) {
 			t.Errorf("%s: error %v; want %v", tt.name, err, tt.want)
+		}
+		if n := 0; err == nil {
+			for _, g := range got {
+				n += len(g.Candidates)
+			}
+			if n != 31 {
+				t.Errorf("%s: %d candidates; want 31", tt.name, n)
+			}
 		}
 	}
 }

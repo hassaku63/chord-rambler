@@ -81,11 +81,14 @@ type CadenceLabel struct {
 func (CadenceLabel) Basis() Basis { return School }
 
 // PreferenceLabel holds how often the catalogue of function transitions says
-// the function of the last slot moves to the function of the candidate, the
-// style the catalogue limits that to, and the grounds of the entry. It is
-// given to a diatonic candidate when the preference orders the group and the
-// entry is Common or LessCommon.
+// the function of the last slot (From) moves to the function of the candidate
+// (To), the style the catalogue limits that to, and the grounds of the entry.
+// The preference is of the move between the functions, not of the chord, so
+// the label keeps both. It is given to a diatonic candidate when the
+// preference orders the group and the entry is Common or LessCommon.
 type PreferenceLabel struct {
+	From       reading.Function
+	To         reading.Function
 	Preference catalog.Preference
 	Style      catalog.Style
 	Grounds    catalog.Grounds
@@ -129,13 +132,18 @@ func positions(numerals ...string) []material.Position {
 // secondary dominants and borrowed chords. Every group holds all of its
 // chords, spelled in the key from their positions.
 //
+// The beats are the length the caller will give the slot. A caller whose
+// slot would cross the boundary of a phrase cuts it to the beats left in the
+// phrase before it calls; the cadence label depends on the length.
+//
 // The diatonic group is ordered by the catalogue of function transitions:
 // the candidates the function of the chord of the last slot moves to with the
 // preference Common come first, and the rest after them. The order is
 // otherwise the order of candidateGroups, which the other groups keep, and so
 // does the diatonic group when the progression is empty, its last slot holds
-// no chord or none chosen yet, the chord has no function, or the catalogue has
-// no entry for it (the zero value).
+// no chord or none chosen yet, the chord is not tertian (reading.Tertian:
+// a sus or a sixth chord), the chord has no function, or the catalogue has no
+// entry for it (the zero value).
 //
 // Every candidate carries its members and its reading; the relations to the
 // last slot when it holds a chord; the cadence when it ends a full phrase; and
@@ -145,7 +153,8 @@ func positions(numerals ...string) []material.Position {
 // It fails for a key other than Ionian (relation.ErrNotMajor), a length of
 // less than one beat (progression.ErrLength), a slot that would cross the
 // boundary of a phrase (progression.ErrCrossesPhrase), and a candidate beyond
-// a double sharp or a double flat (material.ErrAlterOutOfRange).
+// a double sharp or a double flat (material.ErrAlterOutOfRange). A key with
+// one such candidate, such as E♯ major, fails as a whole.
 func NextCandidates(p progression.Progression, beats int, transitions catalog.FunctionTransitions) ([]CandidateGroup, error) {
 	key := p.Key()
 	if key.Mode() != material.Ionian {
@@ -159,7 +168,10 @@ func NextCandidates(p progression.Progression, beats int, transitions catalog.Fu
 	from := reading.NoFunction
 	if n := p.Len(); n > 0 {
 		if c, ok := p.Slots()[n-1].Content().Chord(); ok {
-			last, from = &c, read[n-1].Chord.Main.Function
+			last = &c
+			if reading.Tertian(c) {
+				from = read[n-1].Chord.Main.Function
+			}
 		}
 	}
 	out := make([]CandidateGroup, 0, len(candidateGroups))
@@ -188,7 +200,10 @@ func byPreference(cs []Candidate, from reading.Function, transitions catalog.Fun
 	for _, c := range cs {
 		t, ok := transitions.Lookup(from, c.Reading.Main.Function)
 		if ok && (t.Preference == catalog.Common || t.Preference == catalog.LessCommon) {
-			c.Preference = &PreferenceLabel{Preference: t.Preference, Style: transitions.Source().Style, Grounds: t.Grounds}
+			c.Preference = &PreferenceLabel{
+				From: t.From, To: t.To, Preference: t.Preference,
+				Style: transitions.Source().Style, Grounds: t.Grounds,
+			}
 		}
 		if ok && t.Preference == catalog.Common {
 			common = append(common, c)

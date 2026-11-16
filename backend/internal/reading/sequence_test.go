@@ -272,6 +272,37 @@ func TestCadence(t *testing.T) {
 	}
 }
 
+// A triad with a third or a seventh chord, with any tensions and bass, is
+// tertian; a chord with a second, a fourth or a sixth member, or without a
+// third, is not (#103).
+func TestTertian(t *testing.T) {
+	c, g := note(material.C, 0), note(material.G, 0)
+	tests := []struct {
+		name  string
+		chord material.Chord
+		want  bool
+	}{
+		{"C", chord(c, "M3 P5", ""), true},
+		{"C/E", chord(c, "M3 P5", "M3"), true},
+		{"Cmaj7", chord(c, "M3 P5 M7", ""), true},
+		{"Cdim", chord(c, "m3 d5", ""), true},
+		{"Caug", chord(c, "M3 A5", ""), true},
+		{"C(add9)", chord(c, "M3 P5 M9", ""), true},
+		{"G7(♭9)", chord(g, "M3 P5 m7 m9", ""), true},
+		{"C6", chord(c, "M3 P5 M6", ""), false},
+		{"C(add2)", chord(c, "M2 M3 P5", ""), false},
+		{"Gsus4", chord(g, "P4 P5", ""), false},
+		{"G7sus4", chord(g, "P4 P5 m7", ""), false},
+		{"Csus2", chord(c, "M2 P5", ""), false},
+		{"C5", chord(c, "P5", ""), false},
+	}
+	for _, tt := range tests {
+		if got := reading.Tertian(tt.chord); got != tt.want {
+			t.Errorf("%s: %v; want %v", tt.name, got, tt.want)
+		}
+	}
+}
+
 // Each slot holding a chord carries the reading of ReadChord in the key of the
 // progression; the others carry none. A progression with no slots has no
 // readings.

@@ -238,7 +238,7 @@
 
 - 名前は `ReadProgression`。進行を受け取り、枠と同じ順（`relation.Places` と同じ番号）の `SlotReading` の並びを返す。`SlotReading` は、和音を持つか `HasChord`、和音 1 つの読み `Chord`（`ChordReading`）、解決 `Resolution`（`NoResolution`・`ResolutionExpected`・`ResolutionIrregular`）、終止 `Cadence`（`NoCadence`・`AuthenticCadence`・`HalfCadence`・`PlagalCadence`・`DeceptiveCadence`）を持つ。ゼロ値は「述べない」。和音のない枠は、すべてゼロ値。イオニアンでない調の進行は、枠がなくてもエラー（`relation.ErrNotMajor` を包む）。
 - 度数は `relation.PositionOf` の度数を使う。ダイアトニックの和音は根音が調の音なので、変化はない。
-- 「3 度のある三和音か七の和音」は、和音の見方の `Triad` が長・短・減・増のどれかで、2 度・4 度・6 度の構成音がないもの。七度はあってもなくてもよい。
+- 「3 度のある三和音か七の和音」は、和音の見方の `Triad` が長・短・減・増のどれかで、2 度・4 度・6 度の構成音がないもの。七度はあってもなくてもよい。判定は `reading.Tertian`。ほかのまとまりも、この見方に合わせるときはこれを使う。
 - 次の枠の和音が 3 度のある三和音か七の和音でなければ（sus、6 の和音など）、度数によらず解決を述べない。同じく、最後の枠がそうでなければ、どの終止も付けない。
 - 満ちたフレーズかは、`relation.Places` の `FullPhrase` を読む。読みは拍を足し直さない（#111）。
 - 解決の「次」は、進行の次の枠。フレーズの区切りをまたいでも見る（終止とは見方が違う）。
@@ -314,20 +314,24 @@
   - セカンダリー・ドミナント: V/ii、V/iii、V/V、V/vi の長三和音と、V7/ii〜V7/vi の属七。V/IV の三和音は I と同じなので除く。9。
   - 借用和音: 同主短調からの iv、♭III、♭VI、♭VII と、iv7、♭IIImaj7、♭VImaj7、♭VII7。8。
 - まとまりは、ダイアトニック、セカンダリー・ドミナント、借用和音の順で、まとまりごとに全部を返す。どれを開いておくかは画面が決める。
-- ダイアトニックは、末尾の和音の機能から候補の機能への好みで並べる。「よく使われる」が先、「より少ない」と「言明なし」はそのあとに一緒に度数の順。同じ段階の中は度数の順で、三和音を七の和音より先にする。
+- ダイアトニックは、末尾の和音の機能から候補の機能への好みで並べる。「よく使われる」が先、「より少ない」と「言明なし」はそのあと。「よく使われる」の中と、残り（「より少ない」と「言明なし」）の中を、それぞれ度数の順にし、三和音を七の和音より先にする。
+- 末尾の和音に機能がない（セカンダリー・ドミナント、借用和音、事実だけ）、末尾の枠が和音なしかまだ選んでいない、進行が空のときは、好みを使わず度数の順（保守的な解釈）。
 - セカンダリー・ドミナントと借用和音のまとまりは、いつも度数の順（機能を付けないため。#101 の A1）。
 - 札: 構成音（定義）。種別・機能・借り先・向かう先（流儀）。末尾が和音のとき、根音の動き（計算。表せない距離なら出さない）、共通音の数（計算）、末尾の和音の解決（流儀）。候補を足すと満ちたフレーズの最後になるとき、終止（流儀）。ダイアトニックで好みを使い、段階が「よく使われる」か「より少ない」のとき、好みの段階（慣習。カタログの様式の範囲を一緒に持つ）。
 - 流儀の札は、候補を末尾に足した進行を `reading.ReadProgression` で読んだ事実と同じ（誤り 5 の止め方。性質のテストで固定する）。C7 はいつも V7/IV（#83）。
 
+所有者の判断（#116）:
+
+- 好みは、末尾の和音が 3 度のある三和音か七の和音（6 章の #103 と同じ見方。`reading.Tertian`）のときだけ使う。末尾が sus や 6 の和音なら、度数の順にし、好みの札を出さない。C/E のときは使い、C6 と Gsus4 のときは使わない。解決・終止と好みが、同じ基準で「ドミナントか」を見るため。
+
 #116 で決めた。所有者の判断ではない:
 
-- 名前は `NextCandidates(p, beats, transitions)`。`beats` は候補を置く枠の長さで、終止の札はこの長さで決まる。3 つの `CandidateGroup`（`Kind` に `reading.Kind`、`Candidates`）を返す。`Candidate` は、和音 `Chord`、位置 `Position`（度数・変化・形・向かう先）、札 `Members`、`Reading`、`RootMotion`（`RootMotionLabel`）、`CommonTones`（`CommonTonesLabel`）、`Resolution`（`ResolutionLabel`）、`Cadence`（`CadenceLabel`）、`Preference`（`PreferenceLabel`）を持つ。付かない札は nil。付いた札はゼロ値の事実も持つ（G のあとの G7 は、解決の札が「述べない」）。
-- 好みの札は、段階 `Preference`、様式の範囲 `Style`、カタログの項目の `Grounds` を持ち、根拠の種類は `Grounds` から写す（`catalog.Grounds` の全部の値を `Basis` に写す関数を 1 つ置き、型を二重に持たない）。
-- 末尾の和音に機能がない（セカンダリー・ドミナント、借用和音、事実だけ）、末尾の枠が和音なしかまだ選んでいない、進行が空のときは、好みを使わず度数の順（保守的な解釈）。
-- 「末尾」は最後の枠。末尾の機能は `reading.ReadChord` の主な読みの機能なので、Gsus4 と G7(♭9) はドミナント、C6 と C/E はトニックとして並べる。
+- 名前は `NextCandidates(p, beats, transitions)`。`beats` は候補を置く枠の長さで、終止の札はこの長さで決まる。画面は、実際に置く長さを渡す。フレーズをまたぐ長さは、画面が残りの拍に丸めてから呼ぶ（またぐ長さはエラー）。3 つの `CandidateGroup`（`Kind` に `reading.Kind`、`Candidates`）を返す。`Candidate` は、和音 `Chord`、位置 `Position`（度数・変化・形・向かう先）、札 `Members`、`Reading`、`RootMotion`（`RootMotionLabel`）、`CommonTones`（`CommonTonesLabel`）、`Resolution`（`ResolutionLabel`）、`Cadence`（`CadenceLabel`）、`Preference`（`PreferenceLabel`）を持つ。付かない札は nil。付いた札はゼロ値の事実も持つ（G のあとの G7 は、解決の札が「述べない」）。
+- 好みの札は、前の機能 `From`、次の機能 `To`、段階 `Preference`、様式の範囲 `Style`、カタログの項目の `Grounds` を持ち（好みは和音でなく機能の動きのものなので、文が和音の単位で言わないように両端を持つ）、根拠の種類は `Grounds` から写す（`catalog.Grounds` の全部の値を `Basis` に写す関数を 1 つ置き、型を二重に持たない）。
+- 「末尾」は最後の枠。末尾の機能は `reading.ReadChord` の主な読みの機能なので、G7(♭9) はドミナント、C/E はトニックとして並べる。
 - セカンダリー・ドミナントの度数の順は、向かう先の度数の順（V/ii、V7/ii、V/iii、V7/iii、V7/IV、V/V、V7/V、V/vi、V7/vi）。借用和音は根音の度数の順（♭III、♭IIImaj7、iv、iv7、♭VI、♭VImaj7、♭VII、♭VII7）。
 - カタログがゼロ値（項目を持たない）のときは、好みを使わない。
-- 枠の長さが 1 拍未満（`progression.ErrLength`）、フレーズをまたぐ（`progression.ErrCrossesPhrase`）、イオニアンでない調（`relation.ErrNotMajor`）、重変化を超える候補（`material.ErrAlterOutOfRange`）はエラー。
+- 枠の長さが 1 拍未満（`progression.ErrLength`）、フレーズをまたぐ（`progression.ErrCrossesPhrase`）、イオニアンでない調（`relation.ErrNotMajor`）、重変化を超える候補（`material.ErrAlterOutOfRange`）はエラー。重変化を超える候補が 1 つでもある調（E♯ 長調など）は、問い合わせ全体がエラー。画面は 12 の長調に絞る（ADR-0006）。
 
 ### 和音の変形
 

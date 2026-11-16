@@ -189,7 +189,7 @@ func readSlot(s progression.Slot, key material.Scale) (slotChord, error) {
 	if err != nil {
 		return slotChord{}, fmt.Errorf("read progression: %w", err)
 	}
-	out := slotChord{ok: true, reading: r, tertian: tertian(c)}
+	out := slotChord{ok: true, reading: r, tertian: Tertian(c)}
 	if r.Main.Kind == Diatonic {
 		pos, err := relation.PositionOf(c, key)
 		if err != nil {
@@ -205,10 +205,12 @@ func readSlot(s progression.Slot, key material.Scale) (slotChord, error) {
 	return out, nil
 }
 
-// tertian reports whether the chord is a triad with a third (major, minor,
+// Tertian reports whether the chord is a triad with a third (major, minor,
 // diminished or augmented), with or without a seventh and tensions, and with
-// no second, fourth or sixth member. The bass is not looked at.
-func tertian(c material.Chord) bool {
+// no second, fourth or sixth member. The bass is not looked at. A sus chord
+// and a sixth chord are not. The rules of resolution and cadence look at a
+// chord this way (#103), and so may others that must agree with them.
+func Tertian(c material.Chord) bool {
 	switch c.Triad() {
 	case material.TriadMajor, material.TriadMinor, material.TriadDiminished, material.TriadAugmented:
 	default:

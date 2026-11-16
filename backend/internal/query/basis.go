@@ -49,14 +49,16 @@ func (b Basis) String() string {
 }
 
 // basisOfGrounds returns the basis of an entry of a catalogue from its
-// grounds. Every value of catalog.Grounds maps to one: a value that is none
-// of its constants maps to the zero value, so a label that carries it shows
-// as Basis(0).
+// grounds. The switch lists every constant of catalog.Grounds and has no
+// default, so the lint (exhaustive) fails when a constant is added. The zero
+// value (grounds never set) and any other value that is none of the
+// constants map to Basis(0).
 func basisOfGrounds(g catalog.Grounds) Basis {
 	switch g {
 	case catalog.Convention:
 		return Convention
-	default:
+	case 0:
 		return 0
 	}
+	return 0
 }
