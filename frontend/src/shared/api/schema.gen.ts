@@ -231,8 +231,26 @@ export interface operations {
           'application/json': components['schemas']['ProgressionReading'];
         };
       };
-      /** @description The body is not JSON, or does not describe a progression: a chord name or a key that cannot be read, an unknown role or content, a slot with both or neither of chord and content, a length of less than one beat, or a slot that crosses the boundary of a phrase. The detail names the slot (counted from 0). */
+      /** @description The body is not JSON, or does not describe a progression: a chord name or a key that cannot be read, an unknown role or content, a slot with both or neither of chord and content, a length of less than one beat, or a slot that crosses the boundary of a phrase. The detail names the slot (counted from 0). A field the contract does not have, or a value of the wrong type, is also a 400; the detail gives the place and the type expected (slots[0].beats: expected integer). */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The body is larger than 64 KiB (65536 bytes). */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The Content-Type is not application/json (parameters such as charset are allowed). */
+      415: {
         headers: {
           [name: string]: unknown;
         };
