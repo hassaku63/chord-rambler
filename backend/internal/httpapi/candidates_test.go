@@ -155,11 +155,11 @@ func TestCandidatesRejectWhatTheEngineRefuses(t *testing.T) {
 		wantDetail       []string
 	}{
 		{"no beats", nextCandidatesPath,
-			`{"progression": {"key": "C", "slots": []}, "beats": 0}`, []string{"less than one beat"}},
+			`{"progression": {"key": "C", "slots": []}, "beats": 0}`, []string{"slot 0", "one beat"}},
 		{"crosses a phrase", nextCandidatesPath,
-			`{"progression": {"key": "C", "slots": [{"chord": "C", "beats": 12}]}, "beats": 8}`, []string{"boundary of a phrase"}},
+			`{"progression": {"key": "C", "slots": [{"chord": "C", "beats": 12}]}, "beats": 8}`, []string{"slot 1", "boundary of a phrase"}},
 		{"key that cannot be spelt", nextCandidatesPath,
-			`{"progression": {"key": "E♯", "slots": []}, "beats": 4}`, []string{"E♯ major", "double sharp"}},
+			`{"progression": {"key": "E♯", "slots": []}, "beats": 4}`, []string{"slot 0", "double sharp"}},
 		{"progression not read", nextCandidatesPath,
 			`{"progression": {"key": "C", "slots": [{"chord": "Dmx7", "beats": 4}]}, "beats": 4}`, []string{"slot 0", `"Dmx7"`}},
 		{"place of a wrong type", nextCandidatesPath,
@@ -169,7 +169,7 @@ func TestCandidatesRejectWhatTheEngineRefuses(t *testing.T) {
 			`{"progression": {"key": "C", "slots": [{"chord": "C", "beats": 4}]}, "slot": 1}`, []string{"slot 1", "outside"}},
 		{"slot left out", slotCandidatesPath,
 			`{"progression": {"key": "C", "slots": [{"chord": "C", "beats": 4}]}}`, []string{"slot: required"}},
-		{"no third", variationsPath, `{"key": "C", "chord": "Csus4"}`, []string{"no major, minor or diminished triad"}},
+		{"no third", variationsPath, `{"key": "C", "chord": "Csus4"}`, []string{"major, minor or diminished"}},
 		{"chord not read", variationsPath, `{"key": "C", "chord": "Cmx"}`, []string{"chord", `"Cmx"`}},
 		{"key not read", variationsPath, `{"key": "H", "chord": "C"}`, []string{"key"}},
 	}
@@ -188,6 +188,63 @@ func TestCandidatesRejectWhatTheEngineRefuses(t *testing.T) {
 			for _, want := range tt.wantDetail {
 				if !strings.Contains(body.Detail, want) {
 					t.Errorf("detail = %q, want it to contain %q", body.Detail, want)
+				}
+			}
+		})
+	}
+}
+
+// TestRefusalsAreWrittenForTheUser checks that each sentinel error of the
+// engine that is a 400 is answered with the sentence of the table, with the
+// slot where the handler knows it, and with no Go name or internal prefix.
+func TestRefusalsAreWrittenForTheUser(t *testing.T) {
+	const phraseless = `{"key": "C", "slots": [{"chord": "C", "beats": 12}]}`
+	tests := []struct {
+		name, path, body string
+		text             string // the sentence of the table
+		slot             string // the prefix the handler knows, or ""
+	}{
+		{"index", slotCandidatesPath,
+			`{"progression": {"key": "C", "slots": [{"chord": "C", "beats": 4}]}, "slot": 1}`,
+			"the slot is outside the progression", "slot 1: "},
+		{"length of the next slot", nextCandidatesPath,
+			`{"progression": {"key": "C", "slots": [{"chord": "C", "beats": 4}]}, "beats": 0}`,
+			"a slot must be at least one beat long", "slot 1: "},
+		{"length in the progression", nextCandidatesPath,
+			`{"progression": {"key": "C", "slots": [{"chord": "C", "beats": 0}]}, "beats": 4}`,
+			"a slot must be at least one beat long", "slot 0: "},
+		{"phrase of the next slot", nextCandidatesPath,
+			`{"progression": ` + phraseless + `, "beats": 8}`,
+			"a slot must not cross the boundary of a phrase", "slot 1: "},
+		{"phrase in the progression", nextCandidatesPath,
+			`{"progression": {"key": "C", "slots": [{"chord": "C", "beats": 12}, {"chord": "G", "beats": 8}]}, "beats": 4}`,
+			"a slot must not cross the boundary of a phrase", "slot 1: "},
+		{"alteration of a candidate", nextCandidatesPath,
+			`{"progression": {"key": "E♯", "slots": []}, "beats": 4}`,
+			"a note would need more than a double sharp or a double flat", "slot 0: "},
+		{"alteration of a key", nextCandidatesPath,
+			`{"progression": {"key": "B𝄪", "slots": []}, "beats": 4}`,
+			"a note would need more than a double sharp or a double flat", `key "B𝄪": `},
+		{"alteration in a variation", variationsPath,
+			`{"key": "C", "chord": "C♭dim"}`, "a note would need more than a double sharp or a double flat", ""},
+		{"no triad quality", variationsPath,
+			`{"key": "C", "chord": "Csus4"}`, "variations are made only for a chord whose triad is major, minor or diminished", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := post(t, tt.path, tt.body)
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400\n%s", rec.Code, rec.Body)
+			}
+			body := decode[struct {
+				Detail string `json:"detail"`
+			}](t, rec)
+			if want := tt.slot + tt.text; body.Detail != want {
+				t.Errorf("detail = %q, want %q", body.Detail, want)
+			}
+			for _, bad := range []string{"Triad", "Err", "candidate:", "slot candidates for", "variations of the chord"} {
+				if strings.Contains(body.Detail, bad) {
+					t.Errorf("detail = %q, has the internal %q", body.Detail, bad)
 				}
 			}
 		})

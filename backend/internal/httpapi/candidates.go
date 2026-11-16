@@ -2,10 +2,9 @@ package httpapi
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
-	"github.com/hassaku63/chord-rambler/backend/internal/material"
-	"github.com/hassaku63/chord-rambler/backend/internal/progression"
 	"github.com/hassaku63/chord-rambler/backend/internal/query"
 	"github.com/hassaku63/chord-rambler/backend/internal/reading"
 )
@@ -72,16 +71,9 @@ type (
 	}
 )
 
-// requestFailures are the errors of the engine that say the request asks for
-// what the engine refuses; they are answered with a 400.
-var requestFailures = []error{
-	progression.ErrIndex, progression.ErrLength, progression.ErrCrossesPhrase,
-	material.ErrAlterOutOfRange, query.ErrNoTriadQuality,
-}
-
 // answer reads the body into B, asks the engine with ask and writes what it
-// returns. A *requestError and an error of requestFailures are a 400 (or the
-// status the request error carries); any other error is the server's (500).
+// returns. A *requestError and an error of refusals are a 400 (or the status
+// the request error carries); any other error is the server's (500).
 func answer[B, O any](a *api, ask func(B) (O, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body B
@@ -100,17 +92,37 @@ func answer[B, O any](a *api, ask func(B) (O, error)) http.HandlerFunc {
 
 func (a *api) writeFailure(w http.ResponseWriter, err error) {
 	if re := (*requestError)(nil); errors.As(err, &re) {
-		a.writeProblem(w, re.status, re.detail)
+		a.writeRequestError(w, re)
 		return
 	}
-	for _, f := range requestFailures {
-		if errors.Is(err, f) {
-			a.writeProblem(w, http.StatusBadRequest, err.Error())
-			return
-		}
+	var prefix string
+	if se := (*slotError)(nil); errors.As(err, &se) {
+		prefix = fmt.Sprintf("slot %d: ", se.slot)
+	}
+	if text, ok := refusalOf(err); ok {
+		a.logger.Info("the engine refused the request", "error", err)
+		a.writeProblem(w, http.StatusBadRequest, prefix+text)
+		return
 	}
 	a.logger.Error("answering the query failed", "error", err)
 	a.writeProblem(w, http.StatusInternalServerError, "")
+}
+
+// slotError names the slot an engine error is about, which the engine's own
+// error does not carry as a value.
+type slotError struct {
+	slot int
+	err  error
+}
+
+func (e *slotError) Error() string { return fmt.Sprintf("slot %d: %v", e.slot, e.err) }
+func (e *slotError) Unwrap() error { return e.err }
+
+func inSlot(slot int, err error) error {
+	if err == nil {
+		return nil
+	}
+	return &slotError{slot: slot, err: err}
 }
 
 func (a *api) nextCandidates() http.HandlerFunc {
@@ -121,7 +133,8 @@ func (a *api) nextCandidates() http.HandlerFunc {
 		}
 		groups, err := query.NextCandidates(p, body.Beats, a.transitions)
 		if err != nil {
-			return groupsResponse[candidateLabels]{}, err
+			// The slot asked about is the one after the last.
+			return groupsResponse[candidateLabels]{}, inSlot(p.Len(), err)
 		}
 		out := groupsResponse[candidateLabels]{Groups: make([]candidateGroup[candidateLabels], 0, len(groups))}
 		for _, g := range groups {
@@ -146,7 +159,7 @@ func (a *api) slotCandidates() http.HandlerFunc {
 		}
 		groups, err := query.SlotCandidates(p, *body.Slot, a.transitions)
 		if err != nil {
-			return groupsResponse[slotCandidateLabels]{}, err
+			return groupsResponse[slotCandidateLabels]{}, inSlot(*body.Slot, err)
 		}
 		out := groupsResponse[slotCandidateLabels]{Groups: make([]candidateGroup[slotCandidateLabels], 0, len(groups))}
 		for _, g := range groups {

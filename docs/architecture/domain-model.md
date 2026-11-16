@@ -445,7 +445,7 @@ API の形（進行の送り方、経路、応答の札、失敗）は、契約 
 - 本文は `{progression, beats}`、`{progression, slot}`、`{key, chord}`。応答は `{groups: [{kind, candidates}]}` と `{variations: [...]}`。`slot` を落とした本文は、枠 0 と読まず 400 にする。
 - 候補の札は、和音名・ローマ数字・読みを読みの経路と同じ関数で書く。ローマ数字は候補の位置（`Candidate.Position`）から書く。足した札は、根音の動き（`rootMotion`）、共通音の数（`commonTones`）、好み（`preference`。前と次の機能、段階、様式の範囲）、枠を埋める候補の `nextResolution`、`nextCadence`、役割に合うか（`roleFit`。当たらなかった条件の並び `unmet` を持つ）。候補の `resolution` は前の枠の和音から候補への解決で、読みの経路（その和音から次へ）と向きが違う。候補には構成音とテンションの注意を出さない。
 - 変形の札は、和音名、入力の印（`isInput`）、構成音、読み、テンションの注意、調の外の音（`outOfKey`）。
-- エンジンが断る問い（`progression.ErrIndex`、`ErrLength`、`ErrCrossesPhrase`、`material.ErrAlterOutOfRange`、`query.ErrNoTriadQuality`）は 400 にし、`detail` にエンジンのエラーの文を書く。ほかの失敗は 500。
+- エンジンが断る問い（`progression.ErrIndex`、`ErrLength`、`ErrCrossesPhrase`、`material.ErrAlterOutOfRange`、`query.ErrNoTriadQuality`）は 400 にする。`detail` の文は、ハンドラの 1 か所の表（`refusals`）が、番兵のエラーごとに利用者の言葉で決める。分かるときは枠の番号を前に付ける（`slot 1: …`）。エンジンのエラーの文（Go の名前や関数の前置きを含む）は、ログにだけ書く。表にない番兵のエラーと、ほかの失敗は 500。
 - 複数語の識別子は、カタログの JSON の語（`less_common`）ではなく契約の書き方（`less-common`）にする。札に出ない `unstated` も、全域のテストのため契約の列挙に載せる。
 
 本文の読み方は `decodeBody` の 1 か所に置く。`Content-Type` が `application/json` でなければ 415、本文が 64 KiB を超えれば 413、契約にない欄と型の合わない値は 400 で、後者の `detail` には欄の場所と期待した型だけを書く（例: `slots[0].beats: expected integer`）。

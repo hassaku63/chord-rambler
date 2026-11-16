@@ -39,7 +39,7 @@ func (a *api) variations() http.HandlerFunc {
 		}
 		c, err := notation.ParseChord(body.Chord)
 		if err != nil {
-			return variationsResponse{}, badRequest("chord: %v", err)
+			return variationsResponse{}, engineRefused("chord", err)
 		}
 		vs, err := query.Variations(c, key)
 		if err != nil {
