@@ -13,7 +13,7 @@ COMPOSE := GO_VERSION=$(GO_VERSION) NODE_VERSION=$(NODE_VERSION) VERSION=$(VERSI
 
 .PHONY: help setup check doctor fmt fmt-check lint test build dev-backend dev-frontend \
         image up down logs smoke dockerfile-lint pr-size \
-        docs-check practices-check standards-check shell-lint actions-lint \
+        docs-check practices-check standards-check bundle-budget shell-lint actions-lint \
         backend-fmt backend-fmt-check backend-lint backend-test backend-build backend-deps-check \
         frontend-fmt frontend-fmt-check frontend-typecheck frontend-lint frontend-test frontend-build frontend-deps-check e2e chromium-check
 
@@ -21,7 +21,7 @@ help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # Every gate. CI calls this same target (ADR-0004); each check is listed in docs/dev/harness.md.
-check: fmt-check lint test build e2e docs-check practices-check standards-check ## Run every gate
+check: fmt-check lint test build bundle-budget e2e docs-check practices-check standards-check ## Run every gate
 
 setup: ## Install the dependencies (Go modules, npm packages)
 	cd $(BACKEND) && go mod download
@@ -127,6 +127,11 @@ dockerfile-lint: ## hadolint the Dockerfile, with a local hadolint or the pinned
 PR_BASE ?= origin/main
 pr-size: ## Count the lines this branch changes against PR_BASE (default origin/main); warn over 600, fail over 1000
 	bash scripts/check-pr-size.sh $(PR_BASE)
+
+# --- size of what loads first ------------------------------------------------
+
+bundle-budget: ## gzip size of what index.html loads up front is within the budget (needs frontend/dist; scripts/check-bundle-size.sh)
+	bash scripts/check-bundle-size.sh
 
 # --- documents and scripts ---------------------------------------------------
 
