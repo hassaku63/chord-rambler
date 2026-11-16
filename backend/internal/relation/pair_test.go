@@ -2,6 +2,7 @@ package relation_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/hassaku63/chord-rambler/backend/internal/material"
@@ -119,6 +120,10 @@ func TestSecondaryDominantShapeInCMajor(t *testing.T) {
 		// The minor seventh of the bass is judged by spelling: A♯ sounds like
 		// B♭, but is an augmented sixth.
 		{"C/A♯: an augmented sixth, not a minor seventh", chord(note(material.C, nat), triad, "A6"), 0},
+		// The second, fourth and sixth members are not looked at either,
+		// though the kind of a reading looks at them (#102).
+		{"C(♭6): the sixth A♭ is not looked at", chord(note(material.C, nat), triad+" m6", ""), 0},
+		{"C(add♭2): the second D♭ is not looked at", chord(note(material.C, nat), "m2 "+triad, ""), 0},
 		{"G/C♯: C is I", chord(note(material.G, nat), triad, "A4"), 0},
 	}
 	for _, tt := range tests {
@@ -143,5 +148,41 @@ func TestSecondaryDominantShapeOtherModes(t *testing.T) {
 		if got, ok, err := relation.SecondaryDominantShape(d7, key); !errors.Is(err, relation.ErrNotMajor) {
 			t.Errorf("C %s: SecondaryDominantShape(D7) = %d, %v, %v; want ErrNotMajor", m, got, ok, err)
 		}
+	}
+}
+
+// The notes judged are those that make the chord, the second to the seventh
+// included, and a bass a minor seventh above the root (the owner's calls on
+// PR #90 and #102): G7(♭9) is judged by G B D F, C(♯11) and C/F♯ by C E G,
+// C/B♭ by C E G B♭, Gsus4 by G C D and C6/D by C E G A. A bass a minor
+// seventh above is judged even when it is a member, and C/A♯ (an augmented
+// sixth) is not.
+func TestJudgedNotes(t *testing.T) {
+	c, g := note(material.C, nat), note(material.G, nat)
+	tests := []struct {
+		name  string
+		chord material.Chord
+		want  string
+	}{
+		{"G7(♭9)", chord(g, "M3 P5 m7 m9", ""), "G B D F"},
+		{"C(♯11)", chord(c, "M3 P5 A11", ""), "C E G"},
+		{"C/F♯", chord(c, "M3 P5", "A4"), "C E G"},
+		{"C/B♭", chord(c, "M3 P5", "m7"), "C E G B♭"},
+		{"C7/B♭", chord(c, "M3 P5 m7", "m7"), "C E G B♭ B♭"},
+		{"C/A♯", chord(c, "M3 P5", "A6"), "C E G"},
+		{"Gsus4", chord(g, "P4 P5", ""), "G C D"},
+		{"C6/D", chord(c, "M3 P5 M6", "M2"), "C E G A"},
+		{"Bm7(♭5)", chord(note(material.B, nat), "m3 d5 m7", ""), "B D F A"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got []string
+			for _, n := range relation.JudgedNotes(tt.chord) {
+				got = append(got, n.String())
+			}
+			if strings.Join(got, " ") != tt.want {
+				t.Errorf("JudgedNotes = %v; want %s", got, tt.want)
+			}
+		})
 	}
 }
