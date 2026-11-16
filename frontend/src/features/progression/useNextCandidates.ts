@@ -1,24 +1,12 @@
 import { useEffect, useState } from 'react';
-import type { CandidateGroups, Progression, Slot } from '@/shared/api/client';
+import type { CandidateGroups, Progression } from '@/shared/api/client';
 import { getNextCandidates } from '@/shared/api/client';
-import { DEFAULT_BEATS } from './useProgression';
-
-/** The beats of a phrase: four bars of 4/4, cut from the start (docs/api/openapi.yaml). */
-export const PHRASE_BEATS = 16;
+import { nextBeats } from './useProgression';
 
 /**
- * The length of the slot a candidate goes in: one bar, or the beats left in
- * the phrase when fewer are left, so that the slot does not cross into the
- * next phrase (#116).
- */
-export function nextBeats(slots: Slot[]): number {
-  const used = slots.reduce((sum, slot) => sum + slot.beats, 0) % PHRASE_BEATS;
-  return Math.min(DEFAULT_BEATS, PHRASE_BEATS - used);
-}
-
-/**
- * The candidates for the slot after the last. The server's refusal, or no
- * answer, shows no candidates: the reading of the progression says why.
+ * The candidates for the slot after the last, waiting before the first
+ * answer. The server's refusal, or no answer, shows no candidates: the
+ * reading of the progression says why.
  */
 export type CandidatesState =
   { state: 'waiting' } | { state: 'given'; groups: CandidateGroups['groups'] } | { state: 'none' };
@@ -28,11 +16,13 @@ type Answer = { for: Progression; state: CandidatesState };
 /**
  * Asks for the candidates each time the progression changes, for a slot of
  * nextBeats. An answer to a progression that has since changed is thrown away.
+ * Until the answer to the latest progression comes, the last answer stays and
+ * `busy` is true, so that the list does not leave the screen meanwhile.
  */
 export function useNextCandidates(
   progression: Progression,
   get: typeof getNextCandidates = getNextCandidates,
-): { beats: number; candidates: CandidatesState } {
+): { beats: number; candidates: CandidatesState; busy: boolean } {
   const [answer, setAnswer] = useState<Answer | null>(null);
   const beats = nextBeats(progression.slots);
 
@@ -49,5 +39,9 @@ export function useNextCandidates(
     return () => controller.abort();
   }, [progression, beats, get]);
 
-  return { beats, candidates: answer?.for === progression ? answer.state : { state: 'waiting' } };
+  return {
+    beats,
+    candidates: answer?.state ?? { state: 'waiting' },
+    busy: answer?.for !== progression,
+  };
 }

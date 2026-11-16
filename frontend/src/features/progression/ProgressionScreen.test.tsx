@@ -319,6 +319,61 @@ describe('ProgressionScreen', () => {
     expect(await within(cards[1] ?? document.body).findByText('IV')).toBeInTheDocument();
   });
 
+  it('keeps the list, the open groups and the focus while the next candidates come', async () => {
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const body = init?.body as string;
+        if (url.endsWith('/progressions/next-candidates') && body.includes('"F"')) {
+          await held;
+        }
+        return standInServer(url, init);
+      }),
+    );
+    render(<ProgressionScreen />);
+    addChord('Dm7');
+    const add = await screen.findByRole('button', { name: 'F を足す' });
+    fireEvent.click(screen.getByText('借用和音（1）'));
+    await waitFor(() => expect(screen.getByRole('list', { name: '借用和音の候補' })).toBeVisible());
+
+    add.focus();
+    fireEvent.click(add);
+
+    const region = screen.getByRole('region', { name: /末尾に足す候補/ });
+    expect(screen.getByRole('heading', { name: /末尾に足す候補/ })).toHaveFocus();
+    expect(region).toHaveAttribute('aria-busy', 'true');
+    expect(within(region).getByText('新しい候補を待っています。')).toBeInTheDocument();
+    expect(within(region).getByRole('list', { name: '借用和音の候補' })).toBeVisible();
+
+    await act(async () => {
+      release();
+      await held;
+    });
+
+    await waitFor(() => expect(region).toHaveAttribute('aria-busy', 'false'));
+    expect(within(region).queryByText('新しい候補を待っています。')).not.toBeInTheDocument();
+    expect(within(region).getByRole('list', { name: '借用和音の候補' })).toBeVisible();
+    expect(within(region).getByRole('list', { name: 'ダイアトニックの候補' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: /末尾に足す候補/ })).toHaveFocus();
+  });
+
+  it('cuts a typed chord to the beats left in the phrase', async () => {
+    render(<ProgressionScreen />);
+    addChord('Dm7');
+    fireEvent.change(screen.getByRole('combobox', { name: '長さ' }), { target: { value: '15' } });
+
+    addChord('F');
+
+    const cards = within(screen.getByRole('list', { name: '進行' })).getAllByRole('listitem');
+    expect(cards).toHaveLength(2);
+    expect(within(cards[1] ?? document.body).getByRole('combobox', { name: '長さ' })).toHaveValue(
+      '1',
+    );
+    await screen.findByRole('heading', { name: '末尾に足す候補（4 拍）' });
+  });
+
   it('puts a variation in place of the chosen chord, keeping its length and the list', async () => {
     render(<ProgressionScreen />);
     fireEvent.click(await screen.findByRole('button', { name: 'F を足す' }));
@@ -370,10 +425,17 @@ describe('ProgressionScreen', () => {
     // Dm7 from the start, F 4 beats later at 90 BPM.
     const starts = audio.context.oscillators.map((o) => o.startedAt);
     expect(starts).toEqual([1.05, expect.closeTo(3.717)]);
+    const f = within(screen.getByRole('list', { name: 'ダイアトニックの候補' })).getByRole(
+      'listitem',
+    );
+    expect(within(f).getByText('試聴中')).toBeInTheDocument();
+    expect(f).toHaveAttribute('aria-current', 'true');
 
     fireEvent.click(trial);
 
     expect(trial).toHaveAttribute('aria-pressed', 'false');
+    expect(within(f).queryByText('試聴中')).not.toBeInTheDocument();
+    expect(f).not.toHaveAttribute('aria-current');
   });
 
   it('starts at 90 BPM and takes another tempo', () => {

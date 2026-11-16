@@ -39,7 +39,9 @@ export function ProgressionScreen({ createAudioContext }: Props) {
   const { progression, selected } = state;
   const reading = useProgressionReading(progression);
   const playback = usePlayback(progression, createAudioContext);
-  const { beats, candidates } = useNextCandidates(progression);
+  const { beats, candidates, busy } = useNextCandidates(progression);
+  // The candidate groups opened or closed, kept here so that a new answer keeps them.
+  const [opened, setOpened] = useState<Partial<Record<string, boolean>>>({});
   const [chordName, setChordName] = useState('');
   const readings = reading.state === 'read' ? reading.reading.slots : [];
   const unreadable = reading.state === 'refused' ? reading.slot : null;
@@ -122,6 +124,9 @@ export function ProgressionScreen({ createAudioContext }: Props) {
         <CandidateList
           groups={candidates.groups}
           beats={beats}
+          busy={busy}
+          opened={opened}
+          onToggle={(kind, open) => setOpened((o) => ({ ...o, [kind]: open }))}
           auditioning={playback.auditioning}
           onAdd={(name) => state.addCandidate(name, beats)}
           onAudition={(name) => playback.audition(name, beats)}
