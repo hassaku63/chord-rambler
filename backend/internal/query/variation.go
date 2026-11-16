@@ -60,9 +60,11 @@ func (CautionsLabel) Basis() Basis { return Convention }
 // OutOfKeyLabel holds the notes the variation adds from outside the key:
 // members of the variation whose pitch class is not in the scale of the key
 // and not among the members of the chord asked about (its bass left out), in
-// the order of material.Chord.Notes. No notes means it adds none.
+// the order of material.Chord.Notes. No notes means it adds none; the
+// variation may still hold notes from outside the key that the chord asked
+// about has (D in the list of D7, in C).
 type OutOfKeyLabel struct {
-	Notes []material.NoteName
+	Added []material.NoteName
 }
 
 // Basis returns Computation.
@@ -76,8 +78,9 @@ func (OutOfKeyLabel) Basis() Basis { return Computation }
 // (https://archives.ismir.net/ismir2005/paper/000080.pdf): 6 and m6 add a
 // major sixth (maj6 (3,5,6) and min6 (b3,5,6) in Harte), 9 is a dominant
 // seventh with a major ninth, m9 a minor seventh with a major ninth, and sus2
-// and sus4 keep the perfect fifth. add9 and m(add9) add a major ninth without
-// a seventh (docs/architecture/theory-conventions.md, 6).
+// and sus4 keep the perfect fifth. 7sus4 is sus4 with a minor seventh, and
+// add9 and m(add9) add a major ninth without a seventh
+// (docs/architecture/theory-conventions.md, 6).
 var variationShapes = map[material.Triad][][]material.Interval{
 	material.TriadMajor: {
 		{maj3, p5},             // triad
@@ -173,7 +176,7 @@ func Variations(c material.Chord, key material.Scale) ([]Variation, error) {
 			Members:  MembersLabel{Notes: v.Notes()},
 			Reading:  ReadingLabel{Main: read.Main},
 			Cautions: CautionsLabel{Cautions: cautions},
-			OutOfKey: OutOfKeyLabel{Notes: addedOutOfKey(v, c, key)},
+			OutOfKey: OutOfKeyLabel{Added: addedOutOfKey(v, c, key)},
 		})
 	}
 	return out, nil

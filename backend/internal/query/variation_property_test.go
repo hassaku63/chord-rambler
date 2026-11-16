@@ -152,7 +152,7 @@ func TestVariationsFollowTheKey(t *testing.T) {
 				if !slices.Equal(g.Chord.Intervals(), b.Chord.Intervals()) || g.IsInput != b.IsInput ||
 					gm.Kind != bm.Kind || gm.Function != bm.Function || gm.Target != bm.Target || !slices.Equal(gm.Modes, bm.Modes) ||
 					!slices.Equal(g.Cautions.Cautions, b.Cautions.Cautions) ||
-					!slices.Equal(above(g.Chord.Root(), g.OutOfKey.Notes), above(b.Chord.Root(), b.OutOfKey.Notes)) {
+					!slices.Equal(above(g.Chord.Root(), g.OutOfKey.Added), above(b.Chord.Root(), b.OutOfKey.Added)) {
 					t.Errorf("%v in %s major: variation %d %v differs from %v in C", moved.Notes(), tonic, i, g.Chord.Notes(), b.Chord.Notes())
 				}
 			}

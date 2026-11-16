@@ -143,7 +143,7 @@ func checkVariations(t *testing.T, c material.Chord, key material.Scale, want []
 		if len(g.Cautions.Cautions) != 0 {
 			t.Errorf("%d (%s): cautions %v; want none", i, w.members, g.Cautions.Cautions)
 		}
-		if s := names(g.OutOfKey.Notes); s != w.outOfKey {
+		if s := names(g.OutOfKey.Added); s != w.outOfKey {
 			t.Errorf("%d (%s): adds from outside the key %q; want %q", i, w.members, s, w.outOfKey)
 		}
 	}
