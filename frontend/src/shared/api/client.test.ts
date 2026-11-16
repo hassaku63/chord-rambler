@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { parseHealth, parseProblem, parseProgressionReading } from './client';
+import {
+  parseHealth,
+  parseProblem,
+  parseProgressionNotes,
+  parseProgressionReading,
+} from './client';
 
 describe('parseHealth', () => {
   it('accepts the body the contract describes', () => {
@@ -108,5 +113,33 @@ describe('parseProblem', () => {
     { name: 'a detail that is not a string', body: { title: 'x', status: 400, detail: 1 } },
   ])('rejects $name', ({ body }) => {
     expect(() => parseProblem(body)).toThrow('unexpected body');
+  });
+});
+
+describe('parseProgressionNotes', () => {
+  it('accepts the body the contract describes', () => {
+    const notes = [
+      { pitch: 48, start: 0, beats: 4, velocity: 64 },
+      { pitch: 60, start: 0, beats: 4, velocity: 64 },
+    ];
+
+    expect(parseProgressionNotes({ notes })).toEqual(notes);
+    expect(parseProgressionNotes({ notes: [] })).toEqual([]);
+  });
+
+  it.each([
+    { name: 'no notes', body: {} },
+    { name: 'a note that is not an object', body: { notes: [60] } },
+    { name: 'no velocity', body: { notes: [{ pitch: 60, start: 0, beats: 4 }] } },
+    {
+      name: 'a pitch that is not an integer',
+      body: { notes: [{ pitch: 60.5, start: 0, beats: 4, velocity: 64 }] },
+    },
+    {
+      name: 'a start that is not a number',
+      body: { notes: [{ pitch: 60, start: '0', beats: 4, velocity: 64 }] },
+    },
+  ])('rejects $name', ({ body }) => {
+    expect(() => parseProgressionNotes(body)).toThrow('unexpected body');
   });
 });

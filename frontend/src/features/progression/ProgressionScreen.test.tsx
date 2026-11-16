@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Progression, SlotReading } from '@/shared/api/client';
+import type { Note, Progression, SlotReading } from '@/shared/api/client';
+import { fakeAudio } from '@/test/fakeAudioContext';
 import { ProgressionScreen } from './ProgressionScreen';
 
 // The readings the stand-in server knows, as the contract writes them.
@@ -36,9 +37,28 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status });
 }
 
-/** Answers like POST /progressions/readings: a 400 naming the first chord it cannot read. */
-function standInServer(_url: string, init?: RequestInit): Promise<Response> {
+/** Answers like POST /progressions/notes: one note of middle C for each slot with a chord. */
+function notesOf(progression: Progression): Note[] {
+  let start = 0;
+  const notes: Note[] = [];
+  for (const slot of progression.slots) {
+    if (slot.chord !== undefined) {
+      notes.push({ pitch: 60, start, beats: slot.beats, velocity: 64 });
+    }
+    start += slot.beats;
+  }
+  return notes;
+}
+
+/**
+ * Answers like POST /progressions/readings, a 400 naming the first chord it
+ * cannot read, and like POST /progressions/notes.
+ */
+function standInServer(url: string, init?: RequestInit): Promise<Response> {
   const progression = JSON.parse(init?.body as string) as Progression;
+  if (url.endsWith('/progressions/notes')) {
+    return Promise.resolve(json({ notes: notesOf(progression) }));
+  }
   const slots: SlotReading[] = [];
   for (const [i, slot] of progression.slots.entries()) {
     const reading = slot.chord === undefined ? {} : known[slot.chord];
@@ -130,9 +150,64 @@ describe('ProgressionScreen', () => {
 
     fireEvent.change(screen.getByRole('combobox', { name: '調' }), { target: { value: 'B♭' } });
 
-    expect(fetch).toHaveBeenLastCalledWith(
+    expect(fetch).toHaveBeenCalledWith(
       '/api/v1/progressions/readings',
       expect.objectContaining({ body: JSON.stringify({ key: 'B♭', slots: [] }) }),
     );
+  });
+
+  it('plays the progression, marks the slot sounding, and stops when pressed again', async () => {
+    const audio = fakeAudio();
+    render(<ProgressionScreen createAudioContext={audio.create} />);
+    const play = screen.getByRole('button', { name: '進行を鳴らす' });
+    expect(play).toBeDisabled();
+    addChord('Dm7');
+    await waitFor(() => expect(play).toBeEnabled());
+
+    fireEvent.click(play);
+
+    expect(play).toHaveAttribute('aria-pressed', 'true');
+    expect(audio.context.oscillators).toHaveLength(1);
+    const card = within(screen.getByRole('list', { name: '進行' })).getByRole('listitem');
+    expect(await within(card).findByText('鳴っています')).toBeInTheDocument();
+    expect(card).toHaveAttribute('aria-current', 'true');
+
+    fireEvent.click(play);
+
+    expect(play).toHaveAttribute('aria-pressed', 'false');
+    expect(within(card).queryByText('鳴っています')).not.toBeInTheDocument();
+    expect(audio.context.oscillators[0]?.cut).toBe(true);
+  });
+
+  it('plays the chosen slot alone, and stops', async () => {
+    const audio = fakeAudio();
+    render(<ProgressionScreen createAudioContext={audio.create} />);
+    addChord('Dm7');
+    addChord('Fm');
+    const playSlot = screen.getByRole('button', { name: 'この枠だけ鳴らす' });
+    const stop = screen.getByRole('button', { name: '止める' });
+    await screen.findByText('iv');
+    expect(playSlot).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fm iv 借用和音' }));
+    await waitFor(() => expect(playSlot).toBeEnabled());
+    fireEvent.click(playSlot);
+
+    expect(playSlot).toHaveAttribute('aria-pressed', 'true');
+    expect(audio.context.oscillators.map((o) => o.startedAt)).toEqual([1.05]);
+    fireEvent.click(stop);
+    expect(playSlot).toHaveAttribute('aria-pressed', 'false');
+    expect(stop).toBeDisabled();
+  });
+
+  it('starts at 90 BPM and takes another tempo', () => {
+    render(<ProgressionScreen />);
+    const tempo = screen.getByRole('slider', { name: /テンポ/ });
+    expect(tempo).toHaveValue('90');
+
+    fireEvent.change(tempo, { target: { value: '120' } });
+
+    expect(tempo).toHaveValue('120');
+    expect(tempo).toHaveAttribute('aria-valuetext', '120 BPM');
   });
 });
