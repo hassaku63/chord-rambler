@@ -63,6 +63,7 @@ var romanForms = func() []romanForm {
 		{"m7(♭5)", "ø7", lower}, {"dim7", "°7", lower},
 		{"sus2", "sus2", byDegree}, {"sus4", "sus4", byDegree}, {"7sus4", "7sus4", byDegree},
 		{"add9", "add9", upper},
+		{"6", "6", upper}, {"m6", "6", lower}, {"m(add9)", "add9", lower},
 	}
 	forms := make([]romanForm, 0, len(byName))
 	count := make([]int, len(kinds))
@@ -114,7 +115,9 @@ func numeral(degree int, c letterCase) string {
 // the degree in the major key for a chord without a third, or uppercase on an
 // altered degree), the kind and tensions written as in chord names, and "/"
 // with the target. Examples are ii7, Imaj7, viiø7, ♭VII, V7(9), Vsus4,
-// ♭VIIsus4 and V7/V. A chord name shown with it is written by FormatChord. It
+// ♭VIIsus4, I6, iadd9 and V7/V. The 6 of I6 is an added-sixth chord, not
+// an inversion; m(add9) is written iadd9, without the parentheses. A chord
+// name shown with it is written by FormatChord. It
 // fails for a position with a bass (ErrRomanBass) and a shape outside the
 // vocabulary (ErrNoName).
 func FormatRoman(p material.Position) (string, error) {
@@ -145,7 +148,8 @@ func romanFormOf(suffix string) (romanForm, string) {
 		return romanForms[i], ""
 	}
 	// Only 7, maj7 and m7 take tensions, and none of them is the start of
-	// another with "(".
+	// another with "(". m(add9) has its "(" in the kind and is matched whole
+	// above.
 	for _, f := range romanForms {
 		if name := kinds[f.kind].name; strings.HasPrefix(suffix, name+"(") {
 			return f, suffix[len(name):]
