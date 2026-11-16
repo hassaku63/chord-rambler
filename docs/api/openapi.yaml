@@ -22,6 +22,32 @@ paths:
                 $ref: "#/components/schemas/Health"
         default:
           $ref: "#/components/responses/Problem"
+  /progressions/readings:
+    post:
+      operationId: readProgression
+      summary: The reading of every slot of a progression
+      description: "Reads the progression in its key and answers with one reading per slot, in the order of the slots. Each label carries the kind of knowledge it rests on (basis). No sentences are returned."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Progression"
+      responses:
+        "200":
+          description: The readings of the slots.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressionReading"
+        "400":
+          description: "The body is not JSON, or does not describe a progression: a chord name or a key that cannot be read, an unknown role or content, a slot with both or neither of chord and content, a length of less than one beat, or a slot that crosses the boundary of a phrase. The detail names the slot (counted from 0)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
 components:
   schemas:
     Health:
@@ -34,6 +60,168 @@ components:
         version:
           type: string
           description: The build's version (a git description, or "dev").
+    Progression:
+      type: object
+      description: "A progression in a major key, in 4/4. Phrases are cut every four bars from the start; no slot may cross the boundary of a phrase."
+      required: [key, slots]
+      properties:
+        key:
+          type: string
+          description: "The tonic of the major key, as a note name (C, F♯, B♭; # and b are read as ♯ and ♭)."
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/Slot"
+    Slot:
+      type: object
+      description: "One slot: either a chord (chord) or no chord (content), never both, a length in beats and an optional role."
+      required: [beats]
+      properties:
+        chord:
+          type: string
+          description: "A chord name, with the aliases the notation reads (Dm7, G7(9), C/E, CM7)."
+        content:
+          type: string
+          enum: [none, unchosen]
+          description: "A slot with no chord: none sounds nothing, unchosen has no chord chosen yet."
+        beats:
+          type: integer
+          minimum: 1
+        role:
+          $ref: "#/components/schemas/Role"
+    Role:
+      type: string
+      description: "One of the six structural roles (stable, link, prepare, rise, resolve, close) or the four colour roles (spread, float, wistful, linger)."
+      enum: [stable, link, prepare, rise, resolve, close, spread, float, wistful, linger]
+    Basis:
+      type: string
+      description: The kind of knowledge a label rests on.
+      enum: [definition, computation, school, convention]
+    ProgressionReading:
+      type: object
+      required: [slots]
+      properties:
+        slots:
+          type: array
+          description: One reading per slot, in the order of the slots.
+          items:
+            $ref: "#/components/schemas/SlotReading"
+    SlotReading:
+      type: object
+      description: "The labels of one slot. A slot with no chord, or none chosen yet, has only the role fit, if any."
+      properties:
+        chord:
+          $ref: "#/components/schemas/ChordNameLabel"
+        roman:
+          $ref: "#/components/schemas/RomanLabel"
+        reading:
+          $ref: "#/components/schemas/ChordReadingLabel"
+        resolution:
+          $ref: "#/components/schemas/ResolutionLabel"
+        cadence:
+          $ref: "#/components/schemas/CadenceLabel"
+        tensionCautions:
+          $ref: "#/components/schemas/TensionCautionsLabel"
+        roleFit:
+          $ref: "#/components/schemas/RoleFitLabel"
+    ChordNameLabel:
+      type: object
+      description: The chord of the slot, written with its spelling kept.
+      required: [basis, name]
+      properties:
+        basis:
+          $ref: "#/components/schemas/Basis"
+        name:
+          type: string
+    RomanLabel:
+      type: object
+      description: "The chord seen from the tonic, as a Roman numeral (ii7, ♭VII, V7/V). The bass is not written. Absent when the root has no position in the key. The basis is school for a secondary dominant, whose target is a reading, and computation otherwise."
+      required: [basis, numeral]
+      properties:
+        basis:
+          $ref: "#/components/schemas/Basis"
+        numeral:
+          type: string
+    ChordReadingLabel:
+      type: object
+      description: The main reading of the chord in the key.
+      required: [basis, kind, function, modes, fromParallelMinor]
+      properties:
+        basis:
+          $ref: "#/components/schemas/Basis"
+        kind:
+          type: string
+          enum: [facts-only, diatonic, borrowed, secondary-dominant]
+        function:
+          type: string
+          description: Set for a diatonic chord only; none otherwise.
+          enum: [none, tonic, subdominant, dominant]
+        modes:
+          type: array
+          description: "The parallel modes a borrowed chord is borrowed from; empty for the other kinds."
+          items:
+            $ref: "#/components/schemas/Mode"
+        fromParallelMinor:
+          type: boolean
+          description: Whether a borrowed chord comes from the parallel minor (its modes hold aeolian).
+        target:
+          type: integer
+          minimum: 2
+          maximum: 6
+          description: The degree a secondary dominant points to; absent for the other kinds.
+    Mode:
+      type: string
+      enum: [ionian, dorian, phrygian, lydian, mixolydian, aeolian, locrian]
+    ResolutionLabel:
+      type: object
+      description: How the chord goes on to the chord of the next slot.
+      required: [basis, resolution]
+      properties:
+        basis:
+          $ref: "#/components/schemas/Basis"
+        resolution:
+          type: string
+          enum: [none, expected, irregular]
+    CadenceLabel:
+      type: object
+      description: The cadence named on the last slot of a full phrase; none elsewhere.
+      required: [basis, cadence]
+      properties:
+        basis:
+          $ref: "#/components/schemas/Basis"
+        cadence:
+          type: string
+          enum: [none, authentic, half, plagal, deceptive]
+    TensionCautionsLabel:
+      type: object
+      description: The tensions of the chord that tend to sound muddy in the key, from the lowest.
+      required: [basis, cautions]
+      properties:
+        basis:
+          $ref: "#/components/schemas/Basis"
+        cautions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TensionCaution"
+    TensionCaution:
+      type: object
+      description: "A tension and the note of the chord a half step below it, each as an interval above the root: a quality (P, M, m, A, d) and a number (P11 over M3)."
+      required: [tension, chordTone]
+      properties:
+        tension:
+          type: string
+        chordTone:
+          type: string
+    RoleFitLabel:
+      type: object
+      description: "Whether the slot fits its structural role. Absent for a slot with no role or a colour role."
+      required: [basis, fit]
+      properties:
+        basis:
+          $ref: "#/components/schemas/Basis"
+        fit:
+          type: string
+          enum: [fits, misfits, undecided]
     Problem:
       type: object
       description: A problem document (RFC 9457).

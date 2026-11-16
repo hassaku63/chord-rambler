@@ -103,3 +103,17 @@
 | 当たるべき場面 | 音の高さを数で表す・受け渡すとき（演奏のまとまりの音符、画面での周波数への換算、標準 MIDI ファイルの書き出し）。オクターブの番号の付け方を決めるとき。強さの値を決めるとき |
 | chord-rambler との接点 | `backend/internal/performance` の音符（`Note`）が、ノート番号と強さを持つ（`docs/architecture/domain-model.md` の 9）。C4 = 60 は、このプロジェクトの規約として採る（オクターブの番号の付け方は流儀が割れ、ここでは一次情報で確かめていない）。強さの定数の値は、仕様から引いていない |
 | 確認 | 2026-11-16 / 間隔 365 日 |
+
+## Web と API
+
+### Problem Details for HTTP APIs（RFC 9457）
+
+| 欄 | 内容 |
+| --- | --- |
+| 発行元 | IETF（M. Nottingham、E. Wilde、S. Dalal。2023 年 7 月） |
+| 何を決めているか | HTTP の API が失敗を返すときの、機械で読める本文の形。メディアタイプ `application/problem+json` と `application/problem+xml`、標準の欄（`type`、`status`、`title`、`detail`、`instance`）とそれぞれの意味、問題の種類ごとの拡張の欄 |
+| 一次情報 | https://www.rfc-editor.org/rfc/rfc9457 （登録なしで読める） |
+| 状態 | 現行。Proposed Standard。RFC 7807 を廃止して置き換えた |
+| 当たるべき場面 | API の失敗の応答を足す・変えるとき。`detail` に何を書くか、`type` を定めるか、拡張の欄を足すかを決めるとき。画面が失敗の応答を読むところを作るとき |
+| chord-rambler との接点 | `backend/internal/httpapi` の `writeProblem` と、契約（`docs/api/openapi.yaml`）の `Problem`。`type` を書かないので、RFC の定めにより `about:blank` とみなされ、`title` は状態の標準の句（`http.StatusText`）にしている（RFC はそれを SHOULD とする）。`status` は応答の状態と同じ値。`detail` は、直し方が分かるように、読めなかった枠と所を書く。RFC は、受け手が `detail` を解析しないよう求めるので、画面は `detail` から情報を取り出さない。食い違い: RFC はどの欄も必須にしないが、契約は `title` と `status` を必須にしている（このサーバーはいつも書く）。`instance` と拡張の欄は使っていない |
+| 確認 | 2026-11-16 / 間隔 365 日 |

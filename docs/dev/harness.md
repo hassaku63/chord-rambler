@@ -18,6 +18,7 @@ CI の `required (make check)` は `make check` をそのまま呼ぶ。必須�
 | Go のテスト（race、cover） | 振る舞いの退行 | `make backend-test`（手元の toolchain に coverage の道具がなければ `GOTEST_FLAGS=-race`） | `make check` |
 | `go build` | ビルドできないコード | `make backend-build` | `make check` |
 | ルートと契約の一致のテスト（`docs/api/openapi.yaml` の操作と、サーバーに登録したルート。契約の `paths` の形が崩れていても落ちる） | 契約にないルート、ルートのない操作（ADR-0008） | `cd backend && go test ./internal/httpapi/ -run TestRoutesMatchOpenAPI` | `make check` |
+| 列挙の識別子の全域のテスト（エンジンの列挙のどの値も、`backend/internal/httpapi/names.go` で識別子に写り、契約の `enum` に同じ並びがある） | 識別子のない値、契約にない識別子。定数を足したときの写し漏れは、lint（exhaustive）も落とす | `cd backend && go test ./internal/httpapi/ -run TestEveryValueHasAnIdentifier` | `make check` |
 | 埋め込んだカタログの読み込みと検証のテスト（項目の欠けと重複、知らない値と項目名、空の出どころと様式の範囲。JSON のファイルの一覧と、登録した読み込む関数の一覧の一致） | 壊れたカタログや、検証されないカタログを埋め込んだまま出すこと（ADR-0008 の 6） | `cd backend && go test ./internal/catalog/` | `make check` |
 | Vitest と Testing Library | 画面の振る舞いの退行 | `make frontend-test` | `make check` |
 | `tsc -b` | 型の矛盾 | `make frontend-typecheck` | `make check` |
