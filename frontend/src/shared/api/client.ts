@@ -62,9 +62,11 @@ type OpenTagged<T, Tag extends keyof T> = T extends unknown
 /** The labels of one slot: those of a slot with a chord, or of a slot with no chord. */
 export type SlotReading = OpenTagged<components['schemas']['SlotReading'], 'content'>;
 /** The labels of a slot with a chord: the chord's labels are always there. */
-export type ChordSlotReading = Extract<SlotReading, { content: 'chord' }>;
+type ChordSlotReading = Extract<SlotReading, { content: 'chord' }>;
 /** The readings of a progression's slots, in the order of the slots. */
-export type ProgressionReading = { slots: SlotReading[] };
+export type ProgressionReading = Omit<components['schemas']['ProgressionReading'], 'slots'> & {
+  slots: SlotReading[];
+};
 /** A problem document (RFC 9457). */
 export type Problem = components['schemas']['Problem'];
 

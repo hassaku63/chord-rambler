@@ -54,6 +54,22 @@ func parseRole(id string) (progression.Role, bool) {
 	}
 }
 
+// contentID names what a slot holds as the request's content does: chord,
+// none (nothing sounds) or unchosen (no chord chosen yet). Content is not an
+// int enumeration, so the test lists its three values.
+func contentID(c progression.Content) string {
+	switch {
+	case c.IsUnchosen():
+		return "unchosen"
+	case c.IsNoChord():
+		return "none"
+	}
+	if _, ok := c.Chord(); ok {
+		return "chord"
+	}
+	return ""
+}
+
 func basisID(b query.Basis) string {
 	switch b {
 	case query.Definition:

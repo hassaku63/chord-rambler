@@ -260,7 +260,8 @@ describe('ProgressionScreen', () => {
     render(<ProgressionScreen />);
     addChord('Fsus4');
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Fsus4' }));
+    // The card's name grows with its reading's labels once the reading comes.
+    fireEvent.click(await screen.findByRole('button', { name: /^Fsus4(?! の枠を消す)/ }));
 
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(

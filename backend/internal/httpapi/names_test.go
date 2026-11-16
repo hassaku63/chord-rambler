@@ -9,6 +9,7 @@ import (
 
 	"github.com/hassaku63/chord-rambler/backend/internal/catalog"
 	"github.com/hassaku63/chord-rambler/backend/internal/material"
+	"github.com/hassaku63/chord-rambler/backend/internal/notation"
 	"github.com/hassaku63/chord-rambler/backend/internal/progression"
 	"github.com/hassaku63/chord-rambler/backend/internal/query"
 	"github.com/hassaku63/chord-rambler/backend/internal/reading"
@@ -98,6 +99,38 @@ func TestEveryValueHasAnIdentifier(t *testing.T) {
 				t.Errorf("%s has no %q", openAPIPath, enum)
 			}
 		})
+	}
+}
+
+// TestContentHasAnIdentifier checks the identifier of each of the three
+// contents a slot can hold, and that docs/api/openapi.yaml lists them under the
+// shape of reading they belong to.
+func TestContentHasAnIdentifier(t *testing.T) {
+	contract, err := os.ReadFile(openAPIPath)
+	if err != nil {
+		t.Fatalf("reading the contract: %v", err)
+	}
+	c, err := notation.ParseChord("C")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		content progression.Content
+		want    string
+	}{
+		{progression.ChordOf(c), "chord"},
+		{progression.NoChord(), "none"},
+		{progression.Unchosen(), "unchosen"},
+	}
+	for _, tt := range tests {
+		if got := contentID(tt.content); got != tt.want {
+			t.Errorf("contentID(%v) = %q, want %q", tt.content, got, tt.want)
+		}
+	}
+	for _, enum := range []string{"enum: [chord]", "enum: [none, unchosen]"} {
+		if !strings.Contains(string(contract), enum) {
+			t.Errorf("%s has no %q", openAPIPath, enum)
+		}
 	}
 }
 
