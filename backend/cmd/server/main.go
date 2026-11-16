@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hassaku63/chord-rambler/backend/internal/catalog"
 	"github.com/hassaku63/chord-rambler/backend/internal/config"
 	"github.com/hassaku63/chord-rambler/backend/internal/httpapi"
 )
@@ -35,9 +36,14 @@ func run(logger *slog.Logger) error {
 		return err
 	}
 
+	transitions, err := catalog.LoadFunctionTransitions()
+	if err != nil {
+		return err
+	}
+
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           httpapi.NewHandler(httpapi.Deps{Logger: logger}),
+		Handler:           httpapi.NewHandler(httpapi.Deps{Logger: logger, Transitions: transitions}),
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
 

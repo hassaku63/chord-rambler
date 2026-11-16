@@ -66,7 +66,7 @@ func decodeBody(w http.ResponseWriter, r *http.Request, dst any) error {
 		if tooLarge := (*http.MaxBytesError)(nil); errors.As(err, &tooLarge) {
 			return describeDecodeError(err)
 		}
-		return badRequest("the body is not one JSON value: it goes on after the progression")
+		return badRequest("the body is not one JSON value: it goes on after the first")
 	}
 	return nil
 }
@@ -84,7 +84,7 @@ func describeDecodeError(err error) error {
 	if name, ok := strings.CutPrefix(err.Error(), "json: unknown field "); ok {
 		return badRequest("unknown field %s", name)
 	}
-	return badRequest("the body is not a progression in JSON")
+	return badRequest("the body is not valid JSON")
 }
 
 // fieldPath writes the path of a field as the contract's reader sees it:
@@ -136,13 +136,29 @@ func decodeProgression(w http.ResponseWriter, r *http.Request) (progression.Prog
 	if err := decodeBody(w, r, &body); err != nil {
 		return progression.Progression{}, err
 	}
-	tonic, err := notation.ParseNoteName(body.Key)
+	return body.progression()
+}
+
+// parseKey reads the tonic of a major key. Every error it returns is a
+// *requestError.
+func parseKey(name string) (material.Scale, error) {
+	tonic, err := notation.ParseNoteName(name)
 	if err != nil {
-		return progression.Progression{}, badRequest("key: %v", err)
+		return material.Scale{}, badRequest("key: %v", err)
 	}
 	key, err := material.NewScale(tonic, material.Ionian)
 	if err != nil {
-		return progression.Progression{}, badRequest("key %q: %v", body.Key, err)
+		return material.Scale{}, badRequest("key %q: %v", name, err)
+	}
+	return key, nil
+}
+
+// progression builds the progression of the body with the engine's
+// constructors, which check it. Every error it returns is a *requestError.
+func (body progressionBody) progression() (progression.Progression, error) {
+	key, err := parseKey(body.Key)
+	if err != nil {
+		return progression.Progression{}, err
 	}
 	p := progression.New(key, progression.Meter{})
 	for i, sb := range body.Slots {
@@ -294,7 +310,7 @@ func readProgression(p progression.Progression) (progressionReading, error) {
 }
 
 func chordLabels(c material.Chord, key material.Scale, r reading.SlotReading) (slotReading, error) {
-	name, err := notation.FormatChord(c)
+	name, err := chordNameOf(c)
 	if err != nil {
 		return slotReading{}, err
 	}
@@ -306,38 +322,64 @@ func chordLabels(c material.Chord, key material.Scale, r reading.SlotReading) (s
 	if err != nil {
 		return slotReading{}, err
 	}
-	main := r.Chord.Main
+	school := query.School
+	return slotReading{
+		Chord:           name,
+		Roman:           roman,
+		Reading:         chordReadingOf(school, r.Chord.Main),
+		Resolution:      &resolutionLabel{Basis: basisID(school), Resolution: resolutionID(r.Resolution)},
+		Cadence:         &cadenceLabel{Basis: basisID(school), Cadence: cadenceID(r.Cadence)},
+		TensionCautions: tensionCautionsOf(school, cautions),
+	}, nil
+}
+
+// chordNameOf writes the chord with its spelling kept; the name rests on the
+// definition.
+func chordNameOf(c material.Chord) (*chordNameLabel, error) {
+	name, err := notation.FormatChord(c)
+	if err != nil {
+		return nil, err
+	}
+	return &chordNameLabel{Basis: basisID(query.Definition), Name: name}, nil
+}
+
+// chordReadingOf writes the main reading of a chord.
+func chordReadingOf(basis query.Basis, main reading.Reading) *chordReadingLabel {
 	modes := make([]string, 0, len(main.Modes))
 	for _, m := range main.Modes {
 		modes = append(modes, modeID(m))
 	}
-	tc := make([]tensionCaution, 0, len(cautions))
-	for _, tcn := range cautions {
-		tc = append(tc, tensionCaution{Tension: tcn.Tension.String(), ChordTone: tcn.ChordTone.String()})
+	return &chordReadingLabel{
+		Basis: basisID(basis), Kind: kindID(main.Kind), Function: functionID(main.Function),
+		Modes: modes, FromParallelMinor: main.FromParallelMinor(), Target: main.Target,
 	}
-	school := basisID(query.School)
-	return slotReading{
-		Chord: &chordNameLabel{Basis: basisID(query.Definition), Name: name},
-		Roman: roman,
-		Reading: &chordReadingLabel{
-			Basis: school, Kind: kindID(main.Kind), Function: functionID(main.Function),
-			Modes: modes, FromParallelMinor: main.FromParallelMinor(), Target: main.Target,
-		},
-		Resolution:      &resolutionLabel{Basis: school, Resolution: resolutionID(r.Resolution)},
-		Cadence:         &cadenceLabel{Basis: school, Cadence: cadenceID(r.Cadence)},
-		TensionCautions: &tensionCautionsLabel{Basis: school, Cautions: tc},
-	}, nil
+}
+
+// tensionCautionsOf writes the tensions that tend to sound muddy, always as a
+// list.
+func tensionCautionsOf(basis query.Basis, cautions []reading.TensionCaution) *tensionCautionsLabel {
+	tc := make([]tensionCaution, 0, len(cautions))
+	for _, c := range cautions {
+		tc = append(tc, tensionCaution{Tension: c.Tension.String(), ChordTone: c.ChordTone.String()})
+	}
+	return &tensionCautionsLabel{Basis: basisID(basis), Cautions: tc}
 }
 
 // romanOf writes the chord as a Roman numeral at the position the reading
-// gives it (reading.RomanPosition). A secondary dominant's label rests on the
-// school, as its reading says (#83); any other chord's on a computation. A
-// chord with no position gives no label (nil).
+// gives it (reading.RomanPosition). A chord with no position gives no label
+// (nil).
 func romanOf(c material.Chord, key material.Scale, main reading.Reading) (*romanLabel, error) {
 	pos, ok, err := reading.RomanPosition(c, key, main)
 	if err != nil || !ok {
 		return nil, err
 	}
+	return romanAt(pos, main)
+}
+
+// romanAt writes the position as a Roman numeral. A secondary dominant's
+// label rests on the school, as its reading says (#83); any other chord's on
+// a computation.
+func romanAt(pos material.Position, main reading.Reading) (*romanLabel, error) {
 	numeral, err := notation.FormatRoman(pos)
 	if err != nil {
 		return nil, err

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"github.com/hassaku63/chord-rambler/backend/internal/catalog"
 	"github.com/hassaku63/chord-rambler/backend/internal/material"
 	"github.com/hassaku63/chord-rambler/backend/internal/progression"
 	"github.com/hassaku63/chord-rambler/backend/internal/query"
@@ -154,6 +155,51 @@ func roleFitID(f reading.RoleFit) string {
 		return "misfits"
 	case reading.RoleUndecided:
 		return "undecided"
+	}
+	return ""
+}
+
+func conditionID(c reading.RoleCondition) string {
+	switch c {
+	case reading.ConditionShape:
+		return "shape"
+	case reading.ConditionFunction:
+		return "function"
+	case reading.ConditionPreviousV:
+		return "previous-v"
+	case reading.ConditionNextDominant:
+		return "next-dominant"
+	case reading.ConditionCadence:
+		return "cadence"
+	case reading.ConditionAnotherRoot:
+		return "another-root"
+	case reading.ConditionExpectedResolution:
+		return "expected-resolution"
+	}
+	return ""
+}
+
+func preferenceID(p catalog.Preference) string {
+	switch p {
+	case catalog.Common:
+		return "common"
+	case catalog.LessCommon:
+		return "less-common"
+	case catalog.Unstated:
+		return "unstated"
+	}
+	return ""
+}
+
+// styleID has a case for the zero value (a style never set) so that the
+// switch stays one the lint (exhaustive) checks while there is one style, as
+// query.basisOfGrounds does.
+func styleID(s catalog.Style) string {
+	switch s {
+	case catalog.Classical:
+		return "classical"
+	case 0:
+		return ""
 	}
 	return ""
 }
