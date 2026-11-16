@@ -75,7 +75,7 @@
 | 一次情報 | https://archives.ismir.net/ismir2005/paper/000080.pdf （登録なしで読める PDF） |
 | 状態 | 2005 年の論文。開いたのはこの版だけで、のちの改訂は確かめていない |
 | 当たるべき場面 | 和音名の読み書きを作る・変えるとき（表記のまとまり）。和音名の文法や、足す音の書き方、バスの書き方を決めるとき。和音の注釈のデータと和音を交換するとき |
-| chord-rambler との接点 | `backend/internal/notation` の和音名（`docs/architecture/theory-conventions.md` の 6）。同じところ: 根音と、根音からの音程で和音を持つ（`backend/internal/material`）。足す音を括弧の中にコンマで並べる。`B` と `b` を大文字・小文字で分ける。6 と m6 の音程（`maj6 (3,5,6)`、`min6 (b3,5,6)`）。食い違い: 和音名に `:` を書かない。バスは音名で書く（Harte は度）。変化記号に `♯`・`♭` も使う（Harte は `#`・`b` だけ）。種類は短い名前（`m`、`dim`）で書く（Harte は打ち間違いを見つけやすいように長い名前を選ぶ）。Harte の短縮名には sus2 と add9 がない（m(add9) は Harte では `min(9)`） |
+| chord-rambler との接点 | `backend/internal/notation` の和音名（`docs/architecture/theory-conventions.md` の 6）。同じところ: 根音と、根音からの音程で和音を持つ（`backend/internal/material`）。足す音を括弧の中にコンマで並べる。`B` と `b` を大文字・小文字で分ける。6 と m6 の音程（`maj6 (3,5,6)`、`min6 (b3,5,6)`）。食い違い: 和音名に `:` を書かない。バスは音名で書く（Harte は度）。変化記号に `♯`・`♭` も使う（Harte は `#`・`b` だけ）。種類は短い名前（`m`、`dim`）で書く（Harte は打ち間違いを見つけやすいように長い名前を選ぶ）。Harte の短縮名には sus2 と add9 がない（m(add9) は、Harte の文法では `min(9)` と書ける） |
 | 確認 | 2026-11-16 / 間隔 365 日 |
 
 ### RomanText（Tymoczko、Gotham、Cuthbert、Ariza、ISMIR 2019）

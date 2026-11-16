@@ -83,7 +83,7 @@ func TestChordNames(t *testing.T) {
 		// 6 and m6 add a major sixth to the triad: major-sixth and minor-sixth
 		// in MusicXML 4.0 ("added sixth"), maj6 (3,5,6) and min6 (b3,5,6) in
 		// Harte et al., ISMIR 2005, table 2. m(add9) adds a major ninth to the
-		// minor triad, as add9 does to the major (Harte's min(9)). The owner's
+		// minor triad, as add9 does to the major (min(9) in Harte's grammar). The owner's
 		// decision in #120.
 		{"C6", c, "M3 P5 M6", ""},
 		{"Cm6", c, "m3 P5 M6", ""},
@@ -270,6 +270,7 @@ func TestFormatChordForDisplay(t *testing.T) {
 	}{
 		{note(material.B, -2), "M3 P5", "", "B𝄫", "A"},
 		{note(material.C, -1), "m3 P5 m7", "", "C♭m7", "Bm7"},
+		{note(material.C, -1), "m3 P5 M6", "", "C♭m6", "Bm6"},
 		{note(material.F, -1), "M3 P5 M7", "", "F♭maj7", "Emaj7"},
 		{note(material.F, 2), "M3 P5 m7 M9", "", "F𝄪7(9)", "G7(9)"},
 		{note(material.C, 0), "M3 P5", "d4", "C/F♭", "C/E"},
@@ -349,6 +350,8 @@ func displayNames(root string, basses []string) []string {
 //     The number of these is fixed (wantUnreadable), so a name cannot drop out
 //     unnoticed; so is the number that is read (wantRead).
 func TestChordRoundTrip(t *testing.T) {
+	// The 6, m6 and m(add9) kinds (#120) add 692, 664 and 680 names read, and
+	// 4, 6 and 5 roots whose members go beyond a double sharp or flat.
 	const wantRead, wantUnreadable = 74874, 1003
 	var spellings []string
 	for _, n := range allNotes() {
