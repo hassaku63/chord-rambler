@@ -13,7 +13,7 @@ import (
 // basses that are members and that are not.
 var shapes = []struct{ intervals, bass string }{
 	{"", ""},
-	{maj, ""}, {min, ""}, {dim, ""}, {"M3 A5", ""}, {"P4 P5", ""}, {"M2 P5", ""},
+	{maj, ""}, {minor, ""}, {dim, ""}, {"M3 A5", ""}, {"P4 P5", ""}, {"M2 P5", ""},
 	{dom7, ""}, {maj7, ""}, {min7, ""}, {half7, ""}, {"m3 d5 d7", ""},
 	{"M3 P5 m7 m9 A11 m13", ""},
 	{maj, "M3"}, {maj, "P5"}, {maj, "m7"}, {maj, "M2"}, {maj, "A4"},
@@ -138,8 +138,9 @@ func TestReadingMovesWithTheKey(t *testing.T) {
 }
 
 // The kind is judged by the notes that make the chord and a bass a minor
-// seventh above the root (the owner's call on #102), so adding a tension, or a
-// bass of another interval, keeps the reading. Chords beyond a double sharp or
+// seventh above the root (the owner's calls on #102), so adding a tension (9,
+// 11 or 13), or a bass other than a minor seventh, keeps the reading. The second, fourth and sixth members are looked at, so they are
+// not added here. Chords beyond a double sharp or
 // flat are skipped; at least one must be compared.
 func TestTensionsAndOtherBassesKeepTheReading(t *testing.T) {
 	extras := []struct{ tension, bass string }{

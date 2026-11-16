@@ -21,7 +21,8 @@ const (
 	FactsOnly Kind = iota
 	// Diatonic is a chord whose notes judged (relation.JudgedNotes) are all
 	// notes of the scale of the key, by spelling. Tensions and other basses
-	// are not looked at, so G7(♭9) and C/F♯ are diatonic in C.
+	// are not looked at, so G7(♭9) and C/F♯ are diatonic in C; the fourth of
+	// Fsus4 (B♭) is, so it is not.
 	Diatonic
 	// Borrowed is a chord whose notes judged are all notes of a mode on the
 	// same tonic other than the major scale, by spelling. Secondary dominants
@@ -119,8 +120,8 @@ type ChordReading struct {
 //  1. a secondary dominant, when the chord has the shape of one
 //     (relation.SecondaryDominantShape);
 //  2. diatonic, when the scale of the key holds the notes judged
-//     (relation.JudgedNotes: the root, the third, the fifth, the seventh and a
-//     bass a minor seventh above the root) by spelling;
+//     (relation.JudgedNotes: the root, the second to the seventh members and
+//     a bass a minor seventh above the root) by spelling;
 //  3. borrowed, when another mode on the tonic holds them by spelling;
 //  4. facts only, otherwise. A chord spelled enharmonically (A♯ or B♯ major
 //     in C) is read so, and so is a chord whose root has no position.
@@ -150,11 +151,12 @@ func readMain(c material.Chord, key material.Scale) (Reading, error) {
 	}
 	modes := modesHolding(relation.JudgedNotes(c), key.Tonic())
 	if slices.Contains(modes, material.Ionian) {
-		// The root is a note of the scale, so it has a position without
-		// alteration.
 		pos, err := relation.PositionOf(c, key)
 		if err != nil {
-			return Reading{}, fmt.Errorf("read chord: %w", err)
+			// Not reached: the key is Ionian (SecondaryDominantShape would
+			// have failed) and the root is a note of its scale, so it has a
+			// position without alteration.
+			panic(err)
 		}
 		r.Kind, r.Function = Diatonic, functions[pos.Degree()-1]
 		return r, nil

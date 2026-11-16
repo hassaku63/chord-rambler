@@ -77,7 +77,7 @@ func major(tonic material.NoteName) material.Scale {
 // Shapes, as intervals above the root.
 const (
 	maj   = "M3 P5"
-	min   = "m3 P5"
+	minor = "m3 P5"
 	dim   = "m3 d5"
 	dom7  = "M3 P5 m7"
 	maj7  = "M3 P5 M7"
@@ -153,19 +153,20 @@ var (
 // The function follows the degree whatever the shape: Gsus4 and C/D are
 // diatonic too (#101, D1) and read as D and T (#102).
 //
-// The kind is judged by the notes that make the chord and a bass a minor
-// seventh above the root, by spelling (the owner's call on #102): a tension
-// or another bass outside the scale does not change it. G7(♭9) is V, C(♯11)
+// The kind is judged by the notes that make the chord (the second to the
+// seventh included) and a bass a minor seventh above the root, by spelling
+// (the owner's calls on #102): a tension or another bass outside the scale
+// does not change it. G7(♭9) is V, C(♯11)
 // and C/F♯ are I, and F/D♯ is IV, its bass being an augmented sixth.
 func TestDiatonicInCMajor(t *testing.T) {
 	d := func(f reading.Function) want { return want{kind: reading.Diatonic, function: f} }
 	check(t, major(cNat), []row{
 		{"C", chord(cNat, maj, ""), d(reading.Tonic)},
-		{"Dm", chord(dNat, min, ""), d(reading.Subdominant)},
-		{"Em", chord(eNat, min, ""), d(reading.Tonic)},
+		{"Dm", chord(dNat, minor, ""), d(reading.Subdominant)},
+		{"Em", chord(eNat, minor, ""), d(reading.Tonic)},
 		{"F", chord(fNat, maj, ""), d(reading.Subdominant)},
 		{"G", chord(gNat, maj, ""), d(reading.Dominant)},
-		{"Am", chord(aNat, min, ""), d(reading.Tonic)},
+		{"Am", chord(aNat, minor, ""), d(reading.Tonic)},
 		{"Bdim", chord(bNat, dim, ""), d(reading.Dominant)},
 		{"Cmaj7", chord(cNat, maj7, ""), d(reading.Tonic)},
 		{"Dm7", chord(dNat, min7, ""), d(reading.Subdominant)},
@@ -205,20 +206,26 @@ func TestDiatonicInCMajor(t *testing.T) {
 // to come from the modes by name (docs/architecture/theory-conventions.md, 3).
 // The ♯11 of B♭(♯11) (E) is not looked at, so it keeps the modes of B♭; the
 // bass of F/E♭, a minor seventh above the root, is (E♭ and A: Dorian only).
+// The second and the fourth of sus2 and sus4 are looked at (#102): Fsus4 has
+// B♭, Esus2 F♯, D♭sus4 G♭ (Locrian only) and B♭sus4 E♭ (not Mixolydian).
 func TestBorrowedInCMajor(t *testing.T) {
 	b := func(minor bool, modes ...material.Mode) want {
 		return want{kind: reading.Borrowed, modes: modes, minor: minor}
 	}
 	check(t, major(cNat), []row{
-		{"Fm (iv)", chord(fNat, min, ""), b(true, material.Phrygian, material.Aeolian, material.Locrian)},
+		{"Fm (iv)", chord(fNat, minor, ""), b(true, material.Phrygian, material.Aeolian, material.Locrian)},
 		{"B♭ (♭VII)", chord(bFlat, maj, ""), b(true, material.Dorian, material.Mixolydian, material.Aeolian)},
 		{"A♭ (♭VI)", chord(aFlat, maj, ""), b(true, material.Phrygian, material.Aeolian, material.Locrian)},
 		{"E♭ (♭III)", chord(eFlat, maj, ""), b(true, material.Dorian, material.Phrygian, material.Aeolian)},
-		{"Cm (i)", chord(cNat, min, ""), b(true, material.Dorian, material.Phrygian, material.Aeolian)},
+		{"Cm (i)", chord(cNat, minor, ""), b(true, material.Dorian, material.Phrygian, material.Aeolian)},
 		{"B♭maj7 (♭VIImaj7)", chord(bFlat, maj7, ""), b(false, material.Dorian, material.Mixolydian)},
 		{"D♭ (♭II)", chord(dFlat, maj, ""), b(false, material.Phrygian, material.Locrian)},
 		{"B♭(♯11)", chord(bFlat, "M3 P5 A11", ""), b(true, material.Dorian, material.Mixolydian, material.Aeolian)},
 		{"F/E♭", chord(fNat, maj, "m7"), b(false, material.Dorian)},
+		{"Fsus4", chord(fNat, "P4 P5", ""), b(true, material.Dorian, material.Phrygian, material.Mixolydian, material.Aeolian, material.Locrian)},
+		{"Esus2", chord(eNat, "M2 P5", ""), b(false, material.Lydian)},
+		{"D♭sus4", chord(dFlat, "P4 P5", ""), b(false, material.Locrian)},
+		{"B♭sus4", chord(bFlat, "P4 P5", ""), b(true, material.Dorian, material.Phrygian, material.Aeolian, material.Locrian)},
 	})
 }
 
@@ -234,12 +241,15 @@ func TestSecondaryDominantsInCMajor(t *testing.T) {
 		{"E (V/vi)", chord(eNat, maj, ""), s(6)},
 		{"C7 (V7/IV)", chord(cNat, dom7, ""), s(4)},
 		{"C/B♭ (V7/IV)", chord(cNat, maj, "m7"), s(4)},
+		{"B7 (V7/iii)", chord(bNat, dom7, ""), s(3)},
 	})
 }
 
 // Chords given no name (#101, D1; #89). B♯ major (♯VII) sounds as C, A♯ major
 // (♯VI) as B♭ and F♭m (♭iv) as Em, but no mode on C spells A♯, B♯ or F♭
-// (the owner's call on #102). E♭ in F♯ major and C𝄪
+// (the owner's call on #102). Bdim7 (B D F A♭, vii°7 of the harmonic minor)
+// is facts only as well: no church mode on C has both B and A♭ (#102; the
+// harmonic minor is weighed in #105). E♭ in F♯ major and C𝄪
 // major in C have no position: their roots are two half steps from the degree
 // (E♯ and C), so they are read as facts only too (#102).
 func TestFactsOnly(t *testing.T) {
@@ -247,7 +257,8 @@ func TestFactsOnly(t *testing.T) {
 	check(t, major(cNat), []row{
 		{"B♯ in C", chord(note(material.B, sharp), maj, ""), none},
 		{"A♯ in C", chord(note(material.A, sharp), maj, ""), none},
-		{"F♭m in C", chord(note(material.F, flat), min, ""), none},
+		{"Bdim7 in C", chord(bNat, "m3 d5 d7", ""), none},
+		{"F♭m in C", chord(note(material.F, flat), minor, ""), none},
 		{"C𝄪 in C", chord(note(material.C, 2), maj, ""), none},
 	})
 	check(t, major(note(material.F, sharp)), []row{
