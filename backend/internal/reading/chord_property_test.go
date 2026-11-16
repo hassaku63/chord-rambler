@@ -136,3 +136,49 @@ func TestReadingMovesWithTheKey(t *testing.T) {
 		t.Error("no pair was compared")
 	}
 }
+
+// The kind is judged by the notes that make the chord and a bass a minor
+// seventh above the root (the owner's call on #102), so adding a tension, or a
+// bass of another interval, keeps the reading. Chords beyond a double sharp or
+// flat are skipped; at least one must be compared.
+func TestTensionsAndOtherBassesKeepTheReading(t *testing.T) {
+	extras := []struct{ tension, bass string }{
+		{"m9", ""}, {"A9", ""}, {"A11", ""}, {"m13", ""}, {"", "M2"}, {"", "A4"}, {"", "M6"},
+	}
+	compared := 0
+	eachChord(t, func(key material.Scale, c material.Chord) {
+		if _, ok := c.Bass(); ok || len(c.Tensions()) > 0 {
+			return
+		}
+		before, err := reading.ReadChord(c, key)
+		if err != nil {
+			t.Fatalf("ReadChord: %v", err)
+		}
+		for _, x := range extras {
+			more, err := material.NewChord(c.Root(), append(c.Intervals()[1:], ivs(x.tension)...)...)
+			if err == nil && x.bass != "" {
+				more, err = more.WithBass(ivs(x.bass)[0])
+			}
+			if errors.Is(err, material.ErrAlterOutOfRange) {
+				continue
+			}
+			if err != nil {
+				t.Fatalf("%v with %s%s: %v", c.Notes(), x.tension, x.bass, err)
+			}
+			after, err := reading.ReadChord(more, key)
+			if err != nil {
+				t.Fatalf("ReadChord: %v", err)
+			}
+			compared++
+			b, a := before.Main, after.Main
+			if b.Kind != a.Kind || b.Function != a.Function || b.Target != a.Target || !slices.Equal(b.Modes, a.Modes) {
+				t.Errorf("%v in %s major is %s %s %d %v; with %s%s it is %s %s %d %v",
+					c.Notes(), key.Tonic(), b.Kind, b.Function, b.Target, b.Modes,
+					x.tension, x.bass, a.Kind, a.Function, a.Target, a.Modes)
+			}
+		}
+	})
+	if compared == 0 {
+		t.Error("no chord was compared")
+	}
+}

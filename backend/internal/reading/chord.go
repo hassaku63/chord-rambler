@@ -1,7 +1,6 @@
 package reading
 
 import (
-	"errors"
 	"fmt"
 	"slices"
 
@@ -20,11 +19,13 @@ const (
 	// members) are said. A chord spelled enharmonically, such as B♯ major in
 	// C, is read so (#89).
 	FactsOnly Kind = iota
-	// Diatonic is a chord whose root is a degree of the major scale without
-	// alteration and whose sounding notes are all in the scale of the key.
+	// Diatonic is a chord whose notes judged (relation.JudgedNotes) are all
+	// notes of the scale of the key, by spelling. Tensions and other basses
+	// are not looked at, so G7(♭9) and C/F♯ are diatonic in C.
 	Diatonic
-	// Borrowed is a chord from a mode on the same tonic other than the major
-	// scale. Secondary dominants are not borrowed.
+	// Borrowed is a chord whose notes judged are all notes of a mode on the
+	// same tonic other than the major scale, by spelling. Secondary dominants
+	// are not borrowed.
 	Borrowed
 	// SecondaryDominant is a chord of the shape of a secondary dominant
 	// (relation.SecondaryDominantShape). It keeps the name whatever follows.
@@ -91,8 +92,9 @@ type Reading struct {
 	// Target is the degree a secondary dominant points to (2 to 6), and 0
 	// for the other kinds.
 	Target int
-	// Modes are the parallel modes that hold a borrowed chord, in the order
-	// of material.Mode (relation.ParallelModes), and nil for the other kinds.
+	// Modes are the parallel modes that hold the notes judged of a borrowed
+	// chord by spelling, in the order of material.Mode, and nil for the other
+	// kinds.
 	Modes []material.Mode
 }
 
@@ -116,14 +118,16 @@ type ChordReading struct {
 //
 //  1. a secondary dominant, when the chord has the shape of one
 //     (relation.SecondaryDominantShape);
-//  2. diatonic, when the root is a degree without alteration
-//     (relation.PositionOf) and the sounding notes are in the scale of the key
-//     (relation.InScale);
-//  3. borrowed, when the chord has a position, a sounding note is outside the
-//     scale of the key, and some parallel mode holds it
-//     (relation.ParallelModes);
-//  4. facts only, otherwise. A chord whose root is two or more half steps from
-//     its degree has no position and is read so.
+//  2. diatonic, when the scale of the key holds the notes judged
+//     (relation.JudgedNotes: the root, the third, the fifth, the seventh and a
+//     bass a minor seventh above the root) by spelling;
+//  3. borrowed, when another mode on the tonic holds them by spelling;
+//  4. facts only, otherwise. A chord spelled enharmonically (A♯ or B♯ major
+//     in C) is read so, and so is a chord whose root has no position.
+//
+// A note is held by a mode when the interval from the tonic up to it is one
+// of the mode, so a mode that cannot be spelled on the tonic within a double
+// sharp or flat is compared as well.
 //
 // It fails for a key other than Ionian (relation.ErrNotMajor).
 func ReadChord(c material.Chord, key material.Scale) (ChordReading, error) {
@@ -144,20 +148,51 @@ func readMain(c material.Chord, key material.Scale) (Reading, error) {
 		r.Kind, r.Target = SecondaryDominant, target
 		return r, nil
 	}
-	pos, err := relation.PositionOf(c, key)
-	if errors.Is(err, relation.ErrNoPosition) {
-		return r, nil
-	}
-	if err != nil {
-		return Reading{}, fmt.Errorf("read chord: %w", err)
-	}
-	inScale := relation.InScale(c, key)
-	if pos.Alteration() == material.Natural && inScale {
+	modes := modesHolding(relation.JudgedNotes(c), key.Tonic())
+	if slices.Contains(modes, material.Ionian) {
+		// The root is a note of the scale, so it has a position without
+		// alteration.
+		pos, err := relation.PositionOf(c, key)
+		if err != nil {
+			return Reading{}, fmt.Errorf("read chord: %w", err)
+		}
 		r.Kind, r.Function = Diatonic, functions[pos.Degree()-1]
 		return r, nil
 	}
-	if modes := relation.ParallelModes(c, key); !inScale && len(modes) > 0 {
+	if len(modes) > 0 {
 		r.Kind, r.Modes = Borrowed, modes
 	}
 	return r, nil
+}
+
+// modesHolding returns the modes on the tonic, in the order of material.Mode,
+// that hold every note by spelling: the interval from the tonic up to the note
+// is the interval from C up to a note of the mode on C.
+func modesHolding(notes []material.NoteName, tonic material.NoteName) []material.Mode {
+	var out []material.Mode
+	for m := material.Ionian; m <= material.Locrian; m++ {
+		// Every mode on C is spelled within a single sharp or flat.
+		onC, _ := material.NewScale(material.NoteName{}, m)
+		var degrees []material.Interval
+		for _, n := range onC.Notes() {
+			// Two notes of a mode on C always have an interval.
+			iv, _ := material.IntervalBetween(material.NoteName{}, n)
+			degrees = append(degrees, iv)
+		}
+		if holdsAll(degrees, notes, tonic) {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+func holdsAll(degrees []material.Interval, notes []material.NoteName, tonic material.NoteName) bool {
+	for _, n := range notes {
+		// No interval of the five qualities is no interval of a mode either.
+		iv, err := material.IntervalBetween(tonic, n)
+		if err != nil || !slices.Contains(degrees, iv) {
+			return false
+		}
+	}
+	return true
 }

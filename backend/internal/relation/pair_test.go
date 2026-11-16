@@ -2,6 +2,7 @@ package relation_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/hassaku63/chord-rambler/backend/internal/material"
@@ -143,5 +144,40 @@ func TestSecondaryDominantShapeOtherModes(t *testing.T) {
 		if got, ok, err := relation.SecondaryDominantShape(d7, key); !errors.Is(err, relation.ErrNotMajor) {
 			t.Errorf("C %s: SecondaryDominantShape(D7) = %d, %v, %v; want ErrNotMajor", m, got, ok, err)
 		}
+	}
+}
+
+// The notes judged are those that make the chord and a bass a minor seventh
+// above the root (the owner's call on PR #90): G7(♭9) is judged by G B D F,
+// C(♯11) and C/F♯ by C E G, C/B♭ by C E G B♭. A bass a minor seventh above
+// is judged even when it is a member, and C/A♯ (an augmented sixth) is not.
+// Seconds, fourths and sixths are left out as tensions are.
+func TestJudgedNotes(t *testing.T) {
+	c, g := note(material.C, nat), note(material.G, nat)
+	tests := []struct {
+		name  string
+		chord material.Chord
+		want  string
+	}{
+		{"G7(♭9)", chord(g, "M3 P5 m7 m9", ""), "G B D F"},
+		{"C(♯11)", chord(c, "M3 P5 A11", ""), "C E G"},
+		{"C/F♯", chord(c, "M3 P5", "A4"), "C E G"},
+		{"C/B♭", chord(c, "M3 P5", "m7"), "C E G B♭"},
+		{"C7/B♭", chord(c, "M3 P5 m7", "m7"), "C E G B♭ B♭"},
+		{"C/A♯", chord(c, "M3 P5", "A6"), "C E G"},
+		{"Gsus4", chord(g, "P4 P5", ""), "G D"},
+		{"C6/D", chord(c, "M3 P5 M6", "M2"), "C E G"},
+		{"Bm7(♭5)", chord(note(material.B, nat), "m3 d5 m7", ""), "B D F A"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got []string
+			for _, n := range relation.JudgedNotes(tt.chord) {
+				got = append(got, n.String())
+			}
+			if strings.Join(got, " ") != tt.want {
+				t.Errorf("JudgedNotes = %v; want %s", got, tt.want)
+			}
+		})
 	}
 }

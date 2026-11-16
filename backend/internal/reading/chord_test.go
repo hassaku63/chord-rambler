@@ -152,6 +152,11 @@ var (
 // https://jp.yamaha.com/services/music-pal/study/chord/cadence/index.html).
 // The function follows the degree whatever the shape: Gsus4 and C/D are
 // diatonic too (#101, D1) and read as D and T (#102).
+//
+// The kind is judged by the notes that make the chord and a bass a minor
+// seventh above the root, by spelling (the owner's call on #102): a tension
+// or another bass outside the scale does not change it. G7(♭9) is V, C(♯11)
+// and C/F♯ are I, and F/D♯ is IV, its bass being an augmented sixth.
 func TestDiatonicInCMajor(t *testing.T) {
 	d := func(f reading.Function) want { return want{kind: reading.Diatonic, function: f} }
 	check(t, major(cNat), []row{
@@ -171,11 +176,17 @@ func TestDiatonicInCMajor(t *testing.T) {
 		{"Bm7(♭5)", chord(bNat, half7, ""), d(reading.Dominant)},
 		{"Gsus4", chord(gNat, "P4 P5", ""), d(reading.Dominant)},
 		{"C/D", chord(cNat, maj, "M2"), d(reading.Tonic)},
+		{"G7(♭9)", chord(gNat, "M3 P5 m7 m9", ""), d(reading.Dominant)},
+		{"C(♯11)", chord(cNat, "M3 P5 A11", ""), d(reading.Tonic)},
+		{"C/F♯", chord(cNat, maj, "A4"), d(reading.Tonic)},
+		{"F/D♯", chord(fNat, maj, "A6"), d(reading.Subdominant)},
 	})
 }
 
 // Borrowed chords carry no function (#101, A1). The modes are those on C whose
-// scale holds the sounding notes, worked out from the scales:
+// notes hold, by spelling, the notes that make the chord and a bass a minor
+// seventh above the root (the owner's call on #102), worked out from the
+// scales:
 //
 //	Dorian     C D E♭ F G A B♭
 //	Phrygian   C D♭ E♭ F G A♭ B♭
@@ -192,6 +203,8 @@ func TestDiatonicInCMajor(t *testing.T) {
 // iv and i are borrowed although their roots are not altered (#102).
 // B♭maj7 (A, not A♭) and D♭ (D♭, not D) are not in Aeolian, so they are said
 // to come from the modes by name (docs/architecture/theory-conventions.md, 3).
+// The ♯11 of B♭(♯11) (E) is not looked at, so it keeps the modes of B♭; the
+// bass of F/E♭, a minor seventh above the root, is (E♭ and A: Dorian only).
 func TestBorrowedInCMajor(t *testing.T) {
 	b := func(minor bool, modes ...material.Mode) want {
 		return want{kind: reading.Borrowed, modes: modes, minor: minor}
@@ -204,13 +217,8 @@ func TestBorrowedInCMajor(t *testing.T) {
 		{"Cm (i)", chord(cNat, min, ""), b(true, material.Dorian, material.Phrygian, material.Aeolian)},
 		{"B♭maj7 (♭VIImaj7)", chord(bFlat, maj7, ""), b(false, material.Dorian, material.Mixolydian)},
 		{"D♭ (♭II)", chord(dFlat, maj, ""), b(false, material.Phrygian, material.Locrian)},
-		// Decided in #102, not by the owner: the modes are compared by pitch
-		// class, so a tension or a bass outside the scale is enough (C(♯11)
-		// and C/F♯ are in Lydian only), and so is an enharmonic spelling of a
-		// borrowed chord (A♯ sounds as B♭).
-		{"C(♯11)", chord(cNat, "M3 P5 A11", ""), b(false, material.Lydian)},
-		{"C/F♯", chord(cNat, maj, "A4"), b(false, material.Lydian)},
-		{"A♯ (♯VI)", chord(note(material.A, sharp), maj, ""), b(true, material.Dorian, material.Mixolydian, material.Aeolian)},
+		{"B♭(♯11)", chord(bFlat, "M3 P5 A11", ""), b(true, material.Dorian, material.Mixolydian, material.Aeolian)},
+		{"F/E♭", chord(fNat, maj, "m7"), b(false, material.Dorian)},
 	})
 }
 
@@ -229,14 +237,16 @@ func TestSecondaryDominantsInCMajor(t *testing.T) {
 	})
 }
 
-// Chords given no name (#101, D1; #89). B♯ major (♯VII) sounds as C and F♭m
-// (♭iv) as Em, but both are spelled away from the key. E♭ in F♯ major and C𝄪
+// Chords given no name (#101, D1; #89). B♯ major (♯VII) sounds as C, A♯ major
+// (♯VI) as B♭ and F♭m (♭iv) as Em, but no mode on C spells A♯, B♯ or F♭
+// (the owner's call on #102). E♭ in F♯ major and C𝄪
 // major in C have no position: their roots are two half steps from the degree
 // (E♯ and C), so they are read as facts only too (#102).
 func TestFactsOnly(t *testing.T) {
 	none := want{kind: reading.FactsOnly}
 	check(t, major(cNat), []row{
 		{"B♯ in C", chord(note(material.B, sharp), maj, ""), none},
+		{"A♯ in C", chord(note(material.A, sharp), maj, ""), none},
 		{"F♭m in C", chord(note(material.F, flat), min, ""), none},
 		{"C𝄪 in C", chord(note(material.C, 2), maj, ""), none},
 	})
@@ -272,6 +282,20 @@ func TestDominantSeventhInMajorKeys(t *testing.T) {
 				want{kind: reading.Diatonic, function: reading.Dominant}},
 		})
 	}
+}
+
+// The modes are compared by the interval from the tonic, so a mode that cannot
+// be spelled on the tonic still holds a chord (decided in #102, not by the
+// owner). On G𝄫, Dorian and Aeolian would need B triple flat, yet F𝄫 major
+// (♭VII: F𝄫 A𝄫 C𝄫, a minor seventh, a major second and a perfect fourth above
+// the tonic) is held by the same modes as B♭ in C.
+func TestBorrowedOnUnspellableModes(t *testing.T) {
+	check(t, major(note(material.G, -2)), []row{
+		{"F𝄫 in G𝄫", chord(note(material.F, -2), maj, ""), want{
+			kind: reading.Borrowed, minor: true,
+			modes: []material.Mode{material.Dorian, material.Mixolydian, material.Aeolian},
+		}},
+	})
 }
 
 // A key other than Ionian is refused, as the position is (relation).

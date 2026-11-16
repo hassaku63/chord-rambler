@@ -62,7 +62,11 @@ func SecondaryDominantShape(c material.Chord, key material.Scale) (target int, o
 	if s := c.Seventh(); s != material.NoSeventh && s != material.SeventhMinor {
 		return 0, false, nil
 	}
-	if key.Contains(judgedPitchClasses(c)) {
+	var judged []material.PitchClass
+	for _, n := range JudgedNotes(c) {
+		judged = append(judged, n.PitchClass())
+	}
+	if key.Contains(material.NewPitchClassSet(judged...)) {
 		return 0, false, nil
 	}
 	notes := key.Notes()
@@ -82,25 +86,29 @@ func SecondaryDominantShape(c material.Chord, key material.Scale) (target int, o
 	return 0, false, nil
 }
 
-// judgedPitchClasses returns the pitch classes a major triad or a dominant
-// seventh is compared with the key by: the root, the third, the fifth and the
-// seventh, and a bass a minor seventh above the root. Other members, such as
-// the tensions, and any other bass are left out.
-func judgedPitchClasses(c material.Chord) material.PitchClassSet {
-	var pcs []material.PitchClass
+// JudgedNotes returns the spelled notes a chord is compared with a key by:
+// the notes that make the chord, the root, the third, the fifth and the
+// seventh it has, and a bass a minor seventh above the root by spelling,
+// member or not (C/B♭). The tensions, the second, fourth and sixth members, and
+// any other bass are left out (C/A♯, whose bass is an augmented sixth). The
+// shape of a secondary dominant (SecondaryDominantShape) and the kind of a
+// reading look at these notes. They come in the order of Chord.Notes, and the
+// bass last.
+func JudgedNotes(c material.Chord) []material.NoteName {
+	var out []material.NoteName
 	notes := c.Notes()
 	for i, iv := range c.Intervals() {
 		switch iv.Number() {
 		case 1, 3, 5, 7:
-			pcs = append(pcs, notes[i].PitchClass())
+			out = append(out, notes[i])
 		}
 	}
 	if bass, ok := c.Bass(); ok && bass == minorSeventh() {
 		// WithBass checked that the bass is in range.
 		n, _ := c.Root().Transpose(bass)
-		pcs = append(pcs, n.PitchClass())
+		out = append(out, n)
 	}
-	return material.NewPitchClassSet(pcs...)
+	return out
 }
 
 func perfectFifth() material.Interval {
