@@ -246,11 +246,7 @@ func (a *api) readings() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p, err := decodeProgression(w, r)
 		if err != nil {
-			var re *requestError
-			if !errors.As(err, &re) {
-				re = &requestError{status: http.StatusBadRequest, detail: err.Error()}
-			}
-			a.writeProblem(w, re.status, re.detail)
+			a.writeRequestError(w, err)
 			return
 		}
 		out, err := readProgression(p)
@@ -261,6 +257,16 @@ func (a *api) readings() http.HandlerFunc {
 		}
 		a.writeJSON(w, http.StatusOK, "application/json", out)
 	}
+}
+
+// writeRequestError answers a failed decode with the status its error carries;
+// an error that is not a *requestError is a 400.
+func (a *api) writeRequestError(w http.ResponseWriter, err error) {
+	var re *requestError
+	if !errors.As(err, &re) {
+		re = &requestError{status: http.StatusBadRequest, detail: err.Error()}
+	}
+	a.writeProblem(w, re.status, re.detail)
 }
 
 // readProgression calls the engine and writes its answers as labels.

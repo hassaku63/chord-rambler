@@ -428,6 +428,8 @@
 
 API の形（進行の送り方、経路、応答の札、失敗）は、契約 `docs/api/openapi.yaml` が正。ハンドラ（`backend/internal/httpapi`）は、本文をエンジンの構築子（`notation.ParseNoteName`、`material.NewScale`、`notation.ParseChord`、`progression.NewSlot`、`WithRole`、`Append`）で読み、エンジンを呼び、答えを札に書くだけで、規則を持たない。列挙を契約の識別子に写す関数は `backend/internal/httpapi/names.go` の 1 か所に置く。
 
+音符の経路（`POST /progressions/notes`）は、同じ本文を同じ変換で進行にし、`performance.Notes` の答えを契約の `Note` に写すだけで、並びは変えない。
+
 本文の読み方は `decodeBody` の 1 か所に置く。`Content-Type` が `application/json` でなければ 415、本文が 64 KiB を超えれば 413、契約にない欄と型の合わない値は 400 で、後者の `detail` には欄の場所と期待した型だけを書く（例: `slots[0].beats: expected integer`）。
 
 #135 の受け入れ条件（所有者が決めた。#134 の A1・B1・C1）: 和音は和音名の文字列で送り、問いごとに `POST` の経路を置き、名前は文字列で、列挙は小文字の英語の識別子で返す。文は返さない。
