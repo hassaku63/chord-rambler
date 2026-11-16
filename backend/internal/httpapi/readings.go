@@ -16,7 +16,6 @@ import (
 	"github.com/hassaku63/chord-rambler/backend/internal/progression"
 	"github.com/hassaku63/chord-rambler/backend/internal/query"
 	"github.com/hassaku63/chord-rambler/backend/internal/reading"
-	"github.com/hassaku63/chord-rambler/backend/internal/relation"
 )
 
 // progressionBody is the Progression of the contract.
@@ -330,46 +329,22 @@ func chordLabels(c material.Chord, key material.Scale, r reading.SlotReading) (s
 	}, nil
 }
 
-// romanOf writes the chord as a Roman numeral, without its bass, which Roman
-// numerals do not write (docs/architecture/theory-conventions.md, 6). A
-// secondary dominant is written V/x, as its reading says (#83), and the label
-// rests on the school; any other chord is written at its position in the key,
-// a computation. A root with no position gives no label (nil).
+// romanOf writes the chord as a Roman numeral at the position the reading
+// gives it (reading.RomanPosition). A secondary dominant's label rests on the
+// school, as its reading says (#83); any other chord's on a computation. A
+// chord with no position gives no label (nil).
 func romanOf(c material.Chord, key material.Scale, main reading.Reading) (*romanLabel, error) {
-	shape := material.ShapeOf(c)
-	if _, ok := c.Bass(); ok {
-		noBass, err := material.NewChord(c.Root(), c.Intervals()[1:]...)
-		if err != nil {
-			return nil, err
-		}
-		shape = material.ShapeOf(noBass)
-	}
-	var pos material.Position
-	basis := query.Computation
-	if main.Kind == reading.SecondaryDominant {
-		five, err := material.NewPosition(5, material.Natural, shape)
-		if err != nil {
-			return nil, err
-		}
-		if pos, err = five.WithTarget(main.Target); err != nil {
-			return nil, err
-		}
-		basis = query.School
-	} else {
-		at, err := relation.PositionOf(c, key)
-		if errors.Is(err, relation.ErrNoPosition) {
-			return nil, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		if pos, err = material.NewPosition(at.Degree(), at.Alteration(), shape); err != nil {
-			return nil, err
-		}
+	pos, ok, err := reading.RomanPosition(c, key, main)
+	if err != nil || !ok {
+		return nil, err
 	}
 	numeral, err := notation.FormatRoman(pos)
 	if err != nil {
 		return nil, err
+	}
+	basis := query.Computation
+	if main.Kind == reading.SecondaryDominant {
+		basis = query.School
 	}
 	return &romanLabel{Basis: basisID(basis), Numeral: numeral}, nil
 }
