@@ -238,7 +238,7 @@
 - 名前は `ReadProgression`。進行を受け取り、枠と同じ順（`relation.Places` と同じ番号）の `SlotReading` の並びを返す。`SlotReading` は、和音を持つか `HasChord`、和音 1 つの読み `Chord`（`ChordReading`）、解決 `Resolution`（`NoResolution`・`ResolutionExpected`・`ResolutionIrregular`）、終止 `Cadence`（`NoCadence`・`AuthenticCadence`・`HalfCadence`・`PlagalCadence`・`DeceptiveCadence`）を持つ。ゼロ値は「述べない」。和音のない枠は、すべてゼロ値。イオニアンでない調の進行は、枠がなくてもエラー（`relation.ErrNotMajor` を包む）。
 - 度数は `relation.PositionOf` の度数を使う。ダイアトニックの和音は根音が調の音なので、変化はない。
 - 「3 度のある三和音か七の和音」は、和音の見方の `Triad` が長・短・減・増のどれかで、2 度・4 度・6 度の構成音がないもの。七度はあってもなくてもよい。
-- 次の枠の和音が 3 度のある三和音か七の和音でなければ（sus、6 の和音など）、度数によらず解決を述べない。同じく、最後の枠がそうでなければ、半終止のほかの終止を付けない。
+- 次の枠の和音が 3 度のある三和音か七の和音でなければ（sus、6 の和音など）、度数によらず解決を述べない。同じく、最後の枠がそうでなければ、どの終止も付けない。
 - 満ちたフレーズは、最後の枠の終わりが、進行の先頭から `PhraseBeats` の倍数の拍にあるフレーズ。
 - 解決の「次」は、進行の次の枠。フレーズの区切りをまたいでも見る（終止とは見方が違う）。
 - 半終止は、最後の枠が V なら、前の枠を見ずに付ける。前が V でも半終止で、偽終止にしない（C で G → G7 で終わる）。

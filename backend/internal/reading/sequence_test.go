@@ -159,6 +159,7 @@ func TestResolution(t *testing.T) {
 		{"C → F: not a dominant", bars(c, f), []reading.Resolution{none, none}},
 		{"Am → Dm: not a dominant", bars(am, dm), []reading.Resolution{none, none}},
 		{"D7 last", bars(d7), []reading.Resolution{none}},
+		{"G7 → no chord", []slot{bar(g7), noChord}, []reading.Resolution{none, none}},
 		{"D7 → no chord", []slot{bar(d7), noChord}, []reading.Resolution{none, none}},
 		{"D7 → none chosen", []slot{bar(d7), unchosen}, []reading.Resolution{none, none}},
 		// The next slot may be in the next phrase (decided in #103, not by the

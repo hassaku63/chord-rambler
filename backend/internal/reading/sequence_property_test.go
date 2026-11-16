@@ -12,20 +12,21 @@ import (
 	"github.com/hassaku63/chord-rambler/backend/internal/relation"
 )
 
-// tertianChord is the owner's call on #103 said again: a triad with a third,
-// with or without a seventh, and no second, fourth or sixth member.
+// tertianChord is the owner's call on #103 said again: the chord is built in
+// thirds. Its members (the root included) are numbered 1, 3, 5, 7, 9, 11 or 13 and it has a third. A
+// sus chord (a 2nd or a 4th in place of the third) and a sixth chord are not.
 func tertianChord(ch material.Chord) bool {
-	switch ch.Triad() {
-	case material.TriadMajor, material.TriadMinor, material.TriadDiminished, material.TriadAugmented:
-	default:
-		return false
-	}
+	hasThird := false
 	for _, iv := range ch.Intervals() {
-		if n := iv.Number(); n == 2 || n == 4 || n == 6 {
+		switch iv.Number() {
+		case 3:
+			hasThird = true
+		case 1, 5, 7, 9, 11, 13:
+		default:
 			return false
 		}
 	}
-	return true
+	return hasThird
 }
 
 // degreeIn returns the degree of a chord read as diatonic, or 0.
@@ -51,7 +52,8 @@ func degreeIn(t *testing.T, ch material.Chord, key material.Scale) int {
 // dominant only, and it is expected only when the next chord is read as
 // diatonic, is tertian and is on the degree pointed to (1 for V). This checks
 // that the fact said matches the next chord (docs/architecture/explanations.md,
-// error 2).
+// error 2). The rules that the same dominant going on and a next chord that is
+// a sus or a sixth chord say nothing are held by the table of TestResolution.
 func TestExpectedOnlyOnTheDegreePointedTo(t *testing.T) {
 	key := major(cNat)
 	var chords []material.Chord
