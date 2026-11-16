@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hassaku63/chord-rambler/backend/internal/catalog"
 	"github.com/hassaku63/chord-rambler/backend/internal/material"
 	"github.com/hassaku63/chord-rambler/backend/internal/progression"
 	"github.com/hassaku63/chord-rambler/backend/internal/query"
@@ -77,6 +78,15 @@ func TestEveryValueHasAnIdentifier(t *testing.T) {
 		{"RoleFit", func(t *testing.T) []string {
 			return idsOf(t, valuesOf(reading.RoleNotJudged), roleFitID)
 		}, []string{"", "fits", "misfits", "undecided"}},
+		{"RoleCondition", func(t *testing.T) []string {
+			return idsOf(t, valuesOf(reading.ConditionShape), conditionID)
+		}, []string{"shape", "function", "previous-v", "next-dominant", "cadence", "another-root", "expected-resolution"}},
+		{"Preference", func(t *testing.T) []string {
+			return idsOf(t, valuesOf(catalog.Common), preferenceID)
+		}, []string{"common", "less-common", "unstated"}},
+		{"Style", func(t *testing.T) []string {
+			return idsOf(t, valuesOf(catalog.Classical), styleID)
+		}, []string{"classical"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

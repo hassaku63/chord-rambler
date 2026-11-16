@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+
+	"github.com/hassaku63/chord-rambler/backend/internal/catalog"
 )
 
 // APIPrefix is the path every operation of the contract lives under; it is
@@ -18,6 +20,9 @@ var Version = "dev"
 // Deps are the things the handlers need from outside.
 type Deps struct {
 	Logger *slog.Logger
+	// Transitions is the catalogue of function transitions the candidates
+	// are ordered by, loaded once when the server starts.
+	Transitions catalog.FunctionTransitions
 }
 
 // route is one operation of the API: a method, a path below APIPrefix and
@@ -34,16 +39,19 @@ var routes = []route{
 	{method: http.MethodGet, path: "/health", handler: (*api).health},
 	{method: http.MethodPost, path: "/progressions/readings", handler: (*api).readings},
 	{method: http.MethodPost, path: "/progressions/notes", handler: (*api).notes},
+	{method: http.MethodPost, path: "/progressions/next-candidates", handler: (*api).nextCandidates},
+	{method: http.MethodPost, path: "/progressions/slot-candidates", handler: (*api).slotCandidates},
 }
 
 type api struct {
-	logger *slog.Logger
-	mux    *http.ServeMux
+	logger      *slog.Logger
+	transitions catalog.FunctionTransitions
+	mux         *http.ServeMux
 }
 
 // NewHandler returns the API's handler with every route registered.
 func NewHandler(deps Deps) http.Handler {
-	a := &api{logger: deps.Logger, mux: http.NewServeMux()}
+	a := &api{logger: deps.Logger, transitions: deps.Transitions, mux: http.NewServeMux()}
 	for _, r := range routes {
 		a.mux.HandleFunc(r.method+" "+APIPrefix+r.path, r.handler(a))
 	}

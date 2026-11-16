@@ -98,6 +98,82 @@ paths:
                 $ref: "#/components/schemas/Problem"
         default:
           $ref: "#/components/responses/Problem"
+  /progressions/next-candidates:
+    post:
+      operationId: getNextCandidates
+      summary: The candidates for a slot added after the last
+      description: "Answers with the chords that may follow the last slot of the progression in a slot of the beats given, as query.NextCandidates gives them: three groups (diatonic, secondary-dominant, borrowed) in this order, each with all of its chords. The diatonic group is ordered by the catalogue of function transitions the server loads when it starts. Each label carries its basis. No sentences are returned."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NextCandidatesRequest"
+      responses:
+        "200":
+          description: The groups of candidates.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CandidateGroups"
+        "400":
+          description: "The progression cannot be read (the same failures as for the readings; a place in it is written progression.slots[0].beats), the beats are less than one, the slot would cross the boundary of a phrase, or a candidate cannot be spelt in the key (beyond a double sharp or a double flat, as in E♯ major)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          description: "The body is larger than 64 KiB (65536 bytes)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "415":
+          description: "The Content-Type is not application/json (parameters such as charset are allowed)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /progressions/slot-candidates:
+    post:
+      operationId: getSlotCandidates
+      summary: The candidates for a slot to fill
+      description: "Answers with the chords that may fill the slot of the progression, as query.SlotCandidates gives them: the groups and the order of the next candidates, with the slot before in place of the last slot, and in each group the candidates that fit the structural role of the slot first. A candidate replaces only the content of the slot."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SlotCandidatesRequest"
+      responses:
+        "200":
+          description: The groups of candidates.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SlotCandidateGroups"
+        "400":
+          description: "The progression cannot be read (as for the next candidates), the slot is left out or is outside 0 to the number of slots - 1, or a candidate cannot be spelt in the key."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          description: "The body is larger than 64 KiB (65536 bytes)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "415":
+          description: "The Content-Type is not application/json (parameters such as charset are allowed)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
 components:
   schemas:
     Health:
@@ -297,6 +373,163 @@ components:
         velocity:
           type: integer
           description: The velocity, 0 to 127.
+    NextCandidatesRequest:
+      type: object
+      required: [progression, beats]
+      properties:
+        progression:
+          $ref: "#/components/schemas/Progression"
+        beats:
+          type: integer
+          minimum: 1
+          description: "The length of the slot the candidate goes in. A slot that would cross the boundary of a phrase is cut by the screen to the beats left in the phrase; the cadence depends on the length."
+    SlotCandidatesRequest:
+      type: object
+      required: [progression, slot]
+      properties:
+        progression:
+          $ref: "#/components/schemas/Progression"
+        slot:
+          type: integer
+          minimum: 0
+          description: The slot to fill, counted from 0.
+    CandidateGroups:
+      type: object
+      required: [groups]
+      properties:
+        groups:
+          type: array
+          description: "The groups in order: diatonic, secondary-dominant, borrowed."
+          items:
+            type: object
+            required: [kind, candidates]
+            properties:
+              kind:
+                $ref: "#/components/schemas/CandidateKind"
+              candidates:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Candidate"
+    SlotCandidateGroups:
+      type: object
+      required: [groups]
+      properties:
+        groups:
+          type: array
+          description: "The groups in order: diatonic, secondary-dominant, borrowed."
+          items:
+            type: object
+            required: [kind, candidates]
+            properties:
+              kind:
+                $ref: "#/components/schemas/CandidateKind"
+              candidates:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SlotCandidate"
+    CandidateKind:
+      type: string
+      description: The kind every candidate of the group is read as.
+      enum: [diatonic, secondary-dominant, borrowed]
+    Candidate:
+      type: object
+      description: "A chord that may go in the slot, with the labels of the progression with it placed. A label that does not apply is absent. The slot before is the last slot for the next candidates."
+      required: [chord, roman, reading]
+      properties:
+        chord:
+          $ref: "#/components/schemas/ChordNameLabel"
+        roman:
+          $ref: "#/components/schemas/RomanLabel"
+        reading:
+          $ref: "#/components/schemas/ChordReadingLabel"
+        rootMotion:
+          $ref: "#/components/schemas/RootMotionLabel"
+        commonTones:
+          $ref: "#/components/schemas/CommonTonesLabel"
+        resolution:
+          description: "How the chord of the slot before goes on to the candidate (not from the candidate, as in the readings). Present when the slot before holds a chord."
+          allOf:
+            - $ref: "#/components/schemas/ResolutionLabel"
+        cadence:
+          description: The cadence of the candidate's slot. Present when that slot is the last of a full phrase.
+          allOf:
+            - $ref: "#/components/schemas/CadenceLabel"
+        preference:
+          $ref: "#/components/schemas/PreferenceLabel"
+    SlotCandidate:
+      description: The labels of a Candidate, and those that look at the next slot and at the role of the slot.
+      allOf:
+        - $ref: "#/components/schemas/Candidate"
+        - type: object
+          properties:
+            nextResolution:
+              description: How the candidate goes on to the next slot. Present when the next slot holds a chord.
+              allOf:
+                - $ref: "#/components/schemas/ResolutionLabel"
+            nextCadence:
+              description: The cadence of the next slot. Present when it is the last of a full phrase, chosen or not.
+              allOf:
+                - $ref: "#/components/schemas/CadenceLabel"
+            roleFit:
+              $ref: "#/components/schemas/CandidateRoleFitLabel"
+    RootMotionLabel:
+      type: object
+      description: "The interval up from the root of the chord of the slot before to the root of the candidate, written as in TensionCaution (P4). Absent when the slot before holds no chord or the two roots have no interval."
+      required: [basis, interval]
+      properties:
+        basis:
+          $ref: "#/components/schemas/Basis"
+        interval:
+          type: string
+    CommonTonesLabel:
+      type: object
+      description: How many pitch classes sound in both the chord of the slot before and the candidate. Absent when the slot before holds no chord.
+      required: [basis, count]
+      properties:
+        basis:
+          $ref: "#/components/schemas/Basis"
+        count:
+          type: integer
+          minimum: 0
+    PreferenceLabel:
+      type: object
+      description: "How often the catalogue says the function of the slot before moves to the function of the candidate, and the style it limits that to. A preference of the move between the functions, not of the chord. Given to a diatonic candidate when the preference orders the group and is common or less-common."
+      required: [basis, from, to, preference, style]
+      properties:
+        basis:
+          $ref: "#/components/schemas/Basis"
+        from:
+          type: string
+          enum: [tonic, subdominant, dominant]
+        to:
+          type: string
+          enum: [tonic, subdominant, dominant]
+        preference:
+          type: string
+          description: A label holds common or less-common; unstated (the source says nothing of how often) orders the group but gives no label.
+          enum: [common, less-common, unstated]
+        style:
+          type: string
+          enum: [classical]
+    CandidateRoleFitLabel:
+      type: object
+      description: "Whether the candidate fits the structural role of the slot, and the conditions of the role it does not meet. Absent for a slot with no role or a colour role."
+      required: [basis, fit, unmet]
+      properties:
+        basis:
+          $ref: "#/components/schemas/Basis"
+        fit:
+          type: string
+          enum: [fits, misfits, undecided]
+        unmet:
+          type: array
+          description: "The conditions not met, in this order, when fit is misfits; empty otherwise (docs/architecture/theory-conventions.md, 7)."
+          items:
+            $ref: "#/components/schemas/RoleCondition"
+    RoleCondition:
+      type: string
+      description: "A condition of the rule of a structural role: the shape (a triad with a third or a seventh chord), the function, the previous slot is V, the next slot is a dominant, a cadence is named, another root than the previous slot, V on the previous slot resolves as expected."
+      enum: [shape, function, previous-v, next-dominant, cadence, another-root, expected-resolution]
     Problem:
       type: object
       description: A problem document (RFC 9457).

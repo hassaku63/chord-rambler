@@ -61,6 +61,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/progressions/next-candidates': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * The candidates for a slot added after the last
+     * @description Answers with the chords that may follow the last slot of the progression in a slot of the beats given, as query.NextCandidates gives them: three groups (diatonic, secondary-dominant, borrowed) in this order, each with all of its chords. The diatonic group is ordered by the catalogue of function transitions the server loads when it starts. Each label carries its basis. No sentences are returned.
+     */
+    post: operations['getNextCandidates'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/progressions/slot-candidates': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * The candidates for a slot to fill
+     * @description Answers with the chords that may fill the slot of the progression, as query.SlotCandidates gives them: the groups and the order of the next candidates, with the slot before in place of the last slot, and in each group the candidates that fit the structural role of the slot first. A candidate replaces only the content of the slot.
+     */
+    post: operations['getSlotCandidates'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -194,6 +234,101 @@ export interface components {
       /** @description The velocity, 0 to 127. */
       velocity: number;
     };
+    NextCandidatesRequest: {
+      progression: components['schemas']['Progression'];
+      /** @description The length of the slot the candidate goes in. A slot that would cross the boundary of a phrase is cut by the screen to the beats left in the phrase; the cadence depends on the length. */
+      beats: number;
+    };
+    SlotCandidatesRequest: {
+      progression: components['schemas']['Progression'];
+      /** @description The slot to fill, counted from 0. */
+      slot: number;
+    };
+    CandidateGroups: {
+      /** @description The groups in order: diatonic, secondary-dominant, borrowed. */
+      groups: {
+        kind: components['schemas']['CandidateKind'];
+        candidates: components['schemas']['Candidate'][];
+      }[];
+    };
+    SlotCandidateGroups: {
+      /** @description The groups in order: diatonic, secondary-dominant, borrowed. */
+      groups: {
+        kind: components['schemas']['CandidateKind'];
+        candidates: components['schemas']['SlotCandidate'][];
+      }[];
+    };
+    /**
+     * @description The kind every candidate of the group is read as.
+     * @enum {string}
+     */
+    CandidateKind: 'diatonic' | 'secondary-dominant' | 'borrowed';
+    /** @description A chord that may go in the slot, with the labels of the progression with it placed. A label that does not apply is absent. The slot before is the last slot for the next candidates. */
+    Candidate: {
+      chord: components['schemas']['ChordNameLabel'];
+      roman: components['schemas']['RomanLabel'];
+      reading: components['schemas']['ChordReadingLabel'];
+      rootMotion?: components['schemas']['RootMotionLabel'];
+      commonTones?: components['schemas']['CommonTonesLabel'];
+      /** @description How the chord of the slot before goes on to the candidate (not from the candidate, as in the readings). Present when the slot before holds a chord. */
+      resolution?: components['schemas']['ResolutionLabel'];
+      /** @description The cadence of the candidate's slot. Present when that slot is the last of a full phrase. */
+      cadence?: components['schemas']['CadenceLabel'];
+      preference?: components['schemas']['PreferenceLabel'];
+    };
+    /** @description The labels of a Candidate, and those that look at the next slot and at the role of the slot. */
+    SlotCandidate: components['schemas']['Candidate'] & {
+      /** @description How the candidate goes on to the next slot. Present when the next slot holds a chord. */
+      nextResolution?: components['schemas']['ResolutionLabel'];
+      /** @description The cadence of the next slot. Present when it is the last of a full phrase, chosen or not. */
+      nextCadence?: components['schemas']['CadenceLabel'];
+      roleFit?: components['schemas']['CandidateRoleFitLabel'];
+    };
+    /** @description The interval up from the root of the chord of the slot before to the root of the candidate, written as in TensionCaution (P4). Absent when the slot before holds no chord or the two roots have no interval. */
+    RootMotionLabel: {
+      basis: components['schemas']['Basis'];
+      interval: string;
+    };
+    /** @description How many pitch classes sound in both the chord of the slot before and the candidate. Absent when the slot before holds no chord. */
+    CommonTonesLabel: {
+      basis: components['schemas']['Basis'];
+      count: number;
+    };
+    /** @description How often the catalogue says the function of the slot before moves to the function of the candidate, and the style it limits that to. A preference of the move between the functions, not of the chord. Given to a diatonic candidate when the preference orders the group and is common or less-common. */
+    PreferenceLabel: {
+      basis: components['schemas']['Basis'];
+      /** @enum {string} */
+      from: 'tonic' | 'subdominant' | 'dominant';
+      /** @enum {string} */
+      to: 'tonic' | 'subdominant' | 'dominant';
+      /**
+       * @description A label holds common or less-common; unstated (the source says nothing of how often) orders the group but gives no label.
+       * @enum {string}
+       */
+      preference: 'common' | 'less-common' | 'unstated';
+      /** @enum {string} */
+      style: 'classical';
+    };
+    /** @description Whether the candidate fits the structural role of the slot, and the conditions of the role it does not meet. Absent for a slot with no role or a colour role. */
+    CandidateRoleFitLabel: {
+      basis: components['schemas']['Basis'];
+      /** @enum {string} */
+      fit: 'fits' | 'misfits' | 'undecided';
+      /** @description The conditions not met, in this order, when fit is misfits; empty otherwise (docs/architecture/theory-conventions.md, 7). */
+      unmet: components['schemas']['RoleCondition'][];
+    };
+    /**
+     * @description A condition of the rule of a structural role: the shape (a triad with a third or a seventh chord), the function, the previous slot is V, the next slot is a dominant, a cadence is named, another root than the previous slot, V on the previous slot resolves as expected.
+     * @enum {string}
+     */
+    RoleCondition:
+      | 'shape'
+      | 'function'
+      | 'previous-v'
+      | 'next-dominant'
+      | 'cadence'
+      | 'another-root'
+      | 'expected-resolution';
     /** @description A problem document (RFC 9457). */
     Problem: {
       /** @description A short summary of the problem type. */
@@ -318,6 +453,110 @@ export interface operations {
         };
       };
       /** @description The body does not describe a progression; the same failures as for the readings. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The body is larger than 64 KiB (65536 bytes). */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The Content-Type is not application/json (parameters such as charset are allowed). */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      default: components['responses']['Problem'];
+    };
+  };
+  getNextCandidates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['NextCandidatesRequest'];
+      };
+    };
+    responses: {
+      /** @description The groups of candidates. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CandidateGroups'];
+        };
+      };
+      /** @description The progression cannot be read (the same failures as for the readings; a place in it is written progression.slots[0].beats), the beats are less than one, the slot would cross the boundary of a phrase, or a candidate cannot be spelt in the key (beyond a double sharp or a double flat, as in E♯ major). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The body is larger than 64 KiB (65536 bytes). */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The Content-Type is not application/json (parameters such as charset are allowed). */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      default: components['responses']['Problem'];
+    };
+  };
+  getSlotCandidates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SlotCandidatesRequest'];
+      };
+    };
+    responses: {
+      /** @description The groups of candidates. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SlotCandidateGroups'];
+        };
+      };
+      /** @description The progression cannot be read (as for the next candidates), the slot is left out or is outside 0 to the number of slots - 1, or a candidate cannot be spelt in the key. */
       400: {
         headers: {
           [name: string]: unknown;
