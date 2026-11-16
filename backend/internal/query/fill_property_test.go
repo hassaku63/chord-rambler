@@ -140,7 +140,7 @@ func checkFillFacts(t *testing.T, p progression.Progression, i int, groups []que
 			if err != nil {
 				t.Fatal(err)
 			}
-			fits, err := reading.ReadRoleFits(filled)
+			verdicts, err := reading.ReadRoleVerdicts(filled)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -165,9 +165,10 @@ func checkFillFacts(t *testing.T, p progression.Progression, i int, groups []que
 			if full := !last && places[i+1].LastInPhrase && places[i+1].FullPhrase; full != (c.NextCadence != nil) || full && c.NextCadence.Cadence != read[i+1].Cadence {
 				t.Errorf("%s: next cadence %+v; ReadProgression %v", name, c.NextCadence, read[i+1].Cadence)
 			}
-			judged := fits[i] != reading.RoleNotJudged
-			if judged != (c.Role != nil) || judged && (c.Role.Fit != fits[i] || c.Role.Role != p.Slots()[i].Role() || c.Role.Basis() != query.School) {
-				t.Errorf("%s: role %+v; ReadRoleFits %v", name, c.Role, fits[i])
+			judged := verdicts[i].Fit != reading.RoleNotJudged
+			if judged != (c.Role != nil) || judged && (c.Role.Fit != verdicts[i].Fit || !reflect.DeepEqual(c.Role.Unmet, verdicts[i].Unmet) ||
+				c.Role.Role != p.Slots()[i].Role() || c.Role.Basis() != query.School) {
+				t.Errorf("%s: role %+v; ReadRoleVerdicts %+v", name, c.Role, verdicts[i])
 			}
 			if l := c.Preference; l != nil && (g.Kind != reading.Diatonic || !hasPrev || l.From != read[i-1].Chord.Main.Function || l.To != c.Reading.Main.Function) {
 				t.Errorf("%s: preference %+v", name, *l)

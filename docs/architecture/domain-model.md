@@ -287,6 +287,8 @@
 - `SlotReading` に欄を足さず、別の関数にした。和音のない枠の `SlotReading` はゼロ値という約束を保つため（役割つきの「まだ選んでいない」枠は「決められない」になる）。
 - 判定の順: 役割なし・色合いの役割 → 枠に和音がない → 依る枠に和音がない（または枠がない）、締めでは満ちていないフレーズの最後 → 合う条件。締めは、満ちたフレーズの最後の枠で終止が付けば合う（半終止は前の枠によらない）。付かなければ、同じフレーズの前の枠に和音がないか前の枠がないとき決められない（B1 に揃えた）。依る枠に和音がなければ、枠の和音が合う条件を満たしえなくても「決められない」。
 - つなぎの「違う和音」を根音で比べること、前の枠の形も見ること、前後の枠がフレーズの区切りをまたぐことも、流儀の 7 のエージェントの推奨。
+- 「合わない」ときに当たらなかった条件（流儀の 7 の 7 つ。#140）は `ReadRoleVerdicts` が返す。枠と同じ順の `RoleVerdict`（`Fit` と `Unmet`）の並びで、`Unmet` は `RoleCondition`（`ConditionShape`、`ConditionFunction`、`ConditionPreviousV`、`ConditionNextDominant`、`ConditionCadence`、`ConditionAnotherRoot`、`ConditionExpectedResolution`）を定数の順に並べる。「合わない」以外では nil。規則は当たらなかった条件を返し、「合う」はそれがないことから導く。`ReadRoleFits` は `ReadRoleVerdicts` の `Fit` だけを返す。
+- 前の枠が V かは、並びの読みが解決と終止に使う V の判定を共有して読む（V の定義を写さない）。
 
 ## 5. 慣習
 
@@ -366,14 +368,14 @@
 
 - 進行（長調）、埋める枠の番号、慣習のカタログから、その枠の候補を返す。範囲とまとまりは「末尾の次の候補」と同じ（C で 31 個、3 つのまとまり）。候補は枠の中身だけを替え（`progression.Fill`）、長さと役割は枠のまま使う。
 - まとまりの中で、枠の構造の役割に「合う」候補（4 章の「構造の役割に合うか」）を先に置き、合わない候補と決められない候補をそのあとに置く。隠さない（A1）。それぞれの中は「末尾の次の候補」と同じ並び（好みは、前の枠が 3 度のある三和音か七の和音のときだけ）。役割なしと色合いの役割の枠は、その並びだけ（C1）。
-- 札: 「末尾の次の候補」の札（「末尾」を「前の枠」に読み替え、終止はこの枠のもの）に加え、次の枠が和音のとき候補の解決（流儀）、次の枠が満ちたフレーズの最後のとき次の枠の終止（流儀。D1）、枠に構造の役割があるとき役割に合うか（流儀。合う・合わない・決められない）。
-- 流儀の札は、枠を候補で埋めた進行を `reading.ReadProgression` と `reading.ReadRoleFits` で読んだ事実と同じ（誤り 5 の止め方。性質のテストで固定する）。
+- 札: 「末尾の次の候補」の札（「末尾」を「前の枠」に読み替え、終止はこの枠のもの）に加え、次の枠が和音のとき候補の解決（流儀）、次の枠が満ちたフレーズの最後のとき次の枠の終止（流儀。D1）、枠に構造の役割があるとき役割に合うか（流儀。合う・合わない・決められない。合わないときは当たらなかった条件の並び）。
+- 流儀の札は、枠を候補で埋めた進行を `reading.ReadProgression` と `reading.ReadRoleVerdicts` で読んだ事実と同じ（誤り 5 の止め方。性質のテストで固定する）。
 
 #126 で決めた。所有者の判断ではない:
 
-- 名前は `SlotCandidates(p, i, transitions)`。3 つの `SlotCandidateGroup`（`Kind`、`Candidates`）を返す。`SlotCandidate` は `Candidate` を埋め込み、`NextResolution`（`ResolutionLabel`）、`NextCadence`（`CadenceLabel`）、`Role`（`RoleLabel`。枠の役割 `Role` と判定 `Fit`）を足す。付かない札は nil。
+- 名前は `SlotCandidates(p, i, transitions)`。3 つの `SlotCandidateGroup`（`Kind`、`Candidates`）を返す。`SlotCandidate` は `Candidate` を埋め込み、`NextResolution`（`ResolutionLabel`）、`NextCadence`（`CadenceLabel`）、`Role`（`RoleLabel`。枠の役割 `Role`、判定 `Fit`、当たらなかった条件 `Unmet`）を足す。付かない札は nil。
 - 札を作る処理、範囲の表、好みの並べ方は「末尾の次の候補」と共有する。役割なしの最後の枠の候補は、その前までの進行の `NextCandidates` と同じになる（テストで固定する）。
-- 構造の役割があるかは、`ReadRoleFits` が判定を付けたか（`RoleNotJudged` でない）で決める。役割の一覧を問い合わせに写さない。決められない判定も札にする（#126 の表）。
+- 構造の役割があるかは、`ReadRoleVerdicts` が判定を付けたか（`RoleNotJudged` でない）で決める。役割の一覧を問い合わせに写さない。決められない判定も札にする（#126 の表）。
 - 次の枠の終止の札は、次の枠がまだ選んでいなくても、満ちたフレーズの最後なら付ける（終止はなし）。
 - 枠の番号が 0 から枠の数 - 1 の外（`progression.ErrIndex`）、イオニアンでない調（`relation.ErrNotMajor`）、重変化を超える候補（`material.ErrAlterOutOfRange`）はエラー。
 

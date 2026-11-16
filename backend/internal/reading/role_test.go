@@ -2,6 +2,7 @@ package reading_test
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/hassaku63/chord-rambler/backend/internal/material"
@@ -200,6 +201,132 @@ func TestRoleFitsInMajorKeys(t *testing.T) {
 			}
 			if got[tt.at] != tt.want {
 				t.Errorf("%s in %s: %s; want %s", tt.name, p.Key().Tonic(), got[tt.at], tt.want)
+			}
+		}
+	}
+}
+
+// verdictCases are progressions in C major, each with the slot judged (at)
+// and the conditions it does not meet (docs/architecture/theory-conventions.md,
+// 7), in the order of the constants. A slot that fits, one undecided and one
+// with no verdict meet none.
+var verdictCases = []struct {
+	name  string
+	slots []roled
+	at    int
+	fit   reading.RoleFit
+	unmet []reading.RoleCondition
+}{
+	{"安定: C", []roled{on(c, stable)}, 0, reading.RoleFits, nil},
+	{"安定: G", []roled{on(g, stable)}, 0, reading.RoleMisfits, []reading.RoleCondition{reading.ConditionFunction}},
+	{"安定: Fm (borrowed, no function)", []roled{on(fm, stable)}, 0, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionFunction}},
+	{"高まり: Gsus4 (a dominant, no shape)", []roled{on(gsus4, rise)}, 0, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionShape}},
+	{"高まり: G6", []roled{on(g6, rise)}, 0, reading.RoleMisfits, []reading.RoleCondition{reading.ConditionShape}},
+	{"高まり: C6 (a tonic, no shape)", []roled{on(c6, rise)}, 0, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionShape, reading.ConditionFunction}},
+	{"高まり: D7 (secondary dominant)", []roled{on(d7, rise)}, 0, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionFunction}},
+	{"高まり: none chosen", []roled{unRoled(rise)}, 0, reading.RoleUndecided, nil},
+	{"準備: F before C", []roled{on(f, prepare), plain(c)}, 0, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionNextDominant}},
+	{"準備: F before Gsus4", []roled{on(f, prepare), plain(gsus4)}, 0, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionNextDominant}},
+	{"準備: C before Gsus4", []roled{on(c, prepare), plain(gsus4)}, 0, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionFunction, reading.ConditionNextDominant}},
+	{"準備: F6 before G", []roled{on(f6, prepare), plain(g)}, 0, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionShape}},
+	{"準備: C before none chosen", []roled{on(c, prepare), unRoled(progression.RoleNone)}, 0, reading.RoleUndecided, nil},
+	{"つなぎ: Am after C", []roled{plain(c), on(am, link)}, 1, reading.RoleFits, nil},
+	{"つなぎ: C after C", []roled{plain(c), on(c, link)}, 1, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionAnotherRoot}},
+	{"つなぎ: G7 after G", []roled{plain(g), on(g7, link)}, 1, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionAnotherRoot}},
+	{"つなぎ: F after C", []roled{plain(c), on(f, link)}, 1, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionFunction}},
+	{"つなぎ: Bdim after Gsus4", []roled{plain(gsus4), on(bdim, link)}, 1, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionFunction}},
+	{"つなぎ: C6 after Am", []roled{plain(am), on(c6, link)}, 1, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionShape}},
+	{"つなぎ: Fm after F", []roled{plain(f), on(fm, link)}, 1, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionFunction, reading.ConditionAnotherRoot}},
+	{"解決: C after G7", []roled{plain(g7), on(c, resolve)}, 1, reading.RoleFits, nil},
+	{"解決: C after Bdim", []roled{plain(bdim), on(c, resolve)}, 1, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionPreviousV}},
+	{"解決: C after F", []roled{plain(f), on(c, resolve)}, 1, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionPreviousV}},
+	{"解決: G after D7 (D7 resolves as expected, and is not V)", []roled{plain(d7), on(g, resolve)}, 1,
+		reading.RoleMisfits, []reading.RoleCondition{reading.ConditionPreviousV}},
+	{"解決: Am after G7", []roled{plain(g7), on(am, resolve)}, 1, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionExpectedResolution}},
+	{"解決: G7 after G", []roled{plain(g), on(g7, resolve)}, 1, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionExpectedResolution}},
+	{"解決: C6 after G7", []roled{plain(g7), on(c6, resolve)}, 1, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionExpectedResolution}},
+	{"解決: after none chosen", []roled{unRoled(progression.RoleNone), on(c, resolve)}, 1, reading.RoleUndecided, nil},
+	{"締め: authentic", []roled{plain(c), plain(f), plain(g7), on(c, closing)}, 3, reading.RoleFits, nil},
+	{"締め: no cadence", []roled{plain(c), plain(g), plain(am), on(f, closing)}, 3, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionCadence}},
+	{"締め: C6 after G7", []roled{plain(c), plain(f), plain(g7), on(c6, closing)}, 3, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionCadence}},
+	{"締め: not last", []roled{plain(c), plain(f), on(g7, closing), plain(c)}, 2, reading.RoleMisfits,
+		[]reading.RoleCondition{reading.ConditionCadence}},
+	{"締め: phrase not full", []roled{plain(f), plain(g7), on(c, closing)}, 2, reading.RoleUndecided, nil},
+	{"no role", []roled{plain(c)}, 0, reading.RoleNotJudged, nil},
+	{"広がり", []roled{on(g, progression.RoleSpread)}, 0, reading.RoleNotJudged, nil},
+}
+
+func TestRoleVerdicts(t *testing.T) {
+	for _, tt := range verdictCases {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := reading.ReadRoleVerdicts(buildRoled(major(cNat), tt.slots...))
+			if err != nil {
+				t.Fatalf("ReadRoleVerdicts: %v", err)
+			}
+			if v := got[tt.at]; v.Fit != tt.fit || !reflect.DeepEqual(v.Unmet, tt.unmet) {
+				t.Errorf("slot %d: %s %v; want %s %v", tt.at, v.Fit, v.Unmet, tt.fit, tt.unmet)
+			}
+		})
+	}
+}
+
+// Each progression of verdictCases, moved to the twelve major keys, gets the
+// same verdict and the same conditions not met.
+func TestRoleVerdictsInMajorKeys(t *testing.T) {
+	for _, s := range []string{"P5", "M2", "M6", "M3", "M7", "A4", "m2", "m6", "m3", "m7", "P4"} {
+		for _, tt := range verdictCases {
+			p, err := buildRoled(major(cNat), tt.slots...).Transpose(ivs(s)[0])
+			if err != nil {
+				t.Fatalf("%s up %s: %v", tt.name, s, err)
+			}
+			got, err := reading.ReadRoleVerdicts(p)
+			if err != nil {
+				t.Fatalf("%s in %s: %v", tt.name, p.Key().Tonic(), err)
+			}
+			if v := got[tt.at]; v.Fit != tt.fit || !reflect.DeepEqual(v.Unmet, tt.unmet) {
+				t.Errorf("%s in %s: %s %v; want %s %v", tt.name, p.Key().Tonic(), v.Fit, v.Unmet, tt.fit, tt.unmet)
+			}
+		}
+	}
+}
+
+// ReadRoleFits says what ReadRoleVerdicts says, and a slot misfits exactly
+// when it has a condition not met.
+func TestRoleFitsAreVerdicts(t *testing.T) {
+	for _, tt := range roleCases {
+		p := buildRoled(major(cNat), tt.slots...)
+		fits, err := reading.ReadRoleFits(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		verdicts, err := reading.ReadRoleVerdicts(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i, v := range verdicts {
+			if v.Fit != fits[i] || (v.Fit == reading.RoleMisfits) != (v.Unmet != nil) || len(v.Unmet) == 0 && v.Unmet != nil {
+				t.Errorf("%s, slot %d: verdict %s %v; ReadRoleFits %s", tt.name, i, v.Fit, v.Unmet, fits[i])
 			}
 		}
 	}
