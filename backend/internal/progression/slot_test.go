@@ -171,3 +171,23 @@ func TestWithRole(t *testing.T) {
 		}
 	}
 }
+
+func TestWithContent(t *testing.T) {
+	c := progression.ChordOf(material.Chord{})
+	contents := []progression.Content{progression.Unchosen(), progression.NoChord(), c}
+	for _, from := range contents {
+		for _, to := range contents {
+			s, err := slot(from, 6).WithRole(progression.RoleRise)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := s.WithContent(to)
+			if got.Content() != to || got.Beats() != 6 || got.Role() != progression.RoleRise {
+				t.Errorf("WithContent(%v) on %v = %v; want the content replaced, length and role kept", to, from, got)
+			}
+			if s.Content() != from {
+				t.Errorf("WithContent changed the original slot to %v", s.Content())
+			}
+		}
+	}
+}

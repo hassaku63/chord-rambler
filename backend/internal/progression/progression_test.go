@@ -330,3 +330,98 @@ func TestTransposeOutOfRange(t *testing.T) {
 		})
 	}
 }
+
+// Fill replaces the content of one slot and keeps its length and role.
+func TestFill(t *testing.T) {
+	chord := progression.ChordOf(material.Chord{})
+	role := func(c progression.Content, beats int, r progression.Role) progression.Slot {
+		s, err := slot(c, beats).WithRole(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	tests := []struct {
+		name  string
+		slots []progression.Slot
+		i     int
+		c     progression.Content
+		want  []progression.Slot
+		err   error
+	}{
+		{"fill an unchosen slot with a chord, keeping length and role",
+			[]progression.Slot{role(progression.Unchosen(), 8, progression.RoleRise), slot(progression.Unchosen(), 4)}, 0, chord,
+			[]progression.Slot{role(chord, 8, progression.RoleRise), slot(progression.Unchosen(), 4)}, nil},
+		{"change a chord to no chord",
+			[]progression.Slot{slot(progression.Unchosen(), 4), role(chord, 4, progression.RoleClose)}, 1, progression.NoChord(),
+			[]progression.Slot{slot(progression.Unchosen(), 4), role(progression.NoChord(), 4, progression.RoleClose)}, nil},
+		{"index before the start", []progression.Slot{slot(progression.Unchosen(), 4)}, -1, chord, nil, progression.ErrIndex},
+		{"index after the end", []progression.Slot{slot(progression.Unchosen(), 4)}, 1, chord, nil, progression.ErrIndex},
+		{"no slots", nil, 0, chord, nil, progression.ErrIndex},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := progression.Progression{}
+			for _, s := range tt.slots {
+				var err error
+				if p, err = p.Append(s); err != nil {
+					t.Fatal(err)
+				}
+			}
+			before := p.Slots()
+			got, err := p.Fill(tt.i, tt.c)
+			if !slices.Equal(p.Slots(), before) {
+				t.Errorf("Fill changed the original to %v", p.Slots())
+			}
+			if !errors.Is(err, tt.err) {
+				t.Fatalf("err = %v; want %v", err, tt.err)
+			}
+			if tt.err == nil && !slices.Equal(got.Slots(), tt.want) {
+				t.Errorf("slots = %v; want %v", got.Slots(), tt.want)
+			}
+		})
+	}
+}
+
+// Whatever slot is filled with whatever content, the lengths and the roles stay
+// in order, and so do the other slots and the phrases.
+func TestFillKeepsLengthsAndRoles(t *testing.T) {
+	roles := []progression.Role{progression.RoleNone, progression.RoleStable, progression.RoleRise, progression.RoleLinger}
+	contents := []progression.Content{progression.Unchosen(), progression.NoChord(), progression.ChordOf(material.Chord{})}
+	for _, beats := range [][]int{{4}, {4, 4, 4, 4, 4, 4}, {8, 4, 4, 3, 5}, {16, 2, 1}} {
+		p := progression.Progression{}
+		for k, b := range beats {
+			s, err := slot(contents[k%len(contents)], b).WithRole(roles[k%len(roles)])
+			if err != nil {
+				t.Fatal(err)
+			}
+			if p, err = p.Append(s); err != nil {
+				t.Fatal(err)
+			}
+		}
+		for i := range beats {
+			for _, c := range contents {
+				got, err := p.Fill(i, c)
+				if err != nil {
+					t.Fatalf("Fill(%d) on %v: %v", i, beats, err)
+				}
+				if !slices.Equal(lengths(got.Slots()), lengths(p.Slots())) {
+					t.Errorf("Fill(%d) changed the lengths to %v", i, lengths(got.Slots()))
+				}
+				for k, s := range got.Slots() {
+					old := p.Slots()[k]
+					wantContent := old.Content()
+					if k == i {
+						wantContent = c
+					}
+					if s.Role() != old.Role() || s.Content() != wantContent {
+						t.Errorf("Fill(%d, %v) on %v: slot %d = %v", i, c, beats, k, s)
+					}
+				}
+				if !slices.EqualFunc(phraseLengths(t, got), phraseLengths(t, p), slices.Equal) {
+					t.Errorf("Fill(%d) changed the phrases", i)
+				}
+			}
+		}
+	}
+}
