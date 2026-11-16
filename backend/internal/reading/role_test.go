@@ -10,21 +10,29 @@ import (
 	"github.com/hassaku63/chord-rambler/backend/internal/relation"
 )
 
-// roled is a slot of one bar of 4/4 of a test progression, with a role.
+// roled is a slot of a test progression in 4/4, with a role: one bar long
+// unless beats is set.
 type roled struct {
 	content progression.Content
 	role    progression.Role
+	beats   int
 }
 
 // on is a bar holding the chord, with the role; plain is one with no role.
-func on(c material.Chord, r progression.Role) roled { return roled{progression.ChordOf(c), r} }
-func plain(c material.Chord) roled                  { return roled{content: progression.ChordOf(c)} }
+func on(c material.Chord, r progression.Role) roled {
+	return roled{content: progression.ChordOf(c), role: r}
+}
+func plain(c material.Chord) roled { return roled{content: progression.ChordOf(c)} }
 
 // buildRoled appends the slots to an empty progression in the key, in 4/4.
 func buildRoled(key material.Scale, slots ...roled) progression.Progression {
 	p := progression.New(key, progression.Meter{})
 	for _, s := range slots {
-		ps, err := progression.NewSlot(s.content, 4)
+		beats := s.beats
+		if beats == 0 {
+			beats = 4
+		}
+		ps, err := progression.NewSlot(s.content, beats)
 		if err == nil {
 			ps, err = ps.WithRole(s.role)
 		}
@@ -50,8 +58,8 @@ const (
 var (
 	aFlatMaj  = chord(aFlat, maj, "")
 	f6        = chord(fNat, "M3 P5 M6", "")
-	noneRoled = func(r progression.Role) roled { return roled{progression.NoChord(), r} }
-	unRoled   = func(r progression.Role) roled { return roled{progression.Unchosen(), r} }
+	noneRoled = func(r progression.Role) roled { return roled{content: progression.NoChord(), role: r} }
+	unRoled   = func(r progression.Role) roled { return roled{content: progression.Unchosen(), role: r} }
 )
 
 // roleCases are progressions in C major, each with the slot judged (at) and
@@ -93,9 +101,11 @@ var roleCases = []struct {
 	{"準備: F before Gsus4", []roled{on(f, prepare), plain(gsus4)}, 0, reading.RoleMisfits},
 	{"準備: F before D7", []roled{on(f, prepare), plain(d7)}, 0, reading.RoleMisfits},
 	{"準備: F last", []roled{plain(c), on(f, prepare)}, 1, reading.RoleUndecided},
-	{"準備: F before none chosen", []roled{on(f, prepare), unRoled(0)}, 0, reading.RoleUndecided},
-	{"準備: F before no chord", []roled{on(f, prepare), noneRoled(0)}, 0, reading.RoleUndecided},
-	{"準備: C before none chosen", []roled{on(c, prepare), unRoled(0)}, 0, reading.RoleUndecided},
+	{"準備: F before none chosen", []roled{on(f, prepare), unRoled(progression.RoleNone)}, 0, reading.RoleUndecided},
+	{"準備: F before no chord", []roled{on(f, prepare), noneRoled(progression.RoleNone)}, 0, reading.RoleUndecided},
+	{"準備: C before none chosen", []roled{on(c, prepare), unRoled(progression.RoleNone)}, 0, reading.RoleUndecided},
+	{"準備: F before G, across phrases",
+		[]roled{plain(c), plain(f), plain(dm), on(f, prepare), plain(g)}, 3, reading.RoleFits},
 	{"準備: none chosen", []roled{unRoled(prepare), plain(g)}, 0, reading.RoleUndecided},
 	// つなぎ
 	{"つなぎ: Am after C", []roled{plain(c), on(am, link)}, 1, reading.RoleFits},
@@ -111,12 +121,14 @@ var roleCases = []struct {
 	{"つなぎ: Bdim after Gsus4", []roled{plain(gsus4), on(bdim, link)}, 1, reading.RoleMisfits},
 	{"つなぎ: C6 after Am", []roled{plain(am), on(c6, link)}, 1, reading.RoleMisfits},
 	{"つなぎ: first", []roled{on(am, link)}, 0, reading.RoleUndecided},
-	{"つなぎ: after none chosen", []roled{unRoled(0), on(am, link)}, 1, reading.RoleUndecided},
-	{"つなぎ: after no chord", []roled{noneRoled(0), on(am, link)}, 1, reading.RoleUndecided},
+	{"つなぎ: after none chosen", []roled{unRoled(progression.RoleNone), on(am, link)}, 1, reading.RoleUndecided},
+	{"つなぎ: after no chord", []roled{noneRoled(progression.RoleNone), on(am, link)}, 1, reading.RoleUndecided},
 	// 解決
 	{"解決: C after G7", []roled{plain(g7), on(c, resolve)}, 1, reading.RoleFits},
 	{"解決: C/E after G", []roled{plain(g), on(cOverE, resolve)}, 1, reading.RoleFits},
 	{"解決: C after G and G7", []roled{plain(g), plain(g7), on(c, resolve)}, 2, reading.RoleFits},
+	{"解決: C after G7, across phrases",
+		[]roled{plain(c), plain(f), plain(dm), plain(g7), on(c, resolve)}, 4, reading.RoleFits},
 	{"解決: Am after G7", []roled{plain(g7), on(am, resolve)}, 1, reading.RoleMisfits},
 	{"解決: C after Bdim (not V)", []roled{plain(bdim), on(c, resolve)}, 1, reading.RoleMisfits},
 	{"解決: G after D7 (not to I)", []roled{plain(d7), on(g, resolve)}, 1, reading.RoleMisfits},
@@ -125,22 +137,26 @@ var roleCases = []struct {
 	{"解決: Cm after G7", []roled{plain(g7), on(cm, resolve)}, 1, reading.RoleMisfits},
 	{"解決: C6 after G7", []roled{plain(g7), on(c6, resolve)}, 1, reading.RoleMisfits},
 	{"解決: first", []roled{on(c, resolve)}, 0, reading.RoleUndecided},
-	{"解決: after none chosen", []roled{unRoled(0), on(c, resolve)}, 1, reading.RoleUndecided},
-	{"解決: after no chord", []roled{noneRoled(0), on(c, resolve)}, 1, reading.RoleUndecided},
+	{"解決: after none chosen", []roled{unRoled(progression.RoleNone), on(c, resolve)}, 1, reading.RoleUndecided},
+	{"解決: after no chord", []roled{noneRoled(progression.RoleNone), on(c, resolve)}, 1, reading.RoleUndecided},
 	// 締め
 	{"締め: authentic", []roled{plain(c), plain(f), plain(g7), on(c, closing)}, 3, reading.RoleFits},
 	{"締め: half", []roled{plain(c), plain(f), plain(dm), on(g, closing)}, 3, reading.RoleFits},
 	{"締め: deceptive", []roled{plain(c), plain(f), plain(g7), on(am, closing)}, 3, reading.RoleFits},
 	{"締め: plagal", []roled{plain(c), plain(am), plain(f), on(c, closing)}, 3, reading.RoleFits},
 	{"締め: no cadence", []roled{plain(c), plain(g), plain(am), on(f, closing)}, 3, reading.RoleMisfits},
+	{"締め: C6 (no shape) after G7", []roled{plain(c), plain(f), plain(g7), on(c6, closing)}, 3, reading.RoleMisfits},
+	{"締め: C, alone in a full phrase",
+		[]roled{plain(c), plain(f), plain(dm), plain(g), {content: progression.ChordOf(c), role: closing, beats: 16}},
+		4, reading.RoleUndecided},
 	{"締め: not last", []roled{plain(c), plain(f), on(g7, closing), plain(c)}, 2, reading.RoleMisfits},
 	{"締め: not last of a phrase not full", []roled{on(c, closing), plain(f)}, 0, reading.RoleMisfits},
 	{"締め: C after none chosen",
-		[]roled{plain(c), plain(f), unRoled(0), on(c, closing)}, 3, reading.RoleUndecided},
+		[]roled{plain(c), plain(f), unRoled(progression.RoleNone), on(c, closing)}, 3, reading.RoleUndecided},
 	{"締め: C after no chord",
-		[]roled{plain(c), plain(f), noneRoled(0), on(c, closing)}, 3, reading.RoleUndecided},
+		[]roled{plain(c), plain(f), noneRoled(progression.RoleNone), on(c, closing)}, 3, reading.RoleUndecided},
 	{"締め: G after none chosen (half)",
-		[]roled{plain(c), plain(f), unRoled(0), on(g, closing)}, 3, reading.RoleFits},
+		[]roled{plain(c), plain(f), unRoled(progression.RoleNone), on(g, closing)}, 3, reading.RoleFits},
 	{"締め: phrase not full", []roled{plain(f), plain(g7), on(c, closing)}, 2, reading.RoleUndecided},
 	{"締め: none chosen, last", []roled{plain(c), plain(f), plain(g7), unRoled(closing)}, 3, reading.RoleUndecided},
 	{"締め: none chosen, not last", []roled{unRoled(closing), plain(c)}, 0, reading.RoleUndecided},
