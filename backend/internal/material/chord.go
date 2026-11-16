@@ -113,10 +113,10 @@ func (c Chord) PitchClasses() PitchClassSet {
 }
 
 // SoundingPitchClasses returns the pitch classes that sound: the members and
-// the bass. Play a chord, and compare it with a key or a scale by pitch class,
-// with this set; a bass that is not a member (C/B♭) can change the answer. A
-// comparison by spelling, such as the kind of a reading, looks at spelled
-// notes instead.
+// the bass. A comparison by pitch class (the tritone, the common tones of two
+// chords) uses this set; a bass that is not a member (C/B♭) can
+// change the answer. A comparison with a key or a mode, such as the kind of a
+// reading, is by spelling and looks at spelled notes instead.
 func (c Chord) SoundingPitchClasses() PitchClassSet {
 	s := c.PitchClasses()
 	if bass, ok := c.Bass(); ok {

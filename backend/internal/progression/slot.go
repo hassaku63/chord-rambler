@@ -130,3 +130,10 @@ func (s Slot) WithRole(r Role) (Slot, error) {
 	s.role = r
 	return s, nil
 }
+
+// WithContent returns the slot holding the content, with its length and role
+// kept.
+func (s Slot) WithContent(c Content) Slot {
+	s.content = c
+	return s
+}
