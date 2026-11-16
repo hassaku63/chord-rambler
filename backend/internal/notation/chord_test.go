@@ -189,7 +189,11 @@ func TestParseChordRejects(t *testing.T) {
 		// vocabulary (#120).
 		{"C69", notation.ErrChordKind, "69"},
 		{"Cmadd9", notation.ErrChordKind, "madd9"},
-		{"Cmin6/9", notation.ErrNoteName, "9"},
+		// 6/9 has no name in the vocabulary; the 9 is not read as a bass.
+		{"C6/9", notation.ErrNoName, "/9"},
+		{"Cm6/9", notation.ErrNoName, "/9"},
+		{"Cmin6/9", notation.ErrNoName, "/9"},
+		{"C6/9/E", notation.ErrNoName, "/9/E"},
 		{"Cm6(9)", notation.ErrNoTensions, "(9)"},
 		{"C(add9)", notation.ErrNoTensions, "(add9)"},
 		// 9 chords are written C7(9) (decision B1); C9 is not an alias.
