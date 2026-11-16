@@ -1,5 +1,6 @@
 import type { Slot, SlotReading } from '@/shared/api/client';
 import { labelRows } from './labels';
+import { LabelList } from './LabelList';
 import { slotName } from './SlotCard';
 
 type Props = { slot: Slot; reading: SlotReading | undefined };
@@ -14,20 +15,7 @@ export function SlotDetail({ slot, reading }: Props) {
         {name}
         {reading?.roman && `（${reading.roman.numeral}）`} の札
       </h2>
-      {rows.length === 0 ? (
-        <p>この枠に札はありません。</p>
-      ) : (
-        <dl>
-          {rows.map((row) => (
-            <div key={row.term} className="label-row">
-              <dt>{row.term}</dt>
-              <dd>
-                {row.word} <span className="basis">〔{row.basis}〕</span>
-              </dd>
-            </div>
-          ))}
-        </dl>
-      )}
+      {rows.length === 0 ? <p>この枠に札はありません。</p> : <LabelList rows={rows} />}
     </section>
   );
 }

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Note, Progression, SlotReading } from '@/shared/api/client';
+import type { Candidate, Note, Progression, SlotReading } from '@/shared/api/client';
 import { fakeAudio } from '@/test/fakeAudioContext';
 import { ProgressionScreen } from './ProgressionScreen';
 
@@ -20,6 +20,10 @@ const known: Record<string, SlotReading> = {
     cadence: { basis: 'school', cadence: 'none' },
     tensionCautions: { basis: 'school', cautions: [] },
   },
+  F: {
+    chord: { basis: 'definition', name: 'F' },
+    roman: { basis: 'computation', numeral: 'IV' },
+  },
   Fm: {
     chord: { basis: 'definition', name: 'Fm' },
     roman: { basis: 'computation', numeral: 'iv' },
@@ -32,6 +36,47 @@ const known: Record<string, SlotReading> = {
     },
   },
 };
+
+const diatonic = {
+  basis: 'school',
+  kind: 'diatonic',
+  function: 'subdominant',
+  modes: [],
+  fromParallelMinor: false,
+};
+
+/** Answers like POST /progressions/next-candidates: one candidate in each group. */
+function candidatesAfter(progression: Progression) {
+  const last = progression.slots.at(-1);
+  const f: Candidate = {
+    chord: { basis: 'definition', name: 'F' },
+    roman: { basis: 'computation', numeral: 'IV' },
+    reading: diatonic,
+  };
+  if (last?.chord !== undefined) {
+    f.rootMotion = { basis: 'computation', interval: 'm3' };
+    f.commonTones = { basis: 'computation', count: 2 };
+    f.preference = {
+      basis: 'convention',
+      from: 'subdominant',
+      to: 'subdominant',
+      preference: 'less-common',
+      style: 'classical',
+    };
+  }
+  const candidate = (name: string, numeral: string, kind: string): Candidate => ({
+    chord: { basis: 'definition', name },
+    roman: { basis: 'computation', numeral },
+    reading: { ...diatonic, kind, function: 'none' },
+  });
+  return {
+    groups: [
+      { kind: 'diatonic', candidates: [f] },
+      { kind: 'secondary-dominant', candidates: [candidate('D7', 'V7/V', 'secondary-dominant')] },
+      { kind: 'borrowed', candidates: [candidate('Fm', 'iv', 'borrowed')] },
+    ],
+  };
+}
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status });
@@ -55,6 +100,10 @@ function notesOf(progression: Progression): Note[] {
  * cannot read, and like POST /progressions/notes.
  */
 function standInServer(url: string, init?: RequestInit): Promise<Response> {
+  if (url.endsWith('/progressions/next-candidates')) {
+    const { progression } = JSON.parse(init?.body as string) as { progression: Progression };
+    return Promise.resolve(json(candidatesAfter(progression)));
+  }
   const progression = JSON.parse(init?.body as string) as Progression;
   if (url.endsWith('/progressions/notes')) {
     return Promise.resolve(json({ notes: notesOf(progression) }));
@@ -115,7 +164,7 @@ describe('ProgressionScreen', () => {
   it('shows the labels of the chosen slot with the kind of knowledge each rests on', async () => {
     render(<ProgressionScreen />);
     addChord('Fm');
-    await screen.findByText('iv');
+    await within(screen.getByRole('list', { name: '進行' })).findByText('iv');
 
     fireEvent.click(screen.getByRole('button', { name: 'Fm iv 借用和音' }));
 
@@ -186,7 +235,7 @@ describe('ProgressionScreen', () => {
     addChord('Fm');
     const playSlot = screen.getByRole('button', { name: 'この枠だけ鳴らす' });
     const stop = screen.getByRole('button', { name: '止める' });
-    await screen.findByText('iv');
+    await within(screen.getByRole('list', { name: '進行' })).findByText('iv');
     expect(playSlot).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Fm iv 借用和音' }));
@@ -198,6 +247,73 @@ describe('ProgressionScreen', () => {
     fireEvent.click(stop);
     expect(playSlot).toHaveAttribute('aria-pressed', 'false');
     expect(stop).toBeDisabled();
+  });
+
+  it('shows the candidates by group, only the diatonic group open, with their labels', async () => {
+    render(<ProgressionScreen />);
+    addChord('Dm7');
+
+    const diatonic = await screen.findByRole('list', { name: 'ダイアトニックの候補' });
+    const f = within(diatonic).getByRole('listitem');
+    await waitFor(() =>
+      expect(f).toHaveTextContent('S 根音の動き m3 共通音 2 クラシックでは、より少ない'),
+    );
+    expect(within(f).getByText('F')).toBeInTheDocument();
+    expect(within(f).getByText('IV')).toBeInTheDocument();
+    // A closed details element hides all but its summary.
+    expect(diatonic).toBeVisible();
+    for (const name of ['セカンダリー・ドミナントの候補', '借用和音の候補']) {
+      expect(screen.getByRole('list', { name, hidden: true })).not.toBeVisible();
+    }
+    const text = (el: HTMLElement) => el.textContent;
+    expect(within(f).getAllByRole('term').map(text)).toEqual([
+      '種別',
+      '機能',
+      '根音の動き',
+      '共通音',
+      '好み',
+    ]);
+    expect(within(f).getAllByRole('definition').map(text).at(-1)).toBe(
+      'サブドミナント → サブドミナント、クラシックでは、より少ない 〔慣習〕',
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/v1/progressions/next-candidates',
+      expect.objectContaining({
+        body: JSON.stringify({
+          progression: { key: 'C', slots: [{ chord: 'Dm7', beats: 4 }] },
+          beats: 4,
+        }),
+      }),
+    );
+  });
+
+  it('adds a candidate after the last slot', async () => {
+    render(<ProgressionScreen />);
+    addChord('Dm7');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'F を足す' }));
+
+    const cards = within(screen.getByRole('list', { name: '進行' })).getAllByRole('listitem');
+    expect(cards).toHaveLength(2);
+    expect(await within(cards[1] ?? document.body).findByText('IV')).toBeInTheDocument();
+  });
+
+  it('plays the last chord and then a candidate on trial', async () => {
+    const audio = fakeAudio();
+    render(<ProgressionScreen createAudioContext={audio.create} />);
+    addChord('Dm7');
+    const trial = await screen.findByRole('button', { name: 'F を試聴する' });
+
+    fireEvent.click(trial);
+
+    await waitFor(() => expect(trial).toHaveAttribute('aria-pressed', 'true'));
+    // Dm7 from the start, F 4 beats later at 90 BPM.
+    const starts = audio.context.oscillators.map((o) => o.startedAt);
+    expect(starts).toEqual([1.05, expect.closeTo(3.717)]);
+
+    fireEvent.click(trial);
+
+    expect(trial).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('starts at 90 BPM and takes another tempo', () => {

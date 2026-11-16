@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  parseCandidateGroups,
   parseHealth,
   parseProblem,
   parseProgressionNotes,
@@ -141,5 +142,60 @@ describe('parseProgressionNotes', () => {
     },
   ])('rejects $name', ({ body }) => {
     expect(() => parseProgressionNotes(body)).toThrow('unexpected body');
+  });
+});
+
+describe('parseCandidateGroups', () => {
+  const bare = {
+    chord: { basis: 'definition', name: 'F' },
+    roman: { basis: 'computation', numeral: 'IV' },
+    reading: {
+      basis: 'school',
+      kind: 'diatonic',
+      function: 'subdominant',
+      modes: [],
+      fromParallelMinor: false,
+    },
+  };
+  const full = {
+    ...bare,
+    rootMotion: { basis: 'computation', interval: 'P4' },
+    commonTones: { basis: 'computation', count: 1 },
+    resolution: { basis: 'school', resolution: 'none' },
+    cadence: { basis: 'school', cadence: 'none' },
+    preference: {
+      basis: 'convention',
+      from: 'tonic',
+      to: 'subdominant',
+      preference: 'common',
+      style: 'classical',
+    },
+  };
+  const bodyOf = (candidate: object) => ({
+    groups: [{ kind: 'diatonic', candidates: [candidate] }],
+  });
+
+  it.each([
+    { name: 'every label', body: bodyOf(full) },
+    { name: 'the labels that are absent left out', body: bodyOf(bare) },
+    { name: 'an empty group', body: { groups: [{ kind: 'borrowed', candidates: [] }] } },
+  ])('accepts a body with $name', ({ body }) => {
+    expect(parseCandidateGroups(body)).toEqual(body);
+  });
+
+  it.each([
+    { name: 'no groups', body: {} },
+    { name: 'a group without kind', body: { groups: [{ candidates: [] }] } },
+    { name: 'a candidate without roman', body: bodyOf({ ...bare, roman: undefined }) },
+    {
+      name: 'a count that is not an integer',
+      body: bodyOf({ ...bare, commonTones: { basis: 'x', count: '1' } }),
+    },
+    {
+      name: 'a preference without style',
+      body: bodyOf({ ...bare, preference: { ...full.preference, style: undefined } }),
+    },
+  ])('rejects $name', ({ body }) => {
+    expect(() => parseCandidateGroups(body)).toThrow('unexpected body');
   });
 });

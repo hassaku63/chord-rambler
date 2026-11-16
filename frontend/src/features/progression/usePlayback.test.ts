@@ -23,10 +23,15 @@ const answer: NotesAnswer = {
   ],
 };
 
+// C for 4 beats and then a slot with no chord for 2.
+const emptyLast: Progression = { key: 'C', slots: progression.slots.slice(0, 2) };
+
+const fetchNotes = vi.fn(() => Promise.resolve<NotesAnswer>(answer));
+
 async function renderPlayback(p: Progression = progression) {
   const audio = fakeAudio();
-  const get = vi.fn(() => Promise.resolve(answer));
-  const { result, rerender } = renderHook(({ p }) => usePlayback(p, audio.create, get), {
+  fetchNotes.mockClear();
+  const { result, rerender } = renderHook(({ p }) => usePlayback(p, audio.create, fetchNotes), {
     initialProps: { p },
   });
   await waitFor(() => expect(result.current.playable).toBe(true));
@@ -93,6 +98,60 @@ describe('usePlayback', () => {
     const { result } = await renderPlayback();
 
     expect([0, 1, 2].map(result.current.slotPlayable)).toEqual([true, false, true]);
+  });
+
+  it('plays the last slot and then a candidate, asking for the notes with it added', async () => {
+    const { audio, result } = await renderPlayback();
+    const withF: NotesAnswer = {
+      ok: true,
+      notes: [
+        { pitch: 43, start: 6, beats: 4, velocity: 64 },
+        { pitch: 67, start: 6, beats: 4, velocity: 64 },
+        { pitch: 65, start: 10, beats: 2, velocity: 64 },
+      ],
+    };
+    fetchNotes.mockResolvedValueOnce(withF);
+
+    act(() => result.current.audition('F', 2));
+
+    await waitFor(() => expect(result.current.playing).toBe('audition'));
+    expect(fetchNotes).toHaveBeenLastCalledWith(
+      { key: 'C', slots: [...progression.slots, { chord: 'F', beats: 2 }] },
+      expect.any(AbortSignal),
+    );
+    expect(result.current.auditioning).toBe('F');
+    // G from 0, then F 4 beats later: 4 × 60 / 90 = 2.67 s.
+    const starts = audio.context.oscillators.map((o) => o.startedAt);
+    expect(starts).toEqual([1.05, 1.05, expect.closeTo(3.717)]);
+  });
+
+  it('plays the candidate alone after a slot with no chord', async () => {
+    const { audio, result } = await renderPlayback(emptyLast);
+    fetchNotes.mockResolvedValueOnce({
+      ok: true,
+      notes: [{ pitch: 65, start: 6, beats: 4, velocity: 64 }],
+    });
+
+    act(() => result.current.audition('F', 4));
+
+    await waitFor(() => expect(result.current.playing).toBe('audition'));
+    expect(audio.context.oscillators.map((o) => o.startedAt)).toEqual([1.05]);
+  });
+
+  it('drops a trial whose notes come after the progression changed', async () => {
+    const { audio, result, rerender } = await renderPlayback();
+    let resolve: (a: NotesAnswer) => void = () => undefined;
+    fetchNotes.mockReturnValueOnce(new Promise<NotesAnswer>((r) => (resolve = r)));
+    act(() => result.current.audition('F', 4));
+
+    rerender({ p: { ...progression, key: 'G' } });
+    await act(async () => {
+      resolve(answer);
+      await Promise.resolve();
+    });
+
+    expect(result.current.playing).toBeNull();
+    expect(audio.context.oscillators).toEqual([]);
   });
 
   it.each([39, 201, 90.5])('keeps the tempo when given %s', async (tempo) => {
