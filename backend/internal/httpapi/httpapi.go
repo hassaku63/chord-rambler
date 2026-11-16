@@ -41,6 +41,7 @@ var routes = []route{
 	{method: http.MethodPost, path: "/progressions/notes", handler: (*api).notes},
 	{method: http.MethodPost, path: "/progressions/next-candidates", handler: (*api).nextCandidates},
 	{method: http.MethodPost, path: "/progressions/slot-candidates", handler: (*api).slotCandidates},
+	{method: http.MethodPost, path: "/variations", handler: (*api).variations},
 }
 
 type api struct {

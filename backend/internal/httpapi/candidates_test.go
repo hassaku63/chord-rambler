@@ -148,7 +148,7 @@ func TestSlotCandidatesToPrepareG7InC(t *testing.T) {
 }
 
 // TestCandidatesRejectWhatTheEngineRefuses checks every 400 of the candidate
-// routes, one case each.
+// and variation routes, one case each.
 func TestCandidatesRejectWhatTheEngineRefuses(t *testing.T) {
 	tests := []struct {
 		name, path, body string
@@ -169,6 +169,9 @@ func TestCandidatesRejectWhatTheEngineRefuses(t *testing.T) {
 			`{"progression": {"key": "C", "slots": [{"chord": "C", "beats": 4}]}, "slot": 1}`, []string{"slot 1", "outside"}},
 		{"slot left out", slotCandidatesPath,
 			`{"progression": {"key": "C", "slots": [{"chord": "C", "beats": 4}]}}`, []string{"slot: required"}},
+		{"no third", variationsPath, `{"key": "C", "chord": "Csus4"}`, []string{"no major, minor or diminished triad"}},
+		{"chord not read", variationsPath, `{"key": "C", "chord": "Cmx"}`, []string{"chord", `"Cmx"`}},
+		{"key not read", variationsPath, `{"key": "H", "chord": "C"}`, []string{"key"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
