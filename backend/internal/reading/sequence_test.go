@@ -81,7 +81,7 @@ func readProgression(t *testing.T, p progression.Progression) []reading.SlotRead
 // How a dominant goes on, read on the first of two slots in C major
 // (docs/architecture/theory-conventions.md, 2; Hutchinson 17.4,
 // https://musictheory.pugetsound.edu/mt21c/AnalyzingSecondaryDominants.html,
-// and 17.6,
+// and Hutchinson on irregular resolutions,
 // https://musictheory.pugetsound.edu/mt21c/IrregularResoltionsOfSecondaryDominants.html).
 // The chord is expected when the next is read as diatonic and is on the degree
 // pointed to (the owner's call on #103): G7, G/B and G7(♭9) after D7, but not
@@ -137,7 +137,7 @@ func TestResolution(t *testing.T) {
 
 // The cadences of every slot of progressions in C major. A cadence is named
 // on the last slot of a phrase only (docs/architecture/theory-conventions.md,
-// 4; Hutchinson 13.1, https://musictheory.pugetsound.edu/mt21c/cadences.html):
+// 4; Hutchinson, https://musictheory.pugetsound.edu/mt21c/cadences.html):
 // authentic V → I, half on V, plagal IV → I, deceptive V → other than I. V,
 // I and IV are read as in TestResolution (the owner's calls on #103): G7 → Cm
 // is deceptive. A phrase ending on V is a half cadence whatever comes before
