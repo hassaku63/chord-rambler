@@ -101,8 +101,44 @@ func TestPlaces(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := relation.Places(built(t, tt.beats...))
+			for i := range got {
+				got[i].FullPhrase = false // checked by TestPlacesFullPhrase
+			}
 			if !slices.Equal(got, tt.want) {
 				t.Errorf("Places(%v beats) = %v; want %v", tt.beats, got, tt.want)
+			}
+		})
+	}
+}
+
+// Whether the phrase of each slot is full, from the cases of #111. The lengths
+// are in beats; want is one value per slot.
+func TestPlacesFullPhrase(t *testing.T) {
+	tests := []struct {
+		name  string
+		beats []int
+		want  []bool
+	}{
+		{"no slots", nil, nil},
+		{"four bars fill a phrase", []int{4, 4, 4, 4}, []bool{true, true, true, true}},
+		{"the last three bars do not", []int{4, 4, 4}, []bool{false, false, false}},
+		{
+			"a full phrase and three bars after it",
+			[]int{4, 4, 4, 4, 4, 4, 4},
+			[]bool{true, true, true, true, false, false, false},
+		},
+		{"slots of two beats close a phrase", []int{4, 4, 4, 2, 2}, []bool{true, true, true, true, true}},
+		{"a slot of four bars is a full phrase", []int{16, 4}, []bool{true, false}},
+		{"a phrase of 15 beats is short", []int{4, 4, 4, 3}, []bool{false, false, false, false}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got []bool
+			for _, pl := range relation.Places(built(t, tt.beats...)) {
+				got = append(got, pl.FullPhrase)
+			}
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("FullPhrase of Places(%v beats) = %v; want %v", tt.beats, got, tt.want)
 			}
 		})
 	}

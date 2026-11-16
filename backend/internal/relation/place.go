@@ -3,7 +3,8 @@ package relation
 import "github.com/hassaku63/chord-rambler/backend/internal/progression"
 
 // Place is where a slot sits in time: its bar and beat, its phrase, and
-// whether it ends the phrase or the progression. Every number counts from 1.
+// whether the phrase is full, and whether it ends the phrase or the
+// progression. Every number counts from 1.
 type Place struct {
 	// Bar and Beat are where the slot starts. A slot that crosses a bar line
 	// is placed by the bar and the beat it starts on.
@@ -16,6 +17,10 @@ type Place struct {
 	// LastInPhrase and LastInProgression report whether no slot follows in the
 	// phrase and in the progression.
 	LastInPhrase, LastInProgression bool
+	// FullPhrase reports whether the phrase of the slot is full: as long as
+	// progression.Progression.PhraseBeats. Every slot of a phrase has the same
+	// value. Only the last phrase can be short, one still being written.
+	FullPhrase bool
 }
 
 // Places returns the place of every slot of the progression, in order: the
@@ -30,6 +35,11 @@ func Places(p progression.Progression) []Place {
 	start := 0 // beats before the slot, from the start of the progression
 	for i, ph := range phrases(p) {
 		slots := ph.Slots()
+		beats := 0
+		for _, s := range slots {
+			beats += s.Beats()
+		}
+		full := beats == p.PhraseBeats()
 		for j, s := range slots {
 			out = append(out, Place{
 				Bar:           start/perBar + 1,
@@ -37,6 +47,7 @@ func Places(p progression.Progression) []Place {
 				Phrase:        i + 1,
 				IndexInPhrase: j + 1,
 				LastInPhrase:  j == len(slots)-1,
+				FullPhrase:    full,
 			})
 			start += s.Beats()
 		}
