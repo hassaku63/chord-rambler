@@ -70,31 +70,54 @@ const diatonic: Schemas['ChordReadingLabel'] = {
   fromParallelMinor: false,
 };
 
+/** The labels every chord the stand-in server knows has, as the server reads it alone in C. */
+const alone: Pick<Schemas['ChordSlotReading'], 'resolution' | 'cadence' | 'tensionCautions'> = {
+  resolution: { basis: 'school', resolution: 'none' },
+  cadence: { basis: 'school', cadence: 'none' },
+  tensionCautions: { basis: 'school', cautions: [] },
+};
+
 /** The readings the stand-in server knows, as the contract writes them. */
-const known: Record<string, Schemas['SlotReading']> = {
+const known: Record<string, Schemas['ChordSlotReading']> = {
   Dm7: {
+    content: 'chord',
     chord: { basis: 'definition', name: 'Dm7' },
     roman: { basis: 'computation', numeral: 'ii7' },
     reading: diatonic,
-    resolution: { basis: 'school', resolution: 'none' },
-    cadence: { basis: 'school', cadence: 'none' },
-    tensionCautions: { basis: 'school', cautions: [] },
+    ...alone,
   },
   F: {
+    content: 'chord',
     chord: { basis: 'definition', name: 'F' },
     roman: { basis: 'computation', numeral: 'IV' },
+    reading: diatonic,
+    ...alone,
   },
-  Fsus4: { chord: { basis: 'definition', name: 'Fsus4' } },
+  Fsus4: {
+    content: 'chord',
+    chord: { basis: 'definition', name: 'Fsus4' },
+    roman: { basis: 'computation', numeral: 'IVsus4' },
+    reading: {
+      basis: 'school',
+      kind: 'borrowed',
+      function: 'none',
+      modes: ['dorian', 'phrygian', 'mixolydian', 'aeolian', 'locrian'],
+      fromParallelMinor: true,
+    },
+    ...alone,
+  },
   Fm: {
+    content: 'chord',
     chord: { basis: 'definition', name: 'Fm' },
     roman: { basis: 'computation', numeral: 'iv' },
     reading: {
       basis: 'school',
       kind: 'borrowed',
       function: 'none',
-      modes: ['dorian', 'aeolian'],
+      modes: ['phrygian', 'aeolian', 'locrian'],
       fromParallelMinor: true,
     },
+    ...alone,
   },
 };
 
@@ -189,7 +212,8 @@ function notesOf(progression: Schemas['Progression']): Schemas['ProgressionNotes
 function readingsOf(progression: Schemas['Progression']): Schemas['ProgressionReading'] | Refusal {
   const slots: Schemas['SlotReading'][] = [];
   for (const [i, slot] of progression.slots.entries()) {
-    const reading = slot.chord === undefined ? {} : known[slot.chord];
+    const reading: Schemas['SlotReading'] | undefined =
+      slot.chord === undefined ? { content: slot.content ?? 'unchosen' } : known[slot.chord];
     if (reading === undefined) {
       return refuse(`slot ${i}: cannot read the chord name "${slot.chord ?? ''}"`);
     }

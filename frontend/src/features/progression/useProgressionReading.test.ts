@@ -6,8 +6,27 @@ import { useProgressionReading } from './useProgressionReading';
 const cMajor: Progression = { key: 'C', slots: [{ chord: 'C', beats: 4 }] };
 const gMajor: Progression = { key: 'G', slots: [{ chord: 'G', beats: 4 }] };
 
+/** The reading of the tonic chord alone in its own key: C in C, G in G. */
 function readingOf(name: string): ProgressionReading {
-  return { slots: [{ chord: { basis: 'definition', name } }] };
+  return {
+    slots: [
+      {
+        content: 'chord',
+        chord: { basis: 'definition', name },
+        roman: { basis: 'computation', numeral: 'I' },
+        reading: {
+          basis: 'school',
+          kind: 'diatonic',
+          function: 'tonic',
+          modes: [],
+          fromParallelMinor: false,
+        },
+        resolution: { basis: 'school', resolution: 'none' },
+        cadence: { basis: 'school', cadence: 'none' },
+        tensionCautions: { basis: 'school', cautions: [] },
+      },
+    ],
+  };
 }
 
 function answerOf(name: string): ReadingAnswer {

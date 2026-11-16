@@ -1,6 +1,6 @@
 import { Fragment } from 'react';
 import type { Slot, SlotReading } from '@/shared/api/client';
-import { cardMarks } from './labels';
+import { cardMarks, numeralOf } from './labels';
 import { ROLE_GROUPS, TERMS } from './terms';
 import { MIN_BEATS } from './useProgression';
 
@@ -13,7 +13,7 @@ function beatChoices(max: number, current: number): number[] {
 /** The name a slot shows: the chord as the server spells it, or what kind of empty slot it is. */
 export function slotName(slot: Slot, reading: SlotReading | undefined): string {
   if (slot.chord !== undefined) {
-    return reading?.chord?.name ?? slot.chord;
+    return reading?.content === 'chord' ? reading.chord.name : slot.chord;
   }
   return slot.content === 'none' ? '和音なし' : 'まだ選んでいない';
 }
@@ -52,12 +52,7 @@ export function SlotCard({
 }: Props) {
   const name = slotName(slot, reading);
   const marks = reading ? cardMarks(reading) : [];
-  const lines = [
-    name,
-    reading?.roman?.numeral,
-    marks.join(' '),
-    unreadable && 'この枠を読めません',
-  ];
+  const lines = [name, numeralOf(reading), marks.join(' '), unreadable && 'この枠を読めません'];
   const shown = lines.filter((line) => typeof line === 'string' && line !== '');
   return (
     <li

@@ -51,10 +51,20 @@ type Open<T> = T extends string
       ? { [K in keyof T]: Open<T[K]> }
       : T;
 
+/**
+ * Open for each member of a tagged union, with the tag kept as the contract
+ * lists it, so the union still narrows on the tag.
+ */
+type OpenTagged<T, Tag extends keyof T> = T extends unknown
+  ? { [K in keyof T]: K extends Tag ? T[K] : Open<T[K]> }
+  : never;
+
+/** The labels of one slot: those of a slot with a chord, or of a slot with no chord. */
+export type SlotReading = OpenTagged<components['schemas']['SlotReading'], 'content'>;
+/** The labels of a slot with a chord: the chord's labels are always there. */
+export type ChordSlotReading = Extract<SlotReading, { content: 'chord' }>;
 /** The readings of a progression's slots, in the order of the slots. */
-export type ProgressionReading = Open<components['schemas']['ProgressionReading']>;
-/** The labels of one slot. */
-export type SlotReading = Open<components['schemas']['SlotReading']>;
+export type ProgressionReading = { slots: SlotReading[] };
 /** A problem document (RFC 9457). */
 export type Problem = components['schemas']['Problem'];
 
@@ -274,23 +284,33 @@ function parseTensionCautionsLabel(value: unknown, where: string) {
   return { basis, cautions };
 }
 
+/**
+ * The labels of one slot, in the shape its content names. A content the
+ * contract does not list is refused: the screen cannot tell which labels the
+ * slot has.
+ */
 function parseSlotReading(value: unknown, where: string): SlotReading {
   const fields = fieldsAt(value, where);
-  const slot: SlotReading = {};
   const at = (name: string) => `${where}.${name}`;
-  if ('chord' in fields) slot.chord = oneStringLabel(fields.chord, 'name', at('chord'));
+  const content = stringAt(fields, 'content', where);
+  const roleFit =
+    'roleFit' in fields ? { roleFit: oneStringLabel(fields.roleFit, 'fit', at('roleFit')) } : {};
+  if (content === 'none' || content === 'unchosen') {
+    return { content, ...roleFit };
+  }
+  if (content !== 'chord') {
+    throw new UnexpectedBody(at('content'));
+  }
+  const slot: ChordSlotReading = {
+    content,
+    chord: oneStringLabel(fields.chord, 'name', at('chord')),
+    reading: parseChordReadingLabel(fields.reading, at('reading')),
+    resolution: oneStringLabel(fields.resolution, 'resolution', at('resolution')),
+    cadence: oneStringLabel(fields.cadence, 'cadence', at('cadence')),
+    tensionCautions: parseTensionCautionsLabel(fields.tensionCautions, at('tensionCautions')),
+    ...roleFit,
+  };
   if ('roman' in fields) slot.roman = oneStringLabel(fields.roman, 'numeral', at('roman'));
-  if ('reading' in fields) slot.reading = parseChordReadingLabel(fields.reading, at('reading'));
-  if ('resolution' in fields) {
-    slot.resolution = oneStringLabel(fields.resolution, 'resolution', at('resolution'));
-  }
-  if ('cadence' in fields) {
-    slot.cadence = oneStringLabel(fields.cadence, 'cadence', at('cadence'));
-  }
-  if ('tensionCautions' in fields) {
-    slot.tensionCautions = parseTensionCautionsLabel(fields.tensionCautions, at('tensionCautions'));
-  }
-  if ('roleFit' in fields) slot.roleFit = oneStringLabel(fields.roleFit, 'fit', at('roleFit'));
   return slot;
 }
 

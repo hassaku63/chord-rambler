@@ -448,6 +448,8 @@ API の形（進行の送り方、経路、応答の札、失敗）は、契約 
 - エンジンが断る問い（`progression.ErrIndex`、`ErrLength`、`ErrCrossesPhrase`、`material.ErrAlterOutOfRange`、`query.ErrNoTriadQuality`）は 400 にする。`detail` の文は、ハンドラの 1 か所の表（`refusals`）が、番兵のエラーごとに利用者の言葉で決める。枠が分かるとき（進行の読み取りの失敗、枠を埋める候補の `slot`、次の候補で足す枠）は、problem に任意の欄 `slot`（0 から数える。RFC 9457 の拡張の欄）を入れ、`detail` の前にも枠の番号を付ける（`slot 1: …`）。複数の枠にまたがる問題や、枠のない問題（鍵、JSON の形、`slot` の欠け）は `slot` を持たない。エンジンのエラーの文（Go の名前や関数の前置きを含む）は、ログにだけ書く。表にない番兵のエラーと、ほかの失敗は 500。
 - 複数語の識別子は、カタログの JSON の語（`less_common`）ではなく契約の書き方（`less-common`）にする。札に出ない `unstated` も、全域のテストのため契約の列挙に載せる。
 
+枠の読み（契約の `SlotReading`）は、判別の欄 `content` で 2 つの形に分ける（#182）。和音のある枠（`chord`。`ChordSlotReading`）は、和音名、読み、解決、終止、テンションの注意の札をいつも持ち、ローマ数字と役割に合うかは当たるときだけ持つ。和音のない枠（`none`・`unchosen`。`NoChordSlotReading`）は、役割に合うかの札だけを、当たるときに持つ。`none` と `unchosen` は、送った枠の `content` のまま返す。契約は `oneOf` と `discriminator` で書き、生成した型はタグつきの共用体になる。画面（`frontend/src/shared/api/client.ts`）は、札の識別子を文字列に広げても `content` だけは契約の値のまま残して絞り込み、契約にない `content` は応答の誤りとして断る。
+
 本文の読み方は `decodeBody` の 1 か所に置く。`Content-Type` が `application/json` でなければ 415、本文が 64 KiB を超えれば 413、契約にない欄と型の合わない値は 400 で、後者の `detail` には欄の場所と期待した型だけを書く（例: `slots[0].beats: expected integer`）。
 
 進行の枠の数の上限は 256 個（`maxSlots`。#142）。4/4 の 64 小節を 1 拍ずつ刻んでも収まる長さで、契約の `Progression.slots` に `maxItems: 256` を書く。本文の大きさの上限だけでは短い枠が約 2,000 個入り、`Append` が足すたびに進行を複製して検証するため、手間が枠の数の二乗で増える。確かめるのは、本文を進行にする `progressionBody.progression` の 1 か所（`decodeProgression` と候補の経路が通る）で、枠を組む前に `slots` の長さで見る。超えたら 400 で、`detail` は `a progression has at most 256 slots`。重さは `backend/internal/httpapi/bench_test.go` のベンチマーク（読み、次の候補、枠を埋める候補を、256 枠の進行で、ハンドラを通して測る）で見る。`cd backend && go test ./internal/httpapi/ -run xxx -bench .` で走らせる（`make check` では走らせない）。256 枠で 1 回あたり 1 秒を超えないことを、手で確かめた。

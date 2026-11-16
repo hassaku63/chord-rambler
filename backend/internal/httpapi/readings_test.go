@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -58,16 +59,16 @@ func TestReadingsOfFourBarsInC(t *testing.T) {
 				{"chord": "C", "beats": 4, "role": "resolve"},
 				{"chord": "C", "beats": 4, "role": "close"}]}`,
 			want: `{"slots": [
-				{"chord": {"basis": "definition", "name": "Dm7"}, "roman": {"basis": "computation", "numeral": "ii7"},
+				{"content": "chord", "chord": {"basis": "definition", "name": "Dm7"}, "roman": {"basis": "computation", "numeral": "ii7"},
 				 "reading": {"basis": "school", "kind": "diatonic", "function": "subdominant", "modes": [], "fromParallelMinor": false},
 				 "resolution": {"basis": "school", "resolution": "none"}, "cadence": {"basis": "school", "cadence": "none"}, "tensionCautions": {"basis": "school", "cautions": []}, "roleFit": {"basis": "school", "fit": "fits"}},
-				{"chord": {"basis": "definition", "name": "G7"}, "roman": {"basis": "computation", "numeral": "V7"},
+				{"content": "chord", "chord": {"basis": "definition", "name": "G7"}, "roman": {"basis": "computation", "numeral": "V7"},
 				 "reading": {"basis": "school", "kind": "diatonic", "function": "dominant", "modes": [], "fromParallelMinor": false},
 				 "resolution": {"basis": "school", "resolution": "expected"}, "cadence": {"basis": "school", "cadence": "none"}, "tensionCautions": {"basis": "school", "cautions": []}, "roleFit": {"basis": "school", "fit": "fits"}},
-				{"chord": {"basis": "definition", "name": "C"}, "roman": {"basis": "computation", "numeral": "I"},
+				{"content": "chord", "chord": {"basis": "definition", "name": "C"}, "roman": {"basis": "computation", "numeral": "I"},
 				 "reading": {"basis": "school", "kind": "diatonic", "function": "tonic", "modes": [], "fromParallelMinor": false},
 				 "resolution": {"basis": "school", "resolution": "none"}, "cadence": {"basis": "school", "cadence": "none"}, "tensionCautions": {"basis": "school", "cautions": []}, "roleFit": {"basis": "school", "fit": "fits"}},
-				{"chord": {"basis": "definition", "name": "C"}, "roman": {"basis": "computation", "numeral": "I"},
+				{"content": "chord", "chord": {"basis": "definition", "name": "C"}, "roman": {"basis": "computation", "numeral": "I"},
 				 "reading": {"basis": "school", "kind": "diatonic", "function": "tonic", "modes": [], "fromParallelMinor": false},
 				 "resolution": {"basis": "school", "resolution": "none"}, "cadence": {"basis": "school", "cadence": "none"}, "tensionCautions": {"basis": "school", "cautions": []}, "roleFit": {"basis": "school", "fit": "misfits"}}]}`,
 		},
@@ -82,16 +83,16 @@ func TestReadingsOfFourBarsInC(t *testing.T) {
 				{"chord": "Fm", "beats": 4},
 				{"chord": "G/B", "beats": 4}]}`,
 			want: `{"slots": [
-				{"chord": {"basis": "definition", "name": "C"}, "roman": {"basis": "computation", "numeral": "I"},
+				{"content": "chord", "chord": {"basis": "definition", "name": "C"}, "roman": {"basis": "computation", "numeral": "I"},
 				 "reading": {"basis": "school", "kind": "diatonic", "function": "tonic", "modes": [], "fromParallelMinor": false},
 				 "resolution": {"basis": "school", "resolution": "none"}, "cadence": {"basis": "school", "cadence": "none"}, "tensionCautions": {"basis": "school", "cautions": []}},
-				{"chord": {"basis": "definition", "name": "D7"}, "roman": {"basis": "school", "numeral": "V7/V"},
+				{"content": "chord", "chord": {"basis": "definition", "name": "D7"}, "roman": {"basis": "school", "numeral": "V7/V"},
 				 "reading": {"basis": "school", "kind": "secondary-dominant", "function": "none", "modes": [], "fromParallelMinor": false, "target": 5},
 				 "resolution": {"basis": "school", "resolution": "irregular"}, "cadence": {"basis": "school", "cadence": "none"}, "tensionCautions": {"basis": "school", "cautions": []}},
-				{"chord": {"basis": "definition", "name": "Fm"}, "roman": {"basis": "computation", "numeral": "iv"},
+				{"content": "chord", "chord": {"basis": "definition", "name": "Fm"}, "roman": {"basis": "computation", "numeral": "iv"},
 				 "reading": {"basis": "school", "kind": "borrowed", "function": "none", "modes": ["phrygian", "aeolian", "locrian"], "fromParallelMinor": true},
 				 "resolution": {"basis": "school", "resolution": "none"}, "cadence": {"basis": "school", "cadence": "none"}, "tensionCautions": {"basis": "school", "cautions": []}},
-				{"chord": {"basis": "definition", "name": "G/B"}, "roman": {"basis": "computation", "numeral": "V"},
+				{"content": "chord", "chord": {"basis": "definition", "name": "G/B"}, "roman": {"basis": "computation", "numeral": "V"},
 				 "reading": {"basis": "school", "kind": "diatonic", "function": "dominant", "modes": [], "fromParallelMinor": false},
 				 "resolution": {"basis": "school", "resolution": "none"}, "cadence": {"basis": "school", "cadence": "half"}, "tensionCautions": {"basis": "school", "cautions": []}}]}`,
 		},
@@ -106,12 +107,12 @@ func TestReadingsOfFourBarsInC(t *testing.T) {
 				{"content": "unchosen", "beats": 4, "role": "resolve"},
 				{"chord": "G7(11)", "beats": 4, "role": "float"}]}`,
 			want: `{"slots": [
-				{"chord": {"basis": "definition", "name": "C"}, "roman": {"basis": "computation", "numeral": "I"},
+				{"content": "chord", "chord": {"basis": "definition", "name": "C"}, "roman": {"basis": "computation", "numeral": "I"},
 				 "reading": {"basis": "school", "kind": "diatonic", "function": "tonic", "modes": [], "fromParallelMinor": false},
 				 "resolution": {"basis": "school", "resolution": "none"}, "cadence": {"basis": "school", "cadence": "none"}, "tensionCautions": {"basis": "school", "cautions": []}, "roleFit": {"basis": "school", "fit": "fits"}},
-				{},
-				{"roleFit": {"basis": "school", "fit": "undecided"}},
-				{"chord": {"basis": "definition", "name": "G7(11)"}, "roman": {"basis": "computation", "numeral": "V7(11)"},
+				{"content": "none"},
+				{"content": "unchosen", "roleFit": {"basis": "school", "fit": "undecided"}},
+				{"content": "chord", "chord": {"basis": "definition", "name": "G7(11)"}, "roman": {"basis": "computation", "numeral": "V7(11)"},
 				 "reading": {"basis": "school", "kind": "diatonic", "function": "dominant", "modes": [], "fromParallelMinor": false},
 				 "resolution": {"basis": "school", "resolution": "none"}, "cadence": {"basis": "school", "cadence": "half"}, "tensionCautions": {"basis": "school", "cautions": [{"tension": "P11", "chordTone": "M3"}]}}]}`,
 		},
@@ -202,6 +203,58 @@ func TestReadingsRejectWhatIsNotAProgression(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestReadingsHaveTheShapeOfTheirContent checks the two shapes of the
+// contract's SlotReading, told apart by content: a slot with a chord always
+// has the chord's labels, and roman and roleFit only when they apply; a slot
+// with no chord has only the role fit, if any.
+func TestReadingsHaveTheShapeOfTheirContent(t *testing.T) {
+	rec := postReadings(t, `{"key": "C", "slots": [
+		{"chord": "C", "beats": 4, "role": "stable"},
+		{"chord": "D𝄫", "beats": 4},
+		{"content": "none", "beats": 4, "role": "prepare"},
+		{"content": "none", "beats": 4},
+		{"content": "unchosen", "beats": 4, "role": "resolve"},
+		{"content": "unchosen", "beats": 4, "role": "float"}]}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d\n%s", rec.Code, http.StatusOK, rec.Body)
+	}
+	body := decode[struct {
+		Slots []map[string]json.RawMessage `json:"slots"`
+	}](t, rec)
+	chord := []string{"content", "chord", "reading", "resolution", "cadence", "tensionCautions"}
+	want := []struct {
+		content  string
+		required []string
+		allowed  []string
+	}{
+		{"chord", chord, []string{"roman", "roleFit"}},
+		{"chord", chord, nil}, // D𝄫 has no position in C, so no numeral
+		{"none", []string{"content", "roleFit"}, nil},
+		{"none", []string{"content"}, nil},
+		{"unchosen", []string{"content", "roleFit"}, nil},
+		{"unchosen", []string{"content"}, nil}, // a colour role gets no role fit
+	}
+	if len(body.Slots) != len(want) {
+		t.Fatalf("got %d slots, want %d", len(body.Slots), len(want))
+	}
+	for i, w := range want {
+		slot := body.Slots[i]
+		if got := string(slot["content"]); got != `"`+w.content+`"` {
+			t.Errorf("slot %d: content = %s, want %q", i, got, w.content)
+		}
+		for _, name := range w.required {
+			if _, ok := slot[name]; !ok {
+				t.Errorf("slot %d: %s is missing", i, name)
+			}
+		}
+		for name := range slot {
+			if !slices.Contains(w.required, name) && !slices.Contains(w.allowed, name) {
+				t.Errorf("slot %d (%s): unexpected %s", i, w.content, name)
+			}
+		}
 	}
 }
 

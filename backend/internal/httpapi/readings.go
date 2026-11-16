@@ -265,12 +265,15 @@ func decodeSlot(sb slotBody) (progression.Slot, error) {
 	return s.WithRole(role)
 }
 
-// The labels of the contract's SlotReading.
+// The labels of the contract's SlotReading. Content tells the two shapes
+// apart: a slot with a chord (chord) always has the chord's labels; a slot
+// with no chord (none, unchosen) has only the role fit, if any.
 type (
 	progressionReading struct {
 		Slots []slotReading `json:"slots"`
 	}
 	slotReading struct {
+		Content         string                `json:"content"`
 		Chord           *chordNameLabel       `json:"chord,omitempty"`
 		Roman           *romanLabel           `json:"roman,omitempty"`
 		Reading         *chordReadingLabel    `json:"reading,omitempty"`
@@ -364,6 +367,8 @@ func readProgression(p progression.Progression) (progressionReading, error) {
 			if out.Slots[i], err = chordLabels(c, p.Key(), read[i]); err != nil {
 				return progressionReading{}, fmt.Errorf("slot %d: %w", i, err)
 			}
+		} else {
+			out.Slots[i].Content = noChordContentID(s.Content())
 		}
 		if id := roleFitID(fits[i]); id != "" {
 			out.Slots[i].RoleFit = &roleFitLabel{Basis: basisID(query.School), Fit: id}
@@ -387,6 +392,7 @@ func chordLabels(c material.Chord, key material.Scale, r reading.SlotReading) (s
 	}
 	school := query.School
 	return slotReading{
+		Content:         "chord",
 		Chord:           name,
 		Roman:           roman,
 		Reading:         chordReadingOf(school, r.Chord.Main),
@@ -394,6 +400,15 @@ func chordLabels(c material.Chord, key material.Scale, r reading.SlotReading) (s
 		Cadence:         &cadenceLabel{Basis: basisID(school), Cadence: cadenceID(r.Cadence)},
 		TensionCautions: tensionCautionsOf(school, cautions),
 	}, nil
+}
+
+// noChordContentID names the content of a slot with no chord as the request
+// does: none sounds nothing, unchosen has no chord chosen yet.
+func noChordContentID(c progression.Content) string {
+	if c.IsNoChord() {
+		return "none"
+	}
+	return "unchosen"
 }
 
 // chordNameOf writes the chord with its spelling kept; the name rests on the
