@@ -274,22 +274,22 @@
 - 9 通りの組（3 × 3）が、それぞれちょうど 1 回ある。欠けや重複、知らない機能や段階、空の出どころは、読み込みでエラーにする。
 - 段階の数と名前は、出どころの言い方に合わせる。
 
-出どころは Open Music Theory 第 1 版の「Harmonic syntax – the idealized phrase」（`https://openmusictheory.github.io/harmonicSyntax1.html`。ソースの版は JSON の `source.version`）。機能の流れを事実として参照し、文はカタログに写さない（CC BY-SA 4.0）。出どころは範囲を「少なくともクラシックでは」と限っていて、カタログもそれより強く言わない。
+出どころは Open Music Theory 第 1 版の「Harmonic syntax – the idealized phrase」（サイトは https://openmusictheory.github.io/harmonicSyntax1.html 。JSON の `source` は、ソースのリポジトリのファイルをコミットで固定した URL と、そのコミット）。機能の流れを事実として参照し、文はカタログに写さない（CC BY-SA 4.0）。出どころは範囲を「少なくともクラシックでは」と限っていて、カタログもそれより強く言わない。
 
 所有者の判断（#114）:
 
-| 段階 | 文書での言い方 | 組 | 出どころでの扱い |
-| --- | --- | --- | --- |
-| `common` | よく使われる | T → S、S → D、D → T | 循環 T → S → D → T へ進む傾向がある |
-| `less_common` | より少ない | T → D、D → S、S → T | 循環にない動き。出どころが名指しするのは T → D と D → S で、「など」を循環にない動きと読む |
-| `unstated` | 出どころに言明なし | T → T、S → S、D → D | 頻度に触れていない（同じ機能の区間を延長する、という記述だけ） |
+| 段階 | 組 | 出どころでの扱い |
+| --- | --- | --- |
+| よく使われる | T → S、S → D、D → T | 循環 T → S → D → T へ進む傾向がある |
+| より少ない | T → D、D → S、S → T | 循環にない動き。出どころが名指しするのは T → D と D → S で、「など」を循環にない動きと読む |
+| 出どころに言明なし | T → T、S → S、D → D | 頻度に触れていない（同じ機能の区間を延長する、という記述だけ） |
 
 - 「出どころに言明なし」は頻度ではないので、候補に慣習の札を出さない。並べるときは「よく使われる」のあとに置き、「より少ない」と一緒に扱う（並べる処理は #116）。
 - ポップスで IV → I が多いことのような様式ごとの違いは、様式ごとのカタログで扱う。
 
 #114 で決めた。所有者の判断ではない:
 
-- カタログは `function_transitions.json`。読み込む関数は `LoadFunctionTransitions`（埋め込んだもの）と `ParseFunctionTransitions`（バイト列から）。返す `FunctionTransitions` は、出どころ `Source()`（`URL` と `Version`）と、組を引く `Lookup(from, to)` を持つ。作れるのは読み込む関数だけなので、値はいつも 9 通りを持つ。`Lookup` は、T・S・D のどれでもない機能（`NoFunction` など）には false を返す。
+- カタログは `function_transitions.json`。読み込む関数は `LoadFunctionTransitions`（埋め込んだもの）と `ParseFunctionTransitions`（バイト列から）。返す `FunctionTransitions` は、出どころ `Source()`（`URL` と `Version`）と、組を引く `Lookup(from, to)` を持つ。項目を持つ値を作れるのは読み込む関数だけなので、ゼロ値のほかはいつも 9 通りを持つ。`Lookup` は、T・S・D のどれでもない機能（`NoFunction` など）と、ゼロ値には false を返す。
 - 項目 `Transition` は `From`・`To`（`reading.Function`）、`Preference`（`Common`・`LessCommon`・`Unstated`）、`Grounds`（`Convention`）を持つ。段階と根拠の種類のゼロ値は、読み込む関数が返さない。
-- JSON の語は、機能が `T`・`S`・`D`（大文字だけ）、段階が `common`・`less_common`・`unstated`、根拠の種類が `convention`。知らない項目名、文書のあとに続くデータ、空白だけの URL と版も、読み込みでエラーにする。エラーはすべて `ErrInvalid` を包む。
-- 出どころの版は、ソースのリポジトリ、ファイル、コミットを `<owner>/<repo>:<path>@<commit>` の形で書く（`.claude/skills/practices/index.md` の「ソース」の欄と同じ形）。
+- JSON の語は、機能が `T`・`S`・`D`（大文字だけ）、段階が `common`（よく使われる）・`less_common`（より少ない）・`unstated`（出どころに言明なし）、根拠の種類が `convention`。知らない項目名、文書のあとに続くデータ、空白だけの URL と版も、読み込みでエラーにする。エラーはすべて `ErrInvalid` を包む。
+- 「出どころに言明なし」の項目も、根拠の種類は「慣習」。頻度の言い方を当てないことは、段階で見分ける。

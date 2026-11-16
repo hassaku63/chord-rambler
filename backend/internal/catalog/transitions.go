@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/hassaku63/chord-rambler/backend/internal/reading"
@@ -83,7 +84,8 @@ type Transition struct {
 
 // FunctionTransitions is the catalogue of function transitions: one entry
 // for every ordered pair of tonic, subdominant and dominant. Only the loaders
-// make one, so every value holds all nine pairs.
+// make one with entries, so every value but the zero value holds all nine
+// pairs.
 type FunctionTransitions struct {
 	source  Source
 	entries [3][3]Transition // by From-1, then To-1
@@ -93,14 +95,16 @@ type FunctionTransitions struct {
 func (c FunctionTransitions) Source() Source { return c.source }
 
 // Lookup returns the entry from one function to the next. It reports false
-// when either is not tonic, subdominant or dominant.
+// when either is not tonic, subdominant or dominant, and for the zero value
+// of FunctionTransitions, which holds no entries.
 func (c FunctionTransitions) Lookup(from, to reading.Function) (Transition, bool) {
 	i, ok := functionIndex(from)
 	j, ok2 := functionIndex(to)
 	if !ok || !ok2 {
 		return Transition{}, false
 	}
-	return c.entries[i][j], true
+	e := c.entries[i][j]
+	return e, e.Preference != 0
 }
 
 //go:embed function_transitions.json
@@ -155,7 +159,7 @@ func parseFunctionTransitions(data []byte) (FunctionTransitions, error) {
 	if err := dec.Decode(&doc); err != nil {
 		return FunctionTransitions{}, err
 	}
-	if dec.More() {
+	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
 		return FunctionTransitions{}, errors.New("data after the document")
 	}
 	if doc.Source == nil || strings.TrimSpace(doc.Source.URL) == "" || strings.TrimSpace(doc.Source.Version) == "" {

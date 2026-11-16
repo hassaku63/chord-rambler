@@ -27,8 +27,8 @@ func TestEmbeddedFunctionTransitions(t *testing.T) {
 		t.Fatalf("LoadFunctionTransitions() error = %v", err)
 	}
 	wantSource := catalog.Source{
-		URL:     "https://openmusictheory.github.io/harmonicSyntax1.html",
-		Version: "openmusictheory/openmusictheory.github.io:harmonicSyntax1.md@a907aa0",
+		URL:     "https://github.com/openmusictheory/openmusictheory.github.io/blob/a907aa015f7ec54b925ddb070d2d36aecd0dc705/harmonicSyntax1.md",
+		Version: "a907aa015f7ec54b925ddb070d2d36aecd0dc705",
 	}
 	if got := c.Source(); got != wantSource {
 		t.Errorf("Source() = %+v; want %+v", got, wantSource)
@@ -53,6 +53,13 @@ func TestEmbeddedFunctionTransitions(t *testing.T) {
 		if !ok || got != want {
 			t.Errorf("Lookup(%v, %v) = %+v, %v; want %+v, true", tt.from, tt.to, got, ok, want)
 		}
+	}
+}
+
+func TestLookupInTheZeroValue(t *testing.T) {
+	var c catalog.FunctionTransitions
+	if got, ok := c.Lookup(reading.Tonic, reading.Tonic); ok {
+		t.Errorf("FunctionTransitions{}.Lookup(Tonic, Tonic) = %+v, true; want false", got)
 	}
 }
 
@@ -110,6 +117,7 @@ func TestParseFunctionTransitions(t *testing.T) {
 	}{
 		{"not JSON", `{"source": `, "unexpected EOF"},
 		{"data after the document", doc(validSource, validEntries...) + ` {}`, "data after the document"},
+		{"a closing brace after the document", doc(validSource, validEntries...) + ` }`, "data after the document"},
 		{"no source", `{"transitions": [` + strings.Join(validEntries, ", ") + `]}`, "the source needs"},
 		{"empty url", doc(`{"url": "", "version": "v1"}`, validEntries...), "the source needs"},
 		{"blank version", doc(`{"url": "https://example.org/a", "version": " "}`, validEntries...), "the source needs"},
