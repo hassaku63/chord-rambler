@@ -89,3 +89,17 @@
 | 当たるべき場面 | ローマ数字の読み書きを作る・変えるとき（表記のまとまり）。転回形、足し引き、向かう先の書き方を決めるとき。分析のデータとローマ数字を交換するとき |
 | chord-rambler との接点 | `backend/internal/notation` のローマ数字と主音から見た位置（`docs/architecture/theory-conventions.md` の 6）。同じところ: 大文字・小文字で長・短を分ける。増の `+`。調の音でない根音に前置の変化記号。`/` のあとの向かう先。食い違い: 減は `°`、半減 7 は `ø7`（RomanText は `o` と `/o`）。変化記号は `♭`・`♯`（RomanText は `b`・`#`）。七度とテンションは和音名の書き方（`Imaj7`、`V7(9)`）で、角括弧の足し引きを使わない。転回形と、重ねた向かう先を書かない。RomanText の `6` は転回形の数字（`I6` は第 1 転回形）だが、ここの `I6` は 6 の和音（`docs/architecture/theory-conventions.md` の 6）。調を書かない（位置は調を持たない）。sus の書き方は、論文の和音の一覧にない |
 | 確認 | 2026-11-16 / 間隔 365 日 |
+
+## MIDI
+
+### MIDI のノート番号（MIDI 1.0 の Note On と Note Off）
+
+| 欄 | 内容 |
+| --- | --- |
+| 発行元 | The MIDI Association |
+| 何を決めているか | 楽器どうしが演奏を伝えるメッセージ。Note On と Note Off は、鍵盤の番号（key (note) number）と強さ（velocity）を、それぞれ 7 ビットのデータバイト（0〜127）で運ぶ |
+| 一次情報 | メッセージの一覧は https://midi.org/summary-of-midi-1-0-messages （登録なしで読める。ページ自身が、正式の仕様に当たるよう勧めている）。正式の仕様は MIDI 1.0 Detailed Specification で、https://midi.org/midi-1-0-core-specifications から Google Drive の PDF を開く。PDF は開けず、ノート番号の定義の文言と、中央の C をどの番号に置くかは確かめていない |
+| 状態 | 現行。core specifications のページは、Detailed Specification を 1996 年の改訂としている。MIDI 2.0（Universal MIDI Packet）の仕様が別にある（確かめていない） |
+| 当たるべき場面 | 音の高さを数で表す・受け渡すとき（演奏のまとまりの音符、画面での周波数への換算、標準 MIDI ファイルの書き出し）。オクターブの番号の付け方を決めるとき。強さの値を決めるとき |
+| chord-rambler との接点 | `backend/internal/performance` の音符（`Note`）が、ノート番号と強さを持つ（`docs/architecture/domain-model.md` の 9）。C4 = 60 は、このプロジェクトの規約として採る（オクターブの番号の付け方は流儀が割れ、ここでは一次情報で確かめていない）。強さの定数の値は、仕様から引いていない |
+| 確認 | 2026-11-16 / 間隔 365 日 |
