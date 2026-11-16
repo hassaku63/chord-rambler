@@ -58,6 +58,9 @@ export type SlotReading = Open<components['schemas']['SlotReading']>;
 /** A problem document (RFC 9457). */
 export type Problem = components['schemas']['Problem'];
 
+/** One note to play, as the contract defines it. */
+export type Note = components['schemas']['Note'];
+
 /** The answer to a reading: the readings, or the problem the server named. */
 export type ReadingAnswer =
   { ok: true; reading: ProgressionReading } | { ok: false; problem: Problem };
