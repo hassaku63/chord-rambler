@@ -21,11 +21,13 @@
 
 - **採る立場**: 形で判定する。調の外の音を含む長三和音か属七で、根音の完全 5 度下が、調の長三和音か短三和音（I を除く）の根音であるもの。ローマ数字は「V7/V」のように、向かう先を `/` のあとに書く。
 - 期待した先へ進まなくても、名前を保つ。解決の仕方を「期待どおり」「変則」として別に述べる。
-- **別の立場**: 5 度下の和音へ進んだときだけセカンダリー・ドミナントと呼び、進まなければ別の名前（クオリティ・チェンジ）で呼ぶ（SoundQuest）。
+- 解決は、セカンダリー・ドミナントと V（5 度の長三和音か属七。バスとテンションは問わない）について述べる。次の和音が期待した先なら「期待どおり」、ほかの和音なら「変則」。期待した先は、次の和音の読みがダイアトニックで、向かう先の度数（V では I）にあり、3 度のある三和音か七の和音であること。C で D7 → G/B は期待どおり、D7 → Gm（借用和音）と A7 → D7 は変則（#103 の所有者の判断）。
+- G → Gsus4 と G7 → Csus4 は、解決を述べない。同じドミナントが続くとき（V → V、向かう先が同じセカンダリー・ドミナントどうし）は、続いた最後の和音でだけ述べる（G → G7 → C は G7 だけ。#103 の所有者の判断）。
+- **別の立場**: 5 度下の和音へ進んだときだけセカンダリー・ドミナントと呼び、進まなければ別の名前（クオリティ・チェンジ）で呼ぶ（SoundQuest）。V/V → IV や V/V → ♭VII を、ポップスで IV や ♭VII が V の代わりになることから説明する（Hutchinson の変則的な解決）。
 - **出どころ**:
   - Hutchinson（判定の手順）: https://musictheory.pugetsound.edu/mt21c/AnalyzingSecondaryDominants.html
   - Hutchinson（減三和音はトニック化しない）: https://musictheory.pugetsound.edu/mt21c/Tonicization.html
-  - Hutchinson（変則的な解決）: https://musictheory.pugetsound.edu/mt21c/IrregularResoltionsOfSecondaryDominants.html
+  - Hutchinson（変則的な解決。V の代わりの IV と ♭VII）: https://musictheory.pugetsound.edu/mt21c/IrregularResoltionsOfSecondaryDominants.html
   - SoundQuest: https://soundquest.jp/quest/chord/chord-mv2/secondary-dominant/3/
 
 ## 3. 借用和音
@@ -44,17 +46,22 @@
 
 - **採る立場**: フレーズの終わりに来たときだけ終止と呼ぶ。正格終止（V → I）、半終止（V で終わる）、変格終止（IV → I）、偽終止（V から I 以外へ）。フレーズの途中の同じ動きは、終止と呼ばない。
 - フレーズが終止で終わらなくてもよい。
+- 終止を付けるのは、満ちたフレーズ（4 小節）の最後の枠だけ。作りかけの末尾のフレーズには、半終止も付けない。あとで取り消す名前を付けないため（ADR-0012。#103 の所有者の判断）。
+- I・IV・V は、ダイアトニックの和音で、その度数にあり、3 度のある三和音か七の和音であるもの。バスとテンションは問わない（G/B、G7/F、G7(9) は V、C/E は I）。sus の和音と 6 の和音は含めない（Gsus4 と G6 は V でなく、Fsus2 → C は変格終止でない）。借用和音は含めない（G7 → Cm は偽終止、Fm → C は名前なし。#103 の所有者の判断）。
+- 旋律を持たないので、完全・不完全の正格終止は分けない（#103 の所有者の判断）。
 - 語は「終止」を使い、「カデンツ」は使わない。
-- **別の立場**: 「カデンツ」を、T–S–D–T のような機能の型の意味で使う（ヤマハ、洗足、世界大百科事典）。
+- **別の立場**: 「カデンツ」を、T–S–D–T のような機能の型の意味で使う（ヤマハ、洗足、世界大百科事典）。両方の和音が基本形で、主音が最上声にあるものだけを完全正格終止とし、ほかと vii° → I を不完全正格終止とする（Hutchinson の完全正格終止）。I の第 2 転回形（終止の 6/4。C/G）を、続く V と同じドミナントの機能とみる（Hutchinson の終止の 6/4）。フレーズの長さを 4 小節に決めず、3〜8 小節のフレーズを旋律や歌詞の区切りで認める（Hutchinson のポップスのフレーズ）。
 - **出どころ**:
   - Hutchinson（定義）: https://musictheory.pugetsound.edu/mt21c/cadences.html
-  - Hutchinson（ポップスのフレーズ）: https://musictheory.pugetsound.edu/mt21c/PhraseSection.html
+  - Hutchinson（ポップスのフレーズ。3〜8 小節のフレーズ）: https://musictheory.pugetsound.edu/mt21c/PhraseSection.html
+  - Hutchinson（完全正格終止）: https://musictheory.pugetsound.edu/mt21c/PerfectAuthenticCadence.html
+  - Hutchinson（終止の 6/4）: https://musictheory.pugetsound.edu/mt21c/TheCadentialSixFourChord.html
   - Open Music Theory 第 1 版: https://openmusictheory.github.io/cadenceTypes.html
   - 大辞泉「終止」: https://kotobank.jp/word/%E7%B5%82%E6%AD%A2-526784
 
 ## 5. テンション
 
-- **採る立場**: 調の音階の音のうち、和音の音の半音上にある音は、和音に重ねると濁りやすい、と注意として示す。禁止はしない。属七では 11 度だけを注意とする。IIm7 の 13 度は注意にしない。
+- **採る立場**: 調の音階の音のうち、和音の音の半音上にある音は、和音に重ねると濁りやすい、と注意として示す。禁止はしない。属七では 11 度だけを注意とする。IIm7 の 13 度は注意にしない。調の外のテンションは注意の対象にしない（#108）。注意がないことは、濁らないという意味ではない。
 - **別の立場**: これらを「避ける音（アヴォイド・ノート）」として、和音に使わない規則にする。IIm7 の 13 度も避ける（Berklee 系の一部）。
 - **出どころ**:
   - SoundQuest（半音上の原則、属七の扱い）: https://soundquest.jp/quest/chord/chord-mv4/tension-chord-avoid/2/

@@ -74,7 +74,7 @@ func (ph Phrase) Slots() []Slot { return slices.Clone(ph.slots) }
 // every phrase; a progression with no slots has one section with no phrases.
 func (p Progression) Sections() []Section {
 	var phrases []Phrase
-	length := p.phraseBeats()
+	length := p.PhraseBeats()
 	start := 0
 	for _, s := range p.slots {
 		if start%length == 0 {
@@ -87,7 +87,9 @@ func (p Progression) Sections() []Section {
 	return []Section{{phrases: phrases}}
 }
 
-func (p Progression) phraseBeats() int { return phraseBars * p.meter.BeatsPerBar() }
+// PhraseBeats returns the length of a full phrase in beats: four bars of the
+// meter. Every phrase but the last is full.
+func (p Progression) PhraseBeats() int { return phraseBars * p.meter.BeatsPerBar() }
 
 // Append returns the progression with the slot added at the end.
 func (p Progression) Append(s Slot) (Progression, error) {
@@ -154,7 +156,7 @@ func totalBeats(slots []Slot) int {
 // share, or fails when a slot would cross the boundary of a phrase. Every
 // operation that changes the slots goes through it.
 func (p Progression) with(slots []Slot) (Progression, error) {
-	length := p.phraseBeats()
+	length := p.PhraseBeats()
 	start := 0
 	for i, s := range slots {
 		end := start + s.Beats()
