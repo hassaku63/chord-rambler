@@ -22,6 +22,8 @@ type ItemProps<C> = Shown<C> & {
   candidate: C;
   words: CandidateListWords;
   auditioning: boolean;
+  /** Adding waits for the next answer, so that the same candidate is not added twice. */
+  busy: boolean;
   onAdd: () => void;
   onAudition: () => void;
 };
@@ -36,6 +38,7 @@ function CandidateItem<C extends Candidate>({
   marksOf,
   rowsOf,
   auditioning,
+  busy,
   onAdd,
   onAudition,
 }: ItemProps<C>) {
@@ -50,7 +53,7 @@ function CandidateItem<C extends Candidate>({
       <span>{candidate.roman.numeral}</span>
       <span>{marksOf(candidate).join(' ')}</span>
       <span className="candidate-actions">
-        <button type="button" aria-label={`${name} を${words.add}`} onClick={onAdd}>
+        <button type="button" aria-label={`${name} を${words.add}`} disabled={busy} onClick={onAdd}>
           {words.add}
         </button>
         <button
@@ -111,7 +114,8 @@ export function CandidateList<C extends Candidate>({
       <h2 id={id} ref={heading} tabIndex={-1}>
         {words.heading}
       </h2>
-      {busy && <p>新しい候補を待っています。</p>}
+      {/* The line keeps its place when empty, so that the list does not move. */}
+      <p className="candidates-wait">{busy ? '新しい候補を待っています。' : ''}</p>
       {groups.map((group) => {
         const kind = wordFor(TERMS.kind, group.kind) ?? group.kind;
         return (
@@ -134,6 +138,7 @@ export function CandidateList<C extends Candidate>({
                     marksOf={marksOf}
                     rowsOf={rowsOf}
                     auditioning={auditioning === name}
+                    busy={busy}
                     onAdd={() => {
                       onAdd(name);
                       heading.current?.focus();

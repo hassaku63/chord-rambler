@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { AudioContextFactory } from './usePlayer';
 import type { ReadingState } from './useProgressionReading';
 import { useProgressionReading } from './useProgressionReading';
-import { KEYS, useProgression } from './useProgression';
+import { KEYS, maxBeatsAt, useProgression } from './useProgression';
 import { triedAt, usePlayback } from './usePlayback';
 import { useNextCandidates } from './useNextCandidates';
 import { CandidateList } from './CandidateList';
@@ -98,6 +98,7 @@ export function ProgressionScreen({ createAudioContext }: Props) {
             // Slots have no identity of their own; the position is the slot.
             key={i}
             slot={slot}
+            maxBeats={maxBeatsAt(progression.slots, i)}
             reading={readings[i]}
             unreadable={unreadable === i}
             selected={selected === i}
