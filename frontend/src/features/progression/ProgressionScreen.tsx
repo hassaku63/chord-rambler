@@ -3,10 +3,11 @@ import type { AudioContextFactory } from './usePlayer';
 import type { ReadingState } from './useProgressionReading';
 import { useProgressionReading } from './useProgressionReading';
 import { KEYS, useProgression } from './useProgression';
-import { usePlayback } from './usePlayback';
+import { triedAt, usePlayback } from './usePlayback';
 import { useNextCandidates } from './useNextCandidates';
 import { CandidateList } from './CandidateList';
 import { candidateMarks, candidateRows } from './labels';
+import { SlotFill } from './SlotFill';
 import { useVariations } from './useVariations';
 import { VariationList } from './VariationList';
 import { PlaybackControls } from './PlaybackControls';
@@ -31,9 +32,10 @@ type Props = {
 };
 
 /**
- * Screens 1 to 3 (a provisional layout, A1 of #148): the key and the playing
- * on top, the strip of slots in the middle, the labels and the variations of
- * the chosen slot and the candidates for the slot after the last below.
+ * Screens 1 to 4 (a provisional layout, A1 of #148): the key and the playing
+ * on top, the strip of slots in the middle, the labels, the variations and
+ * the candidates of the chosen slot and the candidates for the slot after the
+ * last below.
  */
 export function ProgressionScreen({ createAudioContext }: Props) {
   const state = useProgression();
@@ -122,6 +124,13 @@ export function ProgressionScreen({ createAudioContext }: Props) {
           />
         )}
 
+      <SlotFill
+        progression={progression}
+        selected={selected}
+        playback={playback}
+        onFill={state.fillSlot}
+      />
+
       {candidates.state === 'given' && (
         <CandidateList
           words={{
@@ -136,7 +145,7 @@ export function ProgressionScreen({ createAudioContext }: Props) {
           busy={busy}
           opened={opened}
           onToggle={(kind, open) => setOpened((o) => ({ ...o, [kind]: open }))}
-          auditioning={playback.auditioning}
+          auditioning={triedAt(playback.auditioning, progression.slots.length)}
           onAdd={(name) => state.addCandidate(name, beats)}
           onAudition={(name) => playback.audition(name, beats)}
           onStop={playback.stop}

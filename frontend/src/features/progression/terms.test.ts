@@ -28,6 +28,15 @@ const candidateKind = ['diatonic', 'secondary-dominant', 'borrowed'] as const;
 const preference = ['common', 'less-common', 'unstated'] as const;
 const style = ['classical'] as const;
 const moveFunction = ['tonic', 'subdominant', 'dominant'] as const;
+const condition = [
+  'shape',
+  'function',
+  'previous-v',
+  'next-dominant',
+  'cadence',
+  'another-root',
+  'expected-resolution',
+] as const;
 const role = [
   'stable',
   'link',
@@ -57,6 +66,8 @@ expectTypeOf<(typeof style)[number]>().toEqualTypeOf<Preference['style']>();
 expectTypeOf<(typeof moveFunction)[number]>().toEqualTypeOf<Preference['from']>();
 expectTypeOf<(typeof moveFunction)[number]>().toEqualTypeOf<Preference['to']>();
 expectTypeOf<(typeof role)[number]>().toEqualTypeOf<Schemas['Role']>();
+expectTypeOf<(typeof condition)[number]>().toEqualTypeOf<Schemas['RoleCondition']>();
+expectTypeOf<(typeof fit)[number]>().toEqualTypeOf<Schemas['CandidateRoleFitLabel']['fit']>();
 
 describe('TERMS', () => {
   it.each([
@@ -73,6 +84,8 @@ describe('TERMS', () => {
     { name: 'style', table: TERMS.style, ids: style },
     { name: 'function of a move', table: TERMS.function, ids: moveFunction },
     { name: 'role', table: TERMS.role, ids: role },
+    { name: 'condition of a role', table: TERMS.unmet, ids: condition },
+    { name: 'fit of a candidate', table: TERMS.fit, ids: fit },
   ])('has an entry for every $name of the contract', ({ table, ids }) => {
     const missing = ids.filter((id) => !Object.hasOwn(table, id));
 

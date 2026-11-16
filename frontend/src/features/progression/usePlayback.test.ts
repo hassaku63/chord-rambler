@@ -119,7 +119,7 @@ describe('usePlayback', () => {
       { key: 'C', slots: [...progression.slots, { chord: 'F', beats: 2 }] },
       expect.any(AbortSignal),
     );
-    expect(result.current.auditioning).toBe('F');
+    expect(result.current.auditioning).toEqual({ chord: 'F', at: 3 });
     // G from 0, then F 4 beats later: 4 × 60 / 90 = 2.67 s.
     const starts = audio.context.oscillators.map((o) => o.startedAt);
     expect(starts).toEqual([1.05, 1.05, expect.closeTo(3.717)]);
@@ -136,6 +136,47 @@ describe('usePlayback', () => {
 
     await waitFor(() => expect(result.current.playing).toBe('audition'));
     expect(audio.context.oscillators.map((o) => o.startedAt)).toEqual([1.05]);
+  });
+
+  it('plays the slots around a chord tried in a slot, each only when it holds a chord', async () => {
+    const { audio, result } = await renderPlayback();
+    fetchNotes.mockResolvedValueOnce({
+      ok: true,
+      notes: [
+        { pitch: 48, start: 0, beats: 4, velocity: 64 },
+        { pitch: 62, start: 4, beats: 2, velocity: 64 },
+        { pitch: 43, start: 6, beats: 4, velocity: 64 },
+      ],
+    });
+
+    act(() => result.current.auditionIn(1, 'Dm'));
+
+    await waitFor(() => expect(result.current.playing).toBe('audition'));
+    expect(fetchNotes).toHaveBeenLastCalledWith(
+      {
+        key: 'C',
+        slots: [
+          { chord: 'C', beats: 4 },
+          { chord: 'Dm', beats: 2 },
+          { chord: 'G', beats: 4 },
+        ],
+      },
+      expect.any(AbortSignal),
+    );
+    expect(result.current.auditioning).toEqual({ chord: 'Dm', at: 1 });
+    // C from 0, Dm 4 beats later (2.67 s), G 6 beats later (4 s).
+    const starts = audio.context.oscillators.map((o) => o.startedAt);
+    expect(starts).toEqual([1.05, expect.closeTo(3.717), expect.closeTo(5.05)]);
+
+    fetchNotes.mockResolvedValueOnce(answer);
+    act(() => result.current.auditionIn(0, 'C'));
+
+    // Only C and the slot after it, which holds no chord, so C alone.
+    await waitFor(() => expect(result.current.auditioning).toEqual({ chord: 'C', at: 0 }));
+    expect(audio.context.oscillators.slice(3).map((o) => o.startedAt)).toEqual([
+      expect.closeTo(1.05),
+      expect.closeTo(1.05),
+    ]);
   });
 
   it('drops a trial whose notes come after the progression changed', async () => {

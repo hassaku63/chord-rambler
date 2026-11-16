@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Note, Progression } from '@/shared/api/client';
+import type { Note, Progression, Slot } from '@/shared/api/client';
 import { getProgressionNotes } from '@/shared/api/client';
 import {
   DEFAULT_TEMPO,
@@ -40,13 +40,21 @@ function useNotes(progression: Progression, get: typeof getProgressionNotes): No
   return fetched?.for === progression ? fetched.notes : null;
 }
 
+/** The chord on trial in the slot at, or null when none is tried there. */
+export function triedAt(auditioning: PlaybackState['auditioning'], at: number): string | null {
+  return auditioning !== null && auditioning.at === at ? auditioning.chord : null;
+}
+
 export type PlaybackState = {
   tempo: number;
   setTempo: (tempo: number) => void;
   /** What is playing: the whole progression, one slot, a candidate on trial, or nothing. */
   playing: 'progression' | 'slot' | 'audition' | null;
-  /** The chord on trial while one plays, or null. */
-  auditioning: string | null;
+  /**
+   * The chord on trial while one plays and the slot it is tried in (the
+   * number of slots for a slot after the last), or null.
+   */
+  auditioning: { chord: string; at: number } | null;
   /** The slot sounding now, or null. */
   sounding: number | null;
   /** Whether the progression has notes to play. */
@@ -61,12 +69,18 @@ export type PlaybackState = {
    * the chord added.
    */
   audition: (chord: string, beats: number) => void;
+  /**
+   * Plays the slot before, the chord in place of the slot's, and the slot
+   * after, each slot around only when it holds a chord: the notes are those
+   * of the progression with the chord in the slot.
+   */
+  auditionIn: (index: number, chord: string) => void;
   stop: () => void;
 };
 
 /**
- * Plays the progression, one slot of it, or a candidate after the last slot,
- * at the tempo the screen holds. A change to the progression stops the
+ * Plays the progression, one slot of it, or a candidate after the last slot or
+ * in a slot, at the tempo the screen holds. A change to the progression stops the
  * playing; a change to the tempo takes effect at the next play.
  */
 export function usePlayback(
@@ -79,7 +93,7 @@ export function usePlayback(
   const { play, stop: silence } = player;
   const [tempo, setTempo] = useState(DEFAULT_TEMPO);
   const [what, setWhat] = useState<'progression' | 'slot' | 'audition'>('progression');
-  const [auditioned, setAuditioned] = useState('');
+  const [auditioned, setAuditioned] = useState({ chord: '', at: 0 });
   // The request for the notes of a trial not yet played.
   const pending = useRef<{ trial: AbortController | null }>({ trial: null });
   const { slots } = progression;
@@ -95,6 +109,23 @@ export function usePlayback(
     pending.current.trial?.abort();
     play(performance);
     setWhat(kind);
+  };
+
+  /** Plays the slots around the slot at, in the progression with the chord in it. */
+  const trial = (chord: string, at: number, withChord: Slot[]) => {
+    pending.current.trial?.abort();
+    const controller = new AbortController();
+    pending.current.trial = controller;
+    const from = withChord[at - 1]?.chord === undefined ? at : at - 1;
+    const to = withChord[at + 1]?.chord === undefined ? at + 1 : at + 2;
+    get({ ...progression, slots: withChord }, controller.signal)
+      .then((answer) => {
+        if (!controller.signal.aborted && answer.ok) {
+          start(passagePerformance(answer.notes, withChord, from, to, tempo), 'audition');
+          setAuditioned({ chord, at });
+        }
+      })
+      .catch(() => undefined);
   };
 
   return {
@@ -119,25 +150,13 @@ export function usePlayback(
         start(slotPerformance(notes, slots, index, tempo), 'slot');
       }
     },
-    audition: (chord, beats) => {
-      pending.current.trial?.abort();
-      const trial = new AbortController();
-      pending.current.trial = trial;
-      const withChord = [...slots, { chord, beats }];
-      const last = slots.length - 1;
-      const from = slots[last]?.chord === undefined ? last + 1 : last;
-      get({ ...progression, slots: withChord }, trial.signal)
-        .then((answer) => {
-          if (!trial.signal.aborted && answer.ok) {
-            start(
-              passagePerformance(answer.notes, withChord, from, withChord.length, tempo),
-              'audition',
-            );
-            setAuditioned(chord);
-          }
-        })
-        .catch(() => undefined);
-    },
+    audition: (chord, beats) => trial(chord, slots.length, [...slots, { chord, beats }]),
+    auditionIn: (index, chord) =>
+      trial(
+        chord,
+        index,
+        slots.map((slot, i) => (i === index ? { chord, beats: slot.beats } : slot)),
+      ),
     stop,
   };
 }

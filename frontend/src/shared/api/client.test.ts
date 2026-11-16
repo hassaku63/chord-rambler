@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   parseCandidateGroups,
+  parseSlotCandidateGroups,
   parseHealth,
   parseProblem,
   parseProgressionNotes,
@@ -242,5 +243,54 @@ describe('parseVariations', () => {
     { name: 'no outOfKey', body: { variations: [{ ...g, outOfKey: undefined }] } },
   ])('rejects $name', ({ body }) => {
     expect(() => parseVariations(body)).toThrow('unexpected body');
+  });
+});
+
+describe('parseSlotCandidateGroups', () => {
+  const bare = {
+    chord: { basis: 'definition', name: 'Dm7' },
+    roman: { basis: 'computation', numeral: 'ii7' },
+    reading: {
+      basis: 'school',
+      kind: 'diatonic',
+      function: 'subdominant',
+      modes: [],
+      fromParallelMinor: false,
+    },
+  };
+  const full = {
+    ...bare,
+    resolution: { basis: 'school', resolution: 'none' },
+    nextResolution: { basis: 'school', resolution: 'none' },
+    nextCadence: { basis: 'school', cadence: 'half' },
+    roleFit: { basis: 'school', fit: 'misfits', unmet: ['shape', 'function'] },
+  };
+  const bodyOf = (candidate: object) => ({
+    groups: [{ kind: 'diatonic', candidates: [candidate] }],
+  });
+
+  it.each([
+    { name: 'every label', body: bodyOf(full) },
+    { name: 'the labels that are absent left out', body: bodyOf(bare) },
+  ])('accepts a body with $name', ({ body }) => {
+    expect(parseSlotCandidateGroups(body)).toEqual(body);
+  });
+
+  it.each([
+    { name: 'a candidate without reading', body: bodyOf({ ...bare, reading: undefined }) },
+    {
+      name: 'a next cadence without cadence',
+      body: bodyOf({ ...bare, nextCadence: { basis: 'school' } }),
+    },
+    {
+      name: 'a role fit without unmet',
+      body: bodyOf({ ...bare, roleFit: { basis: 'school', fit: 'fits' } }),
+    },
+    {
+      name: 'a condition that is not a string',
+      body: bodyOf({ ...bare, roleFit: { basis: 'school', fit: 'misfits', unmet: [1] } }),
+    },
+  ])('rejects $name', ({ body }) => {
+    expect(() => parseSlotCandidateGroups(body)).toThrow('unexpected body');
   });
 });

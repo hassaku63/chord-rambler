@@ -185,6 +185,22 @@ describe('useProgression', () => {
     ]);
   });
 
+  it('fills a slot with a candidate, keeping its length and role, and makes it the base', () => {
+    const { result } = renderHook(() => useProgression());
+    act(() => result.current.addCandidate('F', 2));
+    act(() => result.current.addUnchosen());
+    act(() => result.current.setRole(0, 'prepare'));
+
+    act(() => result.current.fillSlot(0, 'Dm7'));
+    act(() => result.current.fillSlot(1, 'G7'));
+
+    expect(result.current.progression.slots).toEqual([
+      { chord: 'Dm7', beats: 2, role: 'prepare' },
+      { chord: 'G7', beats: 4 },
+    ]);
+    expect(result.current.bases).toEqual(['Dm7', 'G7']);
+  });
+
   it('brings the roles back after a reload', () => {
     const { result: before, unmount } = renderHook(() => useProgression());
     act(() => before.current.addUnchosen());
