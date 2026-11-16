@@ -57,6 +57,16 @@ describe('useProgressionReading', () => {
       want: { state: 'refused', detail: 'slot 2: cannot read "Hm"', slot: 2 },
     },
     {
+      name: 'a slot field',
+      problem: { title: 'Bad Request', status: 400, detail: 'cannot read "Hm"', slot: 4 },
+      want: { state: 'refused', detail: 'cannot read "Hm"', slot: 4 },
+    },
+    {
+      name: 'a slot field and a detail naming another slot',
+      problem: { title: 'Bad Request', status: 400, detail: 'slot 2: x', slot: 5 },
+      want: { state: 'refused', detail: 'slot 2: x', slot: 5 },
+    },
+    {
       name: 'a detail naming no slot',
       problem: { title: 'Bad Request', status: 400, detail: 'key: cannot read "H"' },
       want: { state: 'refused', detail: 'key: cannot read "H"', slot: null },

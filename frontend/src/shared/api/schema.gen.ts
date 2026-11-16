@@ -382,6 +382,8 @@ export interface components {
       status: number;
       /** @description An explanation specific to this occurrence. */
       detail?: string;
+      /** @description The slot the problem is in, counted from 0. Present only when the problem is in one slot; the detail also names it, for a person to read. */
+      slot?: number;
     };
   };
   responses: {

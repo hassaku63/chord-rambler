@@ -95,13 +95,13 @@ func (a *api) writeFailure(w http.ResponseWriter, err error) {
 		a.writeRequestError(w, re)
 		return
 	}
-	var prefix string
-	if se := (*slotError)(nil); errors.As(err, &se) {
-		prefix = fmt.Sprintf("slot %d: ", se.slot)
-	}
 	if text, ok := refusalOf(err); ok {
 		a.logger.Info("the engine refused the request", "error", err)
-		a.writeProblem(w, http.StatusBadRequest, prefix+text)
+		if se := (*slotError)(nil); errors.As(err, &se) {
+			a.writeProblemIn(w, http.StatusBadRequest, fmt.Sprintf("slot %d: %s", se.slot, text), &se.slot)
+			return
+		}
+		a.writeProblem(w, http.StatusBadRequest, text)
 		return
 	}
 	a.logger.Error("answering the query failed", "error", err)

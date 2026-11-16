@@ -109,7 +109,18 @@ describe('parseProblem', () => {
     });
   });
 
+  it('reads the slot field', () => {
+    expect(parseProblem({ title: 'Bad Request', status: 400, slot: 3 })).toEqual({
+      title: 'Bad Request',
+      status: 400,
+      slot: 3,
+    });
+  });
+
   it.each([
+    { name: 'a slot that is not a number', body: { title: 'x', status: 400, slot: '1' } },
+    { name: 'a slot that is not an integer', body: { title: 'x', status: 400, slot: 1.5 } },
+    { name: 'a slot below 0', body: { title: 'x', status: 400, slot: -1 } },
     { name: 'no title', body: { status: 400 } },
     { name: 'a status that is not a number', body: { title: 'x', status: '400' } },
     { name: 'a detail that is not a string', body: { title: 'x', status: 400, detail: 1 } },
