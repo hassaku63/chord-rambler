@@ -60,9 +60,11 @@ type CommonTonesLabel struct {
 // Basis returns Computation.
 func (CommonTonesLabel) Basis() Basis { return Computation }
 
-// ResolutionLabel holds how the chord of the last slot goes on to the
-// candidate, as reading.ReadProgression reads the progression with the
-// candidate added. It is given when the last slot holds a chord.
+// ResolutionLabel holds how a chord goes on to the next, as
+// reading.ReadProgression reads the progression with the candidate placed: in
+// Candidate, the chord of the slot before the candidate to the candidate,
+// given when that slot holds a chord; in SlotCandidate.NextResolution, the
+// candidate to the next slot.
 type ResolutionLabel struct {
 	Resolution reading.Resolution
 }
@@ -70,9 +72,10 @@ type ResolutionLabel struct {
 // Basis returns School.
 func (ResolutionLabel) Basis() Basis { return School }
 
-// CadenceLabel holds the cadence the candidate ends its phrase with, as
-// reading.ReadProgression reads the progression with the candidate added. It
-// is given when the candidate is the last slot of a full phrase.
+// CadenceLabel holds the cadence a slot ends its phrase with, as
+// reading.ReadProgression reads the progression with the candidate placed: in
+// Candidate, the slot of the candidate, given when it is the last slot of a
+// full phrase; in SlotCandidate.NextCadence, the next slot.
 type CadenceLabel struct {
 	Cadence reading.Cadence
 }
@@ -164,43 +167,50 @@ func NextCandidates(p progression.Progression, beats int, transitions catalog.Fu
 	if err != nil {
 		return nil, fmt.Errorf("candidates: %w", err)
 	}
-	var last *material.Chord
-	from := reading.NoFunction
-	if n := p.Len(); n > 0 {
-		if c, ok := p.Slots()[n-1].Content().Chord(); ok {
-			last = &c
-			if reading.Tertian(c) {
-				from = read[n-1].Chord.Main.Function
-			}
-		}
-	}
+	from := functionBefore(p, read, p.Len())
 	out := make([]CandidateGroup, 0, len(candidateGroups))
 	for _, g := range candidateGroups {
 		cs := make([]Candidate, 0, len(g.positions))
 		for _, pos := range g.positions {
-			c, err := candidate(p, pos, beats, last)
+			c, err := candidate(p, pos, beats)
 			if err != nil {
 				return nil, err
 			}
 			cs = append(cs, c)
 		}
 		if g.kind == reading.Diatonic {
-			cs = byPreference(cs, from, transitions)
+			cs = byPreference(cs, func(c *Candidate) *Candidate { return c }, from, transitions)
 		}
 		out = append(out, CandidateGroup{Kind: g.kind, Candidates: cs})
 	}
 	return out, nil
 }
 
+// functionBefore returns the function the preference starts from for a
+// candidate at slot i: that of the chord of the slot before it when the slot
+// holds a tertian chord (reading.Tertian), and NoFunction otherwise or when
+// there is no slot before it. read is the reading of p.
+func functionBefore(p progression.Progression, read []reading.SlotReading, i int) reading.Function {
+	if i == 0 {
+		return reading.NoFunction
+	}
+	if c, ok := p.Slots()[i-1].Content().Chord(); ok && reading.Tertian(c) {
+		return read[i-1].Chord.Main.Function
+	}
+	return reading.NoFunction
+}
+
 // byPreference returns the candidates ordered by the preference from the
 // function: Common first, then the rest, each in the order given. It gives the
-// preference label to those of Common and LessCommon.
-func byPreference(cs []Candidate, from reading.Function, transitions catalog.FunctionTransitions) []Candidate {
-	var common, rest []Candidate
+// preference label to those of Common and LessCommon. of returns the
+// candidate's Candidate, where the label goes.
+func byPreference[T any](cs []T, of func(*T) *Candidate, from reading.Function, transitions catalog.FunctionTransitions) []T {
+	var common, rest []T
 	for _, c := range cs {
-		t, ok := transitions.Lookup(from, c.Reading.Main.Function)
+		cand := of(&c)
+		t, ok := transitions.Lookup(from, cand.Reading.Main.Function)
 		if ok && (t.Preference == catalog.Common || t.Preference == catalog.LessCommon) {
-			c.Preference = &PreferenceLabel{
+			cand.Preference = &PreferenceLabel{
 				From: t.From, To: t.To, Preference: t.Preference,
 				Style: transitions.Source().Style, Grounds: t.Grounds,
 			}
@@ -214,12 +224,12 @@ func byPreference(cs []Candidate, from reading.Function, transitions catalog.Fun
 	return append(common, rest...)
 }
 
-// candidate returns the candidate of the position with its labels, but the
-// preference.
-func candidate(p progression.Progression, pos material.Position, beats int, last *material.Chord) (Candidate, error) {
-	c, err := pos.Chord(p.Key().Tonic())
+// candidate returns the candidate of the position added after the last slot
+// of p, with its labels but the preference.
+func candidate(p progression.Progression, pos material.Position, beats int) (Candidate, error) {
+	c, err := spell(p.Key(), pos)
 	if err != nil {
-		return Candidate{}, fmt.Errorf("candidate in %s major: %w", p.Key().Tonic(), err)
+		return Candidate{}, err
 	}
 	slot, err := progression.NewSlot(progression.ChordOf(c), beats)
 	if err != nil {
@@ -233,26 +243,46 @@ func candidate(p progression.Progression, pos material.Position, beats int, last
 	if err != nil {
 		return Candidate{}, fmt.Errorf("candidate: %w", err)
 	}
-	n := next.Len()
+	return labelled(next, read, next.Len()-1, pos, c)
+}
+
+// spell returns the chord of the position in the key.
+func spell(key material.Scale, pos material.Position) (material.Chord, error) {
+	c, err := pos.Chord(key.Tonic())
+	if err != nil {
+		return material.Chord{}, fmt.Errorf("candidate in %s major: %w", key.Tonic(), err)
+	}
+	return c, nil
+}
+
+// labelled returns the candidate c, of the position, at slot i of next (the
+// progression with the candidate placed, read as read) with its labels but the
+// preference: the members, the reading, the cadence when slot i ends a full
+// phrase, and the relations to the slot before when it holds a chord.
+func labelled(next progression.Progression, read []reading.SlotReading, i int, pos material.Position, c material.Chord) (Candidate, error) {
 	out := Candidate{
 		Chord:    c,
 		Position: pos,
 		Members:  MembersLabel{Notes: c.Notes()},
-		Reading:  ReadingLabel{Main: read[n-1].Chord.Main},
+		Reading:  ReadingLabel{Main: read[i].Chord.Main},
 	}
-	if place := relation.Places(next)[n-1]; place.LastInPhrase && place.FullPhrase {
-		out.Cadence = &CadenceLabel{Cadence: read[n-1].Cadence}
+	if place := relation.Places(next)[i]; place.LastInPhrase && place.FullPhrase {
+		out.Cadence = &CadenceLabel{Cadence: read[i].Cadence}
 	}
-	if last == nil {
+	if i == 0 {
 		return out, nil
 	}
-	switch iv, err := relation.RootMotion(*last, c); {
+	last, ok := next.Slots()[i-1].Content().Chord()
+	if !ok {
+		return out, nil
+	}
+	switch iv, err := relation.RootMotion(last, c); {
 	case err == nil:
 		out.RootMotion = &RootMotionLabel{Interval: iv}
 	case !errors.Is(err, material.ErrInvalidInterval):
 		return Candidate{}, fmt.Errorf("candidate: %w", err)
 	}
-	out.CommonTones = &CommonTonesLabel{Count: len(relation.CommonTones(*last, c).PitchClasses())}
-	out.Resolution = &ResolutionLabel{Resolution: read[n-2].Resolution}
+	out.CommonTones = &CommonTonesLabel{Count: len(relation.CommonTones(last, c).PitchClasses())}
+	out.Resolution = &ResolutionLabel{Resolution: read[i-1].Resolution}
 	return out, nil
 }
