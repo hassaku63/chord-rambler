@@ -296,3 +296,43 @@ func TestReadingsDetailHasNoGoNames(t *testing.T) {
 		t.Errorf("detail = %q, want %q", body.Detail, "slots[0].beats: expected integer")
 	}
 }
+
+// slotsBody is a progression of n slots of one beat, in C.
+func slotsBody(n int) string {
+	slots := make([]string, n)
+	for i := range slots {
+		slots[i] = `{"chord": "C", "beats": 1}`
+	}
+	return `{"key": "C", "slots": [` + strings.Join(slots, ",") + `]}`
+}
+
+// TestProgressionSlotsAreLimited checks that 256 slots are read and 257 are
+// refused, on every route that takes a progression.
+func TestProgressionSlotsAreLimited(t *testing.T) {
+	paths := map[string]func(slots string) string{
+		readingsPath:                 func(s string) string { return s },
+		"/api/v1/progressions/notes": func(s string) string { return s },
+		nextCandidatesPath:           func(s string) string { return `{"progression": ` + s + `, "beats": 4}` },
+		slotCandidatesPath:           func(s string) string { return `{"progression": ` + s + `, "slot": 0}` },
+	}
+	for path, wrap := range paths {
+		t.Run(path, func(t *testing.T) {
+			if rec := post(t, path, wrap(slotsBody(256))); rec.Code != http.StatusOK {
+				t.Fatalf("256 slots: status = %d, want 200\n%s", rec.Code, rec.Body)
+			}
+			rec := post(t, path, wrap(slotsBody(257)))
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("257 slots: status = %d, want 400\n%s", rec.Code, rec.Body)
+			}
+			var problem struct {
+				Detail string `json:"detail"`
+			}
+			if err := json.Unmarshal(rec.Body.Bytes(), &problem); err != nil {
+				t.Fatal(err)
+			}
+			if want := "a progression has at most 256 slots"; problem.Detail != want {
+				t.Errorf("detail = %q, want %q", problem.Detail, want)
+			}
+		})
+	}
+}

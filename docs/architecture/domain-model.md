@@ -450,6 +450,8 @@ API の形（進行の送り方、経路、応答の札、失敗）は、契約 
 
 本文の読み方は `decodeBody` の 1 か所に置く。`Content-Type` が `application/json` でなければ 415、本文が 64 KiB を超えれば 413、契約にない欄と型の合わない値は 400 で、後者の `detail` には欄の場所と期待した型だけを書く（例: `slots[0].beats: expected integer`）。
 
+進行の枠の数の上限は 256 個（`maxSlots`。#142）。4/4 の 64 小節を 1 拍ずつ刻んでも収まる長さで、契約の `Progression.slots` に `maxItems: 256` を書く。本文の大きさの上限だけでは短い枠が約 2,000 個入り、`Append` が足すたびに進行を複製して検証するため、手間が枠の数の二乗で増える。確かめるのは、本文を進行にする `progressionBody.progression` の 1 か所（`decodeProgression` と候補の経路が通る）で、枠を組む前に `slots` の長さで見る。超えたら 400 で、`detail` は `a progression has at most 256 slots`。重さは `backend/internal/httpapi/bench_test.go` のベンチマーク（読み、次の候補、枠を埋める候補を、256 枠の進行で、ハンドラを通して測る）で見る。`cd backend && go test ./internal/httpapi/ -run xxx -bench .` で走らせる（`make check` では走らせない）。256 枠で 1 回あたり 1 秒を超えないことを、手で確かめた。
+
 #135 の受け入れ条件（所有者が決めた。#134 の A1・B1・C1）: 和音は和音名の文字列で送り、問いごとに `POST` の経路を置き、名前は文字列で、列挙は小文字の英語の識別子で返す。文は返さない。
 
 #135 で決めた。所有者の判断ではない:
