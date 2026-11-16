@@ -33,6 +33,7 @@ type route struct {
 var routes = []route{
 	{method: http.MethodGet, path: "/health", handler: (*api).health},
 	{method: http.MethodPost, path: "/progressions/readings", handler: (*api).readings},
+	{method: http.MethodPost, path: "/progressions/notes", handler: (*api).notes},
 }
 
 type api struct {

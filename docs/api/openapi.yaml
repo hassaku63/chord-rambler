@@ -60,6 +60,44 @@ paths:
                 $ref: "#/components/schemas/Problem"
         default:
           $ref: "#/components/responses/Problem"
+  /progressions/notes:
+    post:
+      operationId: getProgressionNotes
+      summary: The notes that play a progression
+      description: "Answers with the notes of the progression as block chords, in the order of their start, as performance.Notes gives them: the bass of each chord, then its upper voices. Slots with no chord or none chosen give no notes. Tempo and seconds are not here; the screen holds them."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Progression"
+      responses:
+        "200":
+          description: The notes to play.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressionNotes"
+        "400":
+          description: "The body does not describe a progression; the same failures as for the readings."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          description: "The body is larger than 64 KiB (65536 bytes)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "415":
+          description: "The Content-Type is not application/json (parameters such as charset are allowed)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
 components:
   schemas:
     Health:
@@ -234,6 +272,31 @@ components:
         fit:
           type: string
           enum: [fits, misfits, undecided]
+    ProgressionNotes:
+      type: object
+      required: [notes]
+      properties:
+        notes:
+          type: array
+          description: The notes, in the order of their start.
+          items:
+            $ref: "#/components/schemas/Note"
+    Note:
+      type: object
+      required: [pitch, start, beats, velocity]
+      properties:
+        pitch:
+          type: integer
+          description: The MIDI note number (C4 = 60).
+        start:
+          type: integer
+          description: The beat the note starts on, counted from 0 at the start of the progression.
+        beats:
+          type: integer
+          description: The length of the note in beats.
+        velocity:
+          type: integer
+          description: The velocity, 0 to 127.
     Problem:
       type: object
       description: A problem document (RFC 9457).

@@ -41,6 +41,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/progressions/notes': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * The notes that play a progression
+     * @description Answers with the notes of the progression as block chords, in the order of their start, as performance.Notes gives them: the bass of each chord, then its upper voices. Slots with no chord or none chosen give no notes. Tempo and seconds are not here; the screen holds them.
+     */
+    post: operations['getProgressionNotes'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -160,6 +180,20 @@ export interface components {
       /** @enum {string} */
       fit: 'fits' | 'misfits' | 'undecided';
     };
+    ProgressionNotes: {
+      /** @description The notes, in the order of their start. */
+      notes: components['schemas']['Note'][];
+    };
+    Note: {
+      /** @description The MIDI note number (C4 = 60). */
+      pitch: number;
+      /** @description The beat the note starts on, counted from 0 at the start of the progression. */
+      start: number;
+      /** @description The length of the note in beats. */
+      beats: number;
+      /** @description The velocity, 0 to 127. */
+      velocity: number;
+    };
     /** @description A problem document (RFC 9457). */
     Problem: {
       /** @description A short summary of the problem type. */
@@ -232,6 +266,58 @@ export interface operations {
         };
       };
       /** @description The body is not JSON, or does not describe a progression: a chord name or a key that cannot be read, an unknown role or content, a slot with both or neither of chord and content, a length of less than one beat, or a slot that crosses the boundary of a phrase. The detail names the slot (counted from 0). A field the contract does not have, or a value of the wrong type, is also a 400; the detail gives the place and the type expected (slots[0].beats: expected integer). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The body is larger than 64 KiB (65536 bytes). */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The Content-Type is not application/json (parameters such as charset are allowed). */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      default: components['responses']['Problem'];
+    };
+  };
+  getProgressionNotes: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['Progression'];
+      };
+    };
+    responses: {
+      /** @description The notes to play. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProgressionNotes'];
+        };
+      };
+      /** @description The body does not describe a progression; the same failures as for the readings. */
       400: {
         headers: {
           [name: string]: unknown;
