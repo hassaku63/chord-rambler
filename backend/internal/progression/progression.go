@@ -107,6 +107,18 @@ func (p Progression) Replace(i int, s Slot) (Progression, error) {
 	return p.with(slots)
 }
 
+// Fill returns the progression with the content of the slot at the index (from
+// 0) replaced. The length and the role of the slot are kept, so the phrases do
+// not change. It fails for an index outside 0 to Len()-1 (ErrIndex).
+func (p Progression) Fill(i int, c Content) (Progression, error) {
+	if i < 0 || i >= len(p.slots) {
+		return Progression{}, fmt.Errorf("fill slot %d of %d: %w", i, len(p.slots), ErrIndex)
+	}
+	slots := slices.Clone(p.slots)
+	slots[i] = slots[i].WithContent(c)
+	return p.with(slots)
+}
+
 // Insert returns the progression with the slot inserted before the index
 // (from 0). An index of Len() adds the slot at the end, as Append does. It
 // fails for an index outside 0 to Len() (ErrIndex).
