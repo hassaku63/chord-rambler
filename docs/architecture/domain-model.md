@@ -259,3 +259,37 @@
 - 属七は、形で決める（`Triad` が長、`Seventh` が短 7 度。度数と種別は問わない）。属七では、上の条件に当たるテンションのうち 11 度だけを残す（C で E7(♭9) と A7(♭13) の F は注意にせず、A7(11) の D は注意にする）。7 度のない E(♭9) は属七でないので、F を注意にする。
 - 調の外のテンションは注意にしない（C で G7(♭9) の A♭。#108）。注意がないことは、濁らないという意味ではない。
 - IIm7 の 13 度は、5 度の全音上なので、条件に当たらない（C で Dm7(13) の B）。度数 2 の特別な扱いは置かない。
+
+## 5. 慣習
+
+`backend/internal/catalog`。慣習を JSON のカタログとして埋め込み、読み込みで検証する（ADR-0005、ADR-0008 の 6）。読み込むのは `material`、`notation`、`progression`、`relation`、`reading` だけで、入出力は `embed` だけ。カタログの項目は根拠の種類を持ち、慣習の項目はいつも「慣習」。慣習は頻度で言い、正誤にしない（`docs/architecture/explanations.md` の「根拠の種類ごとの言い方」）。埋め込んだカタログは、すべてテスト（`TestEveryCatalogueLoads`）が読み込んで検証する。
+
+### 機能の移り変わり
+
+前の和音の機能から次の和音の機能への好み。候補を種別でまとめたとき、まとまりの中を並べる根拠にする（#112 の B1）。
+
+#114 の受け入れ条件（所有者が決めた）:
+
+- 項目は、前の機能・次の機能（T・S・D）、好みの段階、根拠の種類（慣習）を持つ。カタログ全体は、出どころ（URL と、読んだ版）を持つ。
+- 9 通りの組（3 × 3）が、それぞれちょうど 1 回ある。欠けや重複、知らない機能や段階、空の出どころは、読み込みでエラーにする。
+- 段階の数と名前は、出どころの言い方に合わせる。
+
+出どころは Open Music Theory 第 1 版の「Harmonic syntax – the idealized phrase」（`https://openmusictheory.github.io/harmonicSyntax1.html`。ソースの版は JSON の `source.version`）。機能の流れを事実として参照し、文はカタログに写さない（CC BY-SA 4.0）。出どころは範囲を「少なくともクラシックでは」と限っていて、カタログもそれより強く言わない。
+
+所有者の判断（#114）:
+
+| 段階 | 文書での言い方 | 組 | 出どころでの扱い |
+| --- | --- | --- | --- |
+| `common` | よく使われる | T → S、S → D、D → T | 循環 T → S → D → T へ進む傾向がある |
+| `less_common` | より少ない | T → D、D → S、S → T | 循環にない動き。出どころが名指しするのは T → D と D → S で、「など」を循環にない動きと読む |
+| `unstated` | 出どころに言明なし | T → T、S → S、D → D | 頻度に触れていない（同じ機能の区間を延長する、という記述だけ） |
+
+- 「出どころに言明なし」は頻度ではないので、候補に慣習の札を出さない。並べるときは「よく使われる」のあとに置き、「より少ない」と一緒に扱う（並べる処理は #116）。
+- ポップスで IV → I が多いことのような様式ごとの違いは、様式ごとのカタログで扱う。
+
+#114 で決めた。所有者の判断ではない:
+
+- カタログは `function_transitions.json`。読み込む関数は `LoadFunctionTransitions`（埋め込んだもの）と `ParseFunctionTransitions`（バイト列から）。返す `FunctionTransitions` は、出どころ `Source()`（`URL` と `Version`）と、組を引く `Lookup(from, to)` を持つ。作れるのは読み込む関数だけなので、値はいつも 9 通りを持つ。`Lookup` は、T・S・D のどれでもない機能（`NoFunction` など）には false を返す。
+- 項目 `Transition` は `From`・`To`（`reading.Function`）、`Preference`（`Common`・`LessCommon`・`Unstated`）、`Grounds`（`Convention`）を持つ。段階と根拠の種類のゼロ値は、読み込む関数が返さない。
+- JSON の語は、機能が `T`・`S`・`D`（大文字だけ）、段階が `common`・`less_common`・`unstated`、根拠の種類が `convention`。知らない項目名、文書のあとに続くデータ、空白だけの URL と版も、読み込みでエラーにする。エラーはすべて `ErrInvalid` を包む。
+- 出どころの版は、ソースのリポジトリ、ファイル、コミットを `<owner>/<repo>:<path>@<commit>` の形で書く（`.claude/skills/practices/index.md` の「ソース」の欄と同じ形）。

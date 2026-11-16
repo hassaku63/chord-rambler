@@ -1,0 +1,17 @@
+{
+  "source": {
+    "url": "https://openmusictheory.github.io/harmonicSyntax1.html",
+    "version": "openmusictheory/openmusictheory.github.io:harmonicSyntax1.md@a907aa0"
+  },
+  "transitions": [
+    { "from": "T", "to": "T", "preference": "unstated", "grounds": "convention" },
+    { "from": "T", "to": "S", "preference": "common", "grounds": "convention" },
+    { "from": "T", "to": "D", "preference": "less_common", "grounds": "convention" },
+    { "from": "S", "to": "T", "preference": "less_common", "grounds": "convention" },
+    { "from": "S", "to": "S", "preference": "unstated", "grounds": "convention" },
+    { "from": "S", "to": "D", "preference": "common", "grounds": "convention" },
+    { "from": "D", "to": "T", "preference": "common", "grounds": "convention" },
+    { "from": "D", "to": "S", "preference": "less_common", "grounds": "convention" },
+    { "from": "D", "to": "D", "preference": "unstated", "grounds": "convention" }
+  ]
+}
