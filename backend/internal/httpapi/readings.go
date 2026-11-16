@@ -47,6 +47,8 @@ const maxSlots = 256
 type requestError struct {
 	status int
 	detail string
+	// slot is the slot the failure is in, when it is in one.
+	slot *int
 	// cause is the engine's error behind the detail. Only the log gets its text.
 	cause error
 }
@@ -88,11 +90,21 @@ func refusalOf(err error) (string, bool) {
 // engineRefused is the 400 for an error of the engine: the sentence of the
 // table when it has one, else the error's own text. The prefix says where.
 func engineRefused(where string, err error) error {
-	text := err.Error()
+	return &requestError{status: http.StatusBadRequest, detail: where + ": " + refusalText(err), cause: err}
+}
+
+// slotRefused is engineRefused for an error in the slot: the detail is
+// prefixed "slot N" and the problem carries N.
+func slotRefused(slot int, err error) error {
+	return &requestError{status: http.StatusBadRequest,
+		detail: fmt.Sprintf("slot %d: %s", slot, refusalText(err)), slot: &slot, cause: err}
+}
+
+func refusalText(err error) string {
 	if t, ok := refusalOf(err); ok {
-		text = t
+		return t
 	}
-	return &requestError{status: http.StatusBadRequest, detail: where + ": " + text, cause: err}
+	return err.Error()
 }
 
 // decodeBody is the one place a request body is read into a value: it checks
@@ -212,10 +224,10 @@ func (body progressionBody) progression() (progression.Progression, error) {
 	for i, sb := range body.Slots {
 		s, err := decodeSlot(sb)
 		if err != nil {
-			return progression.Progression{}, engineRefused(fmt.Sprintf("slot %d", i), err)
+			return progression.Progression{}, slotRefused(i, err)
 		}
 		if p, err = p.Append(s); err != nil {
-			return progression.Progression{}, engineRefused(fmt.Sprintf("slot %d", i), err)
+			return progression.Progression{}, slotRefused(i, err)
 		}
 	}
 	return p, nil
@@ -332,7 +344,7 @@ func (a *api) writeRequestError(w http.ResponseWriter, err error) {
 	if re.cause != nil {
 		a.logger.Info("the engine refused the request", "error", re.cause)
 	}
-	a.writeProblem(w, re.status, re.detail)
+	a.writeProblemIn(w, re.status, re.detail, re.slot)
 }
 
 // readProgression calls the engine and writes its answers as labels.

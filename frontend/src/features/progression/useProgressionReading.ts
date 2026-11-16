@@ -5,7 +5,8 @@ import { readProgression } from '@/shared/api/client';
 /**
  * The reading of the current progression. A progression just changed is
  * waiting; a refused one carries the problem's detail and, when the detail
- * names one, the slot (counted from 0).
+ * names one, the slot (counted from 0): the problem's slot field, else the slot
+ * the detail's text names.
  */
 export type ReadingState =
   | { state: 'waiting' }
@@ -15,7 +16,7 @@ export type ReadingState =
 
 type Answer = { for: Progression; state: ReadingState };
 
-/** The contract says the detail names the slot; the server writes it "slot 2: ...". */
+/** The fallback for a problem with no slot field: the detail is written "slot 2: ...". */
 function slotNamedIn(detail: string): number | null {
   const match = /^slot (\d+):/.exec(detail);
   return match?.[1] === undefined ? null : Number(match[1]);
@@ -26,7 +27,7 @@ function stateOf(answer: ReadingAnswer): ReadingState {
     return { state: 'read', reading: answer.reading };
   }
   const detail = answer.problem.detail ?? answer.problem.title;
-  return { state: 'refused', detail, slot: slotNamedIn(detail) };
+  return { state: 'refused', detail, slot: answer.problem.slot ?? slotNamedIn(detail) };
 }
 
 /**

@@ -52,7 +52,7 @@
 
 ## 読みの失敗
 
-API の problem の `detail` を、`role="alert"` でそのまま出す。`detail` が枠を名指すとき（`slot 2: ...`。0 から数える）は、その枠のカードにも印を付ける。
+API の problem の `detail` を、`role="alert"` でそのまま出す。問題が 1 つの枠にあるとき、problem は `slot` の欄（0 から数える）を持ち、その枠のカードにも印を付ける。`slot` の欄がなければ、`detail` の文が枠を名指すとき（`slot 2: ...`）の番号を使う。
 
 ## 鳴らし方
 

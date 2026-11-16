@@ -92,11 +92,18 @@ type problem struct {
 	Title  string `json:"title"`
 	Status int    `json:"status"`
 	Detail string `json:"detail,omitempty"`
+	// Slot is the slot (counted from 0) the problem is in, set only when it is in one.
+	Slot *int `json:"slot,omitempty"`
 }
 
 func (a *api) writeProblem(w http.ResponseWriter, status int, detail string) {
+	a.writeProblemIn(w, status, detail, nil)
+}
+
+// writeProblemIn is writeProblem for a problem that is in one slot.
+func (a *api) writeProblemIn(w http.ResponseWriter, status int, detail string, slot *int) {
 	a.writeJSON(w, status, "application/problem+json",
-		problem{Title: http.StatusText(status), Status: status, Detail: detail})
+		problem{Title: http.StatusText(status), Status: status, Detail: detail, Slot: slot})
 }
 
 func (a *api) writeJSON(w http.ResponseWriter, status int, contentType string, body any) {

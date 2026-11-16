@@ -250,3 +250,66 @@ func TestRefusalsAreWrittenForTheUser(t *testing.T) {
 		})
 	}
 }
+
+// slotOfProblem reads the slot field of a problem response: -1 when the
+// document has none.
+func slotOfProblem(t *testing.T, rec *httptest.ResponseRecorder) int {
+	t.Helper()
+	var doc map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("the response is not JSON: %v", err)
+	}
+	v, ok := doc["slot"]
+	if !ok {
+		return -1
+	}
+	f, isNumber := v.(float64)
+	if !isNumber {
+		t.Fatalf("slot = %v, want a number", v)
+	}
+	return int(f)
+}
+
+// TestProblemsCarryTheSlotTheyAreIn checks the slot field of each failure that
+// is in one slot, and that a failure that is not in one has none.
+func TestProblemsCarryTheSlotTheyAreIn(t *testing.T) {
+	tests := []struct {
+		name, path, body string
+		want             int // -1 for no slot field
+	}{
+		{"unreadable chord name", readingsPath,
+			`{"key": "C", "slots": [{"chord": "C", "beats": 4}, {"chord": "Dmx7", "beats": 4}]}`, 1},
+		{"unknown role", readingsPath,
+			`{"key": "C", "slots": [{"chord": "C", "beats": 4, "role": "tonic"}]}`, 0},
+		{"no beats", readingsPath, `{"key": "C", "slots": [{"chord": "C", "beats": 0}]}`, 0},
+		{"crosses a phrase", readingsPath,
+			`{"key": "C", "slots": [{"chord": "C", "beats": 12}, {"chord": "G", "beats": 8}]}`, 1},
+		{"notes: unreadable chord name", notesPath,
+			`{"key": "C", "slots": [{"chord": "C", "beats": 4}, {"chord": "Dmx7", "beats": 4}]}`, 1},
+		{"next: the slot to add", nextCandidatesPath,
+			`{"progression": {"key": "C", "slots": [{"chord": "C", "beats": 12}]}, "beats": 8}`, 1},
+		{"next: no beats", nextCandidatesPath,
+			`{"progression": {"key": "C", "slots": []}, "beats": 0}`, 0},
+		{"next: progression not read", nextCandidatesPath,
+			`{"progression": {"key": "C", "slots": [{"chord": "Dmx7", "beats": 4}]}, "beats": 4}`, 0},
+		{"slot candidates: the slot asked", slotCandidatesPath,
+			`{"progression": {"key": "C", "slots": [{"chord": "C", "beats": 4}]}, "slot": 1}`, 1},
+		{"unreadable key", readingsPath, `{"key": "H", "slots": []}`, -1},
+		{"not JSON", readingsPath, `{"key": "C", "slots": [`, -1},
+		{"type of a field", readingsPath, `{"key": "C", "slots": [{"chord": "C", "beats": 2.5}]}`, -1},
+		{"slot left out", slotCandidatesPath,
+			`{"progression": {"key": "C", "slots": [{"chord": "C", "beats": 4}]}}`, -1},
+		{"variations", variationsPath, `{"key": "C", "chord": "Csus4"}`, -1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := post(t, tt.path, tt.body)
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400\n%s", rec.Code, rec.Body)
+			}
+			if got := slotOfProblem(t, rec); got != tt.want {
+				t.Errorf("slot = %d, want %d\n%s", got, tt.want, rec.Body)
+			}
+		})
+	}
+}

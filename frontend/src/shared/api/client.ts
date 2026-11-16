@@ -396,5 +396,12 @@ export function parseProblem(body: unknown): Problem {
   if ('detail' in fields) {
     problem.detail = stringAt(fields, 'detail', 'problem');
   }
+  if ('slot' in fields) {
+    const slot = integerAt(fields, 'slot', 'problem');
+    if (slot < 0) {
+      throw new UnexpectedBody('problem.slot');
+    }
+    problem.slot = slot;
+  }
   return problem;
 }

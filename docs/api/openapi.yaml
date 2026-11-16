@@ -631,6 +631,10 @@ components:
         detail:
           type: string
           description: An explanation specific to this occurrence.
+        slot:
+          type: integer
+          minimum: 0
+          description: "The slot the problem is in, counted from 0. Present only when the problem is in one slot; the detail also names it, for a person to read."
   responses:
     Problem:
       description: The request failed.
