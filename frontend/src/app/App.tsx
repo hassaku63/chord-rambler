@@ -1,3 +1,4 @@
+import { ProgressionScreen } from '@/features/progression/ProgressionScreen';
 import type { BackendHealth } from './useBackendHealth';
 import { useBackendHealth } from './useBackendHealth';
 
@@ -12,7 +13,7 @@ function statusText(health: BackendHealth): string {
   }
 }
 
-/** The application shell. For now it only shows whether the API server answers. */
+/** The application shell: whether the API server answers, and the screen of the progression. */
 export function App() {
   const health = useBackendHealth();
 
@@ -20,6 +21,7 @@ export function App() {
     <main>
       <h1>chord-rambler</h1>
       <p role="status">{statusText(health)}</p>
+      <ProgressionScreen />
     </main>
   );
 }
