@@ -93,7 +93,16 @@ const testHygieneRules = {
 };
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'node_modules', 'src/**/*.gen.ts'] },
+  {
+    ignores: [
+      'dist',
+      'coverage',
+      'node_modules',
+      'test-results',
+      'playwright-report',
+      'src/**/*.gen.ts',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
