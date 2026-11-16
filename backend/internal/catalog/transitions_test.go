@@ -22,8 +22,9 @@ import (
 //   - the page says nothing about how often a function follows itself; it
 //     only speaks of zones of one function: Unstated (#114).
 //
-// The page limits only the sentence on the less common moves to classical
-// music; the catalogue keeps the limit for the whole of it, as Style (#114).
+// The words "at least in classical music" are in the sentence on the less
+// common moves; the catalogue keeps the limit for the whole of it, as Style
+// (#114).
 func TestEmbeddedFunctionTransitions(t *testing.T) {
 	c, err := catalog.LoadFunctionTransitions()
 	if err != nil {
