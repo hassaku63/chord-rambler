@@ -15,7 +15,7 @@ COMPOSE := GO_VERSION=$(GO_VERSION) NODE_VERSION=$(NODE_VERSION) VERSION=$(VERSI
         image up down logs smoke dockerfile-lint pr-size \
         docs-check practices-check standards-check shell-lint actions-lint \
         backend-fmt backend-fmt-check backend-lint backend-test backend-build backend-deps-check \
-        frontend-fmt frontend-fmt-check frontend-typecheck frontend-lint frontend-test frontend-build frontend-deps-check e2e
+        frontend-fmt frontend-fmt-check frontend-typecheck frontend-lint frontend-test frontend-build frontend-deps-check e2e chromium-check
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -87,8 +87,17 @@ frontend-deps-check: ## Production npm dependencies have no high vulnerabilities
 	cd $(FRONTEND) && npm audit --omit=dev --audit-level=high
 
 # Needs Chromium: `cd frontend && npx playwright install chromium`, or PW_CHROMIUM_PATH (docs/dev/harness.md).
-e2e: backend-build ## The screen end to end in Chromium: the scenario, axe-core and the layout (ADR-0017)
+e2e: chromium-check backend-build ## The screen end to end in Chromium: the scenario, axe-core and the layout (ADR-0017)
 	cd $(FRONTEND) && npx playwright test
+
+# Stops with the way to get Chromium when there is none. With PW_CHROMIUM_PATH set, Playwright uses that path as it is.
+chromium-check:
+	@cd $(FRONTEND) && if [ -z "$$PW_CHROMIUM_PATH" ] && ! [ -x "$$(node -p "require('@playwright/test').chromium.executablePath()")" ]; then \
+		echo "e2e: no Chromium for Playwright. Get one with 'cd frontend && npx playwright install chromium'" >&2; \
+		echo "     (on Linux without the OS libraries: 'npx playwright install --with-deps chromium')," >&2; \
+		echo "     or point PW_CHROMIUM_PATH at a Chromium on this machine (docs/dev/harness.md)." >&2; \
+		exit 1; \
+	fi
 
 # --- containers (need Docker; CI runs them) ------------------------------------
 

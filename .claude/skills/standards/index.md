@@ -117,3 +117,17 @@
 | 当たるべき場面 | API の失敗の応答を足す・変えるとき。`detail` に何を書くか、`type` を定めるか、拡張の欄を足すかを決めるとき。画面が失敗の応答を読むところを作るとき |
 | chord-rambler との接点 | `backend/internal/httpapi` の `writeProblem` と、契約（`docs/api/openapi.yaml`）の `Problem`。`type` を書かないので、RFC の定めにより `about:blank` とみなされ、`title` は状態の標準の句（`http.StatusText`）にしている（RFC はそれを SHOULD とする）。`status` は応答の状態と同じ値。`detail` は、直し方が分かるように、読めなかった枠と所を書く。RFC は、受け手が `detail` を解析しないよう求めるので、画面は `detail` から情報を取り出さない。食い違い: RFC はどの欄も必須にしないが、契約は `title` と `status` を必須にしている（このサーバーはいつも書く）。`instance` と拡張の欄は使っていない |
 | 確認 | 2026-11-16 / 間隔 365 日 |
+
+## アクセシビリティ
+
+### Web Content Accessibility Guidelines（WCAG）2.2
+
+| 欄 | 内容 |
+| --- | --- |
+| 発行元 | W3C の Web Content Accessibility Guidelines Working Group |
+| 何を決めているか | Web の内容をより多くの人が使えるようにする達成基準。4 つの原則（知覚可能、操作可能、理解可能、堅牢）のもとにガイドラインと達成基準があり、適合のレベルは A、AA、AAA。2.2 で足された基準は 2.4.11、2.4.12、2.4.13、2.5.7、2.5.8（操作の的の大きさ。AA）、3.2.6、3.3.7、3.3.8、3.3.9。4.1.1 Parsing は廃止された |
+| 一次情報 | https://www.w3.org/TR/WCAG22/ （最新の版。確かめた版は https://www.w3.org/TR/2024/REC-WCAG22-20241212/ ）。W3C の文書で、開くのに登録は要らない（この文書が無償かどうかを述べた箇所は、読んだ範囲になかった） |
+| 状態 | 現行。W3C Recommendation（2024-12-12）。2.0 と 2.1 を廃止せず、2.1 と後方互換 |
+| 当たるべき場面 | 画面の操作の的の大きさ、色の対比、キーボードでの操作、名前と役割、状態の伝え方を決める・変えるとき。アクセシビリティの検査（axe-core のタグ）を足す・変えるとき |
+| chord-rambler との接点 | `make e2e` の axe-core の検査（`frontend/e2e/accessibility.spec.ts`、`docs/dev/harness.md`）が、WCAG 2.0・2.1・2.2 の A と AA を、axe-core のタグ `wcag2a`、`wcag2aa`、`wcag21a`、`wcag21aa`、`wcag22aa` で見る。axe-core 4.14 に `wcag22a` のタグはなく、2.2 で足された A の基準（3.2.6、3.3.7）は機械では検査されない。機械で見えるのは基準の一部で、通っても適合の保証にはならない |
+| 確認 | 2026-11-16 / 間隔 365 日 |
