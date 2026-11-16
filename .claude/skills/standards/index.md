@@ -106,6 +106,18 @@
 
 ## Web と API
 
+### OpenAPI Specification 3.1
+
+| 欄 | 内容 |
+| --- | --- |
+| 発行元 | OpenAPI Initiative（Linux Foundation の下のプロジェクト） |
+| 何を決めているか | HTTP の API を、言語によらず機械で読める形で書く形式。経路と操作、要求と応答の本文、`components` の再利用。本文の形は Schema Object で書き、3.1 からは JSON Schema 2020-12 をそのまま使う。`oneOf`・`anyOf`・`allOf` に添えて、どの形かを本文の欄で示す Discriminator Object（`propertyName` と `mapping`） |
+| 一次情報 | https://spec.openapis.org/oas/v3.1.0.html （登録なしで読める。Discriminator Object は 4.8.25）。版の一覧は https://spec.openapis.org/oas/ |
+| 状態 | 現行。版の一覧の先頭は v3.2.1 で、3.1 系の最新のパッチは v3.1.2。開いたのは 3.1.0 の本文だけ |
+| 当たるべき場面 | 契約の形（スキーマの分け方、必須の欄、判別の欄、`oneOf` の使い方）を決める・変えるとき。生成した型の形が契約の書き方によるか確かめるとき |
+| chord-rambler との接点 | 契約（`docs/api/openapi.yaml`。`openapi: 3.1.0` を宣言。ADR-0008）。画面の型は契約から生成する（`npm run gen:api`）。枠の読みは `oneOf` と、`content` を `propertyName` にした判別の欄で 2 つの形に分ける（#182）。3.1.0 は、判別の欄を `oneOf`・`anyOf`・`allOf` と使うときにだけ許し、判別は検証の近道の「ヒント」で、本文は検証で `oneOf` のちょうど 1 つに合わなければならないとする。契約は、各形の `content` に重ならない `enum` を置いて、ちょうど 1 つに合うようにしている。`mapping` は `none` と `unchosen` を同じスキーマに写す。3.1.0 の `mapping` の説明は、値とスキーマの対応を持つものとだけ述べ、複数の値を同じスキーマに写すことを禁じていない（例は 1 対 1 だけ） |
+| 確認 | 2026-11-16 / 間隔 365 日 |
+
 ### Problem Details for HTTP APIs（RFC 9457）
 
 | 欄 | 内容 |
