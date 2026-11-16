@@ -76,13 +76,13 @@ func major(tonic material.NoteName) material.Scale {
 
 // Shapes, as intervals above the root.
 const (
-	maj   = "M3 P5"
-	minor = "m3 P5"
-	dim   = "m3 d5"
-	dom7  = "M3 P5 m7"
-	maj7  = "M3 P5 M7"
-	min7  = "m3 P5 m7"
-	half7 = "m3 d5 m7"
+	maj      = "M3 P5"
+	minTriad = "m3 P5"
+	dim      = "m3 d5"
+	dom7     = "M3 P5 m7"
+	maj7     = "M3 P5 M7"
+	min7     = "m3 P5 m7"
+	half7    = "m3 d5 m7"
 )
 
 // want is the main reading expected, without the key: every test checks that
@@ -162,11 +162,11 @@ func TestDiatonicInCMajor(t *testing.T) {
 	d := func(f reading.Function) want { return want{kind: reading.Diatonic, function: f} }
 	check(t, major(cNat), []row{
 		{"C", chord(cNat, maj, ""), d(reading.Tonic)},
-		{"Dm", chord(dNat, minor, ""), d(reading.Subdominant)},
-		{"Em", chord(eNat, minor, ""), d(reading.Tonic)},
+		{"Dm", chord(dNat, minTriad, ""), d(reading.Subdominant)},
+		{"Em", chord(eNat, minTriad, ""), d(reading.Tonic)},
 		{"F", chord(fNat, maj, ""), d(reading.Subdominant)},
 		{"G", chord(gNat, maj, ""), d(reading.Dominant)},
-		{"Am", chord(aNat, minor, ""), d(reading.Tonic)},
+		{"Am", chord(aNat, minTriad, ""), d(reading.Tonic)},
 		{"Bdim", chord(bNat, dim, ""), d(reading.Dominant)},
 		{"Cmaj7", chord(cNat, maj7, ""), d(reading.Tonic)},
 		{"Dm7", chord(dNat, min7, ""), d(reading.Subdominant)},
@@ -213,11 +213,11 @@ func TestBorrowedInCMajor(t *testing.T) {
 		return want{kind: reading.Borrowed, modes: modes, minor: minor}
 	}
 	check(t, major(cNat), []row{
-		{"Fm (iv)", chord(fNat, minor, ""), b(true, material.Phrygian, material.Aeolian, material.Locrian)},
+		{"Fm (iv)", chord(fNat, minTriad, ""), b(true, material.Phrygian, material.Aeolian, material.Locrian)},
 		{"B♭ (♭VII)", chord(bFlat, maj, ""), b(true, material.Dorian, material.Mixolydian, material.Aeolian)},
 		{"A♭ (♭VI)", chord(aFlat, maj, ""), b(true, material.Phrygian, material.Aeolian, material.Locrian)},
 		{"E♭ (♭III)", chord(eFlat, maj, ""), b(true, material.Dorian, material.Phrygian, material.Aeolian)},
-		{"Cm (i)", chord(cNat, minor, ""), b(true, material.Dorian, material.Phrygian, material.Aeolian)},
+		{"Cm (i)", chord(cNat, minTriad, ""), b(true, material.Dorian, material.Phrygian, material.Aeolian)},
 		{"B♭maj7 (♭VIImaj7)", chord(bFlat, maj7, ""), b(false, material.Dorian, material.Mixolydian)},
 		{"D♭ (♭II)", chord(dFlat, maj, ""), b(false, material.Phrygian, material.Locrian)},
 		{"B♭(♯11)", chord(bFlat, "M3 P5 A11", ""), b(true, material.Dorian, material.Mixolydian, material.Aeolian)},
@@ -249,16 +249,16 @@ func TestSecondaryDominantsInCMajor(t *testing.T) {
 // (♯VI) as B♭ and F♭m (♭iv) as Em, but no mode on C spells A♯, B♯ or F♭
 // (the owner's call on #102). Bdim7 (B D F A♭, vii°7 of the harmonic minor)
 // is facts only as well: no church mode on C has both B and A♭ (#102; the
-// harmonic minor is weighed in #105). E♭ in F♯ major and C𝄪
-// major in C have no position: their roots are two half steps from the degree
-// (E♯ and C), so they are read as facts only too (#102).
+// harmonic minor is weighed in #105). E♭ in F♯ major and C𝄪 major in C have
+// no position: their roots are two half steps from the degree (E♯ and C), so
+// they are read as facts only too (#102).
 func TestFactsOnly(t *testing.T) {
 	none := want{kind: reading.FactsOnly}
 	check(t, major(cNat), []row{
 		{"B♯ in C", chord(note(material.B, sharp), maj, ""), none},
 		{"A♯ in C", chord(note(material.A, sharp), maj, ""), none},
 		{"Bdim7 in C", chord(bNat, "m3 d5 d7", ""), none},
-		{"F♭m in C", chord(note(material.F, flat), minor, ""), none},
+		{"F♭m in C", chord(note(material.F, flat), minTriad, ""), none},
 		{"C𝄪 in C", chord(note(material.C, 2), maj, ""), none},
 	})
 	check(t, major(note(material.F, sharp)), []row{

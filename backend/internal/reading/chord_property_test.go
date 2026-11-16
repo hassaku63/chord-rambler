@@ -13,7 +13,7 @@ import (
 // basses that are members and that are not.
 var shapes = []struct{ intervals, bass string }{
 	{"", ""},
-	{maj, ""}, {minor, ""}, {dim, ""}, {"M3 A5", ""}, {"P4 P5", ""}, {"M2 P5", ""},
+	{maj, ""}, {minTriad, ""}, {dim, ""}, {"M3 A5", ""}, {"P4 P5", ""}, {"M2 P5", ""},
 	{dom7, ""}, {maj7, ""}, {min7, ""}, {half7, ""}, {"m3 d5 d7", ""},
 	{"M3 P5 m7 m9 A11 m13", ""},
 	{maj, "M3"}, {maj, "P5"}, {maj, "m7"}, {maj, "M2"}, {maj, "A4"},
