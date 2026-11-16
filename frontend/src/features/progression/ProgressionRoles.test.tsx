@@ -1,14 +1,11 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Progression, SlotReading } from '@/shared/api/client';
+import type { Schemas } from '@/test/standInServer';
+import { stubServer } from '@/test/standInServer';
 import { ProgressionScreen } from './ProgressionScreen';
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status });
-}
-
 /** The readings of Dm7, and of a slot with no chord, before the role fit. */
-const dm7: SlotReading = {
+const dm7: Schemas['SlotReading'] = {
   chord: { basis: 'definition', name: 'Dm7' },
   roman: { basis: 'computation', numeral: 'ii7' },
   reading: {
@@ -18,28 +15,27 @@ const dm7: SlotReading = {
     modes: [],
     fromParallelMinor: false,
   },
+  resolution: { basis: 'school', resolution: 'none' },
+  cadence: { basis: 'school', cadence: 'none' },
+  tensionCautions: { basis: 'school', cautions: [] },
 };
+const COLOUR_ROLES: readonly Schemas['Role'][] = ['spread', 'float', 'wistful', 'linger'];
 
 /**
- * Answers like POST /progressions/readings for Dm7 and slots with no chord:
- * a slot with a structural role gets undecided when it holds no chord and
- * misfits when it holds Dm7; a colour role gets no role fit. Every other
- * request is refused, which shows no candidates and plays nothing.
+ * Reads Dm7 and slots with no chord: a slot with a structural role gets
+ * undecided when it holds no chord and misfits when it holds Dm7; a colour
+ * role gets no role fit.
  */
-function standInServer(url: string, init?: RequestInit): Promise<Response> {
-  if (!url.endsWith('/progressions/readings')) {
-    return Promise.resolve(json({ title: 'Bad Request', status: 400 }, 400));
-  }
-  const progression = JSON.parse(init?.body as string) as Progression;
-  const slots = progression.slots.map((slot): SlotReading => {
+function readingsOf(progression: Schemas['Progression']): Schemas['ProgressionReading'] {
+  const slots = progression.slots.map((slot): Schemas['SlotReading'] => {
     const reading = slot.chord === undefined ? {} : dm7;
-    if (slot.role === undefined || ['spread', 'float', 'wistful', 'linger'].includes(slot.role)) {
+    if (slot.role === undefined || COLOUR_ROLES.includes(slot.role)) {
       return reading;
     }
     const fit = slot.chord === undefined ? 'undecided' : 'misfits';
     return { ...reading, roleFit: { basis: 'school', fit } };
   });
-  return Promise.resolve(json({ slots }));
+  return { slots };
 }
 
 function cards() {
@@ -59,7 +55,7 @@ function roleOf(card: HTMLElement | undefined) {
 }
 
 describe('ProgressionScreen roles', () => {
-  beforeEach(() => vi.stubGlobal('fetch', vi.fn(standInServer)));
+  beforeEach(() => stubServer({ '/progressions/readings': readingsOf }));
   afterEach(() => {
     vi.unstubAllGlobals();
     localStorage.clear();
