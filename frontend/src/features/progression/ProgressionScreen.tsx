@@ -6,6 +6,7 @@ import { KEYS, useProgression } from './useProgression';
 import { usePlayback } from './usePlayback';
 import { useNextCandidates } from './useNextCandidates';
 import { CandidateList } from './CandidateList';
+import { candidateMarks, candidateRows } from './labels';
 import { useVariations } from './useVariations';
 import { VariationList } from './VariationList';
 import { PlaybackControls } from './PlaybackControls';
@@ -123,8 +124,15 @@ export function ProgressionScreen({ createAudioContext }: Props) {
 
       {candidates.state === 'given' && (
         <CandidateList
+          words={{
+            heading: `末尾に足す候補（${beats} 拍）`,
+            list: (kind) => `${kind}の候補`,
+            add: '足す',
+            trial: (chord) => `${chord} を試聴する`,
+          }}
           groups={candidates.groups}
-          beats={beats}
+          marksOf={candidateMarks}
+          rowsOf={candidateRows}
           busy={busy}
           opened={opened}
           onToggle={(kind, open) => setOpened((o) => ({ ...o, [kind]: open }))}
