@@ -57,6 +57,7 @@ chord-rambler で作業する人間と AI コーディングエージェント�
 make check        # すべての検査（CI は同じターゲットを呼ぶ）
 make doctor       # 手元の道具の版が .tool-versions と合っているか
 make fmt          # 自動整形
+make e2e          # 画面の検査（実ブラウザ。Chromium が要る。取り方は docs/dev/harness.md）
 make setup        # 依存を入れる（Go のモジュール、npm のパッケージ）
 make dev-backend  # API サーバー（:8080。PORT で変える）
 make dev-frontend # 画面の開発サーバー（:5173。/api は API サーバーへ中継）
