@@ -75,6 +75,34 @@ export function notesOfSlot(notes: Note[], slots: Slot[], index: number): Note[]
     }));
 }
 
+/**
+ * The slots from `from` up to `to` (not included) alone: their notes from the
+ * start of the first, each slot marked as it begins, for their length.
+ */
+export function passagePerformance(
+  notes: Note[],
+  slots: Slot[],
+  from: number,
+  to: number,
+  tempo: number,
+): Performance {
+  const beat = secondsPerBeat(tempo);
+  const starts = slotStarts(slots);
+  const offset = starts[from] ?? 0;
+  const range = Array.from({ length: Math.max(0, to - from) }, (_, i) => from + i);
+  const at = (index: number) => ((starts[index] ?? 0) - offset) * beat;
+  return {
+    voices: range.flatMap((index) =>
+      voicesOf(notesOfSlot(notes, slots, index), tempo).map((voice) => ({
+        ...voice,
+        start: voice.start + at(index),
+      })),
+    ),
+    marks: range.map((index) => ({ at: at(index), slot: index })),
+    end: range.reduce((sum, index) => sum + (slots[index]?.beats ?? 0), 0) * beat,
+  };
+}
+
 /** One slot alone, for its length. */
 export function slotPerformance(
   notes: Note[],
@@ -82,10 +110,5 @@ export function slotPerformance(
   index: number,
   tempo: number,
 ): Performance {
-  const beats = slots[index]?.beats ?? 0;
-  return {
-    voices: voicesOf(notesOfSlot(notes, slots, index), tempo),
-    marks: [{ at: 0, slot: index }],
-    end: beats * secondsPerBeat(tempo),
-  };
+  return passagePerformance(notes, slots, index, index + 1, tempo);
 }

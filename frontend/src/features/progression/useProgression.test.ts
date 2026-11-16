@@ -39,6 +39,15 @@ describe('useProgression', () => {
     expect(result.current.progression).toEqual({ key: 'C', slots: [] });
   });
 
+  it('adds a chord of the beats given, and ignores beats outside 1 to 16', () => {
+    const { result } = renderHook(() => useProgression());
+
+    act(() => result.current.addChord('F', 2));
+    act(() => result.current.addChord('G', 0));
+
+    expect(result.current.progression.slots).toEqual([{ chord: 'F', beats: 2 }]);
+  });
+
   it('changes a length within 1 to 16 beats and ignores one outside', () => {
     const { result } = renderHook(() => useProgression());
     act(() => result.current.addChord('C'));

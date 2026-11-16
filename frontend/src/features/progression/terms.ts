@@ -2,6 +2,7 @@ import type { components } from '@/shared/api/schema.gen';
 
 type Schemas = components['schemas'];
 type ChordReading = Schemas['ChordReadingLabel'];
+type Preference = Schemas['PreferenceLabel'];
 
 /**
  * The one table from the identifiers of the readings to the words the screen
@@ -60,6 +61,16 @@ export const TERMS = {
     misfits: '合わない',
     undecided: '決められない',
   } satisfies Record<Schemas['RoleFitLabel']['fit'], string>,
+  /** The grades of a move between functions; unstated (the source says nothing) shows no label. */
+  preference: {
+    common: 'よく使われる',
+    'less-common': 'より少ない',
+    unstated: null,
+  } satisfies Record<Preference['preference'], string | null>,
+  /** The style a grade is limited to, shown with it (#114). */
+  style: {
+    classical: 'クラシック',
+  } satisfies Record<Preference['style'], string>,
 } as const;
 
 /** What a borrowed chord is borrowed from when its modes hold aeolian. */

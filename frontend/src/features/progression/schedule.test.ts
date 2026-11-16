@@ -3,6 +3,7 @@ import type { Note, Slot } from '@/shared/api/client';
 import {
   frequencyOf,
   notesOfSlot,
+  passagePerformance,
   progressionPerformance,
   secondsPerBeat,
   slotPerformance,
@@ -129,5 +130,22 @@ describe('slotPerformance', () => {
     ]);
     expect(performance.marks).toEqual([{ at: 0, slot: 2 }]);
     expect(performance.end).toBe(2);
+  });
+});
+
+describe('passagePerformance', () => {
+  it('plays the slots from the first of them, each marked as it begins', () => {
+    const performance = passagePerformance(notes, slots, 1, 3, 60);
+
+    // The slot with no chord lasts 2 beats, so G starts 2 s in.
+    expect(performance.voices.map((v) => [v.start, v.duration])).toEqual([
+      [2, 4],
+      [2, 4],
+    ]);
+    expect(performance.marks).toEqual([
+      { at: 0, slot: 1 },
+      { at: 2, slot: 2 },
+    ]);
+    expect(performance.end).toBe(6);
   });
 });

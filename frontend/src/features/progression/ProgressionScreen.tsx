@@ -4,6 +4,8 @@ import type { ReadingState } from './useProgressionReading';
 import { useProgressionReading } from './useProgressionReading';
 import { KEYS, useProgression } from './useProgression';
 import { usePlayback } from './usePlayback';
+import { useNextCandidates } from './useNextCandidates';
+import { CandidateList } from './CandidateList';
 import { PlaybackControls } from './PlaybackControls';
 import { SlotCard } from './SlotCard';
 import { SlotDetail } from './SlotDetail';
@@ -26,14 +28,16 @@ type Props = {
 };
 
 /**
- * Screens 1 and 2 (a provisional layout, A1 of #148): the key and the playing
- * on top, the strip of slots in the middle, the labels of the chosen slot below.
+ * Screens 1 to 3 (a provisional layout, A1 of #148): the key and the playing
+ * on top, the strip of slots in the middle, the labels of the chosen slot and
+ * the candidates for the slot after the last below.
  */
 export function ProgressionScreen({ createAudioContext }: Props) {
   const state = useProgression();
   const { progression, selected } = state;
   const reading = useProgressionReading(progression);
   const playback = usePlayback(progression, createAudioContext);
+  const { beats, candidates } = useNextCandidates(progression);
   const [chordName, setChordName] = useState('');
   const readings = reading.state === 'read' ? reading.reading.slots : [];
   const unreadable = reading.state === 'refused' ? reading.slot : null;
@@ -95,6 +99,17 @@ export function ProgressionScreen({ createAudioContext }: Props) {
       </ol>
 
       {chosen && selected !== null && <SlotDetail slot={chosen} reading={readings[selected]} />}
+
+      {candidates.state === 'given' && (
+        <CandidateList
+          groups={candidates.groups}
+          beats={beats}
+          auditioning={playback.auditioning}
+          onAdd={(chord) => state.addChord(chord, beats)}
+          onAudition={(chord) => playback.audition(chord, beats)}
+          onStop={playback.stop}
+        />
+      )}
     </div>
   );
 }

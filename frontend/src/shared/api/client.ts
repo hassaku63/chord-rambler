@@ -74,7 +74,7 @@ export async function readProgression(
   progression: Progression,
   signal?: AbortSignal,
 ): Promise<ReadingAnswer> {
-  const { ok, body } = await postProgression('/progressions/readings', progression, signal);
+  const { ok, body } = await post('/progressions/readings', progression, signal);
   if (ok) {
     return { ok: true, reading: parseProgressionReading(body) };
   }
@@ -93,18 +93,44 @@ export async function getProgressionNotes(
   progression: Progression,
   signal?: AbortSignal,
 ): Promise<NotesAnswer> {
-  const { ok, body } = await postProgression('/progressions/notes', progression, signal);
+  const { ok, body } = await post('/progressions/notes', progression, signal);
   if (ok) {
     return { ok: true, notes: parseProgressionNotes(body) };
   }
   return { ok: false, problem: parseProblem(body) };
 }
 
-async function postProgression(path: string, progression: Progression, signal?: AbortSignal) {
+/** The groups of the candidates for the slot after the last, in the contract's order. */
+export type CandidateGroups = Open<components['schemas']['CandidateGroups']>;
+/** One candidate and its labels. */
+export type Candidate = Open<components['schemas']['Candidate']>;
+
+/** The answer to a request for candidates: the groups, or the problem the server named. */
+export type CandidatesAnswer =
+  { ok: true; groups: CandidateGroups['groups'] } | { ok: false; problem: Problem };
+
+/**
+ * Asks for the candidates for a slot of the beats given, added after the last.
+ * Resolves with the problem when the server refuses; rejects when the server
+ * cannot be reached or answers with a body the contract does not describe.
+ */
+export async function getNextCandidates(
+  progression: Progression,
+  beats: number,
+  signal?: AbortSignal,
+): Promise<CandidatesAnswer> {
+  const { ok, body } = await post('/progressions/next-candidates', { progression, beats }, signal);
+  if (ok) {
+    return { ok: true, groups: parseCandidateGroups(body).groups };
+  }
+  return { ok: false, problem: parseProblem(body) };
+}
+
+async function post(path: string, payload: unknown, signal?: AbortSignal) {
   const response = await fetch(`${API_PREFIX}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(progression),
+    body: JSON.stringify(payload),
     signal: signal ?? null,
   });
   const body: unknown = await response.json();
@@ -226,6 +252,58 @@ export function parseProgressionReading(body: unknown): ProgressionReading {
   const fields = fieldsAt(body, 'body');
   return {
     slots: arrayAt(fields, 'slots', 'body').map((slot, i) => parseSlotReading(slot, `slots[${i}]`)),
+  };
+}
+
+function parseCandidate(value: unknown, where: string): Candidate {
+  const fields = fieldsAt(value, where);
+  const at = (name: string) => `${where}.${name}`;
+  const candidate: Candidate = {
+    chord: oneStringLabel(fields.chord, 'name', at('chord')),
+    roman: oneStringLabel(fields.roman, 'numeral', at('roman')),
+    reading: parseChordReadingLabel(fields.reading, at('reading')),
+  };
+  if ('rootMotion' in fields) {
+    candidate.rootMotion = oneStringLabel(fields.rootMotion, 'interval', at('rootMotion'));
+  }
+  if ('commonTones' in fields) {
+    const { fields: c, basis } = labelAt(fields.commonTones, at('commonTones'));
+    candidate.commonTones = { basis, count: integerAt(c, 'count', at('commonTones')) };
+  }
+  if ('resolution' in fields) {
+    candidate.resolution = oneStringLabel(fields.resolution, 'resolution', at('resolution'));
+  }
+  if ('cadence' in fields) {
+    candidate.cadence = oneStringLabel(fields.cadence, 'cadence', at('cadence'));
+  }
+  if ('preference' in fields) {
+    const where = at('preference');
+    const { fields: p, basis } = labelAt(fields.preference, where);
+    candidate.preference = {
+      basis,
+      from: stringAt(p, 'from', where),
+      to: stringAt(p, 'to', where),
+      preference: stringAt(p, 'preference', where),
+      style: stringAt(p, 'style', where),
+    };
+  }
+  return candidate;
+}
+
+/** Turns an unknown body into the groups of candidates, or throws. */
+export function parseCandidateGroups(body: unknown): CandidateGroups {
+  const fields = fieldsAt(body, 'body');
+  return {
+    groups: arrayAt(fields, 'groups', 'body').map((value, i) => {
+      const where = `groups[${i}]`;
+      const group = fieldsAt(value, where);
+      return {
+        kind: stringAt(group, 'kind', where),
+        candidates: arrayAt(group, 'candidates', where).map((c, j) =>
+          parseCandidate(c, `${where}.candidates[${j}]`),
+        ),
+      };
+    }),
   };
 }
 

@@ -58,3 +58,23 @@
 .basis {
   font-size: 0.85em;
 }
+
+.candidate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.candidate {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.candidate > details {
+  flex-basis: 100%;
+}

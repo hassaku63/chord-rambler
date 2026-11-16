@@ -79,7 +79,8 @@ export type ProgressionState = {
   progression: Progression;
   selected: number | null;
   setKey: (key: string) => void;
-  addChord: (name: string) => void;
+  /** Adds a slot holding the chord, of the beats given (one bar when left out). */
+  addChord: (name: string, beats?: number) => void;
   addNoChord: () => void;
   addUnchosen: () => void;
   remove: (index: number) => void;
@@ -108,10 +109,10 @@ export function useProgression(): ProgressionState {
       }
     }, []),
     addChord: useCallback(
-      (name: string) => {
+      (name: string, beats = DEFAULT_BEATS) => {
         const chord = name.trim();
-        if (chord !== '') {
-          append({ chord, beats: DEFAULT_BEATS });
+        if (chord !== '' && isBeats(beats)) {
+          append({ chord, beats });
         }
       },
       [append],

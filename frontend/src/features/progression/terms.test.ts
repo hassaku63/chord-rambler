@@ -4,6 +4,7 @@ import { TERMS, wordFor } from './terms';
 
 type Schemas = components['schemas'];
 type ChordReading = Schemas['ChordReadingLabel'];
+type Preference = Schemas['PreferenceLabel'];
 
 // Every enumeration of the readings in docs/api/openapi.yaml, written out. The
 // type checks below fail when the contract (through schema.gen.ts) adds a value
@@ -23,6 +24,10 @@ const mode = [
 const resolution = ['none', 'expected', 'irregular'] as const;
 const cadence = ['none', 'authentic', 'half', 'plagal', 'deceptive'] as const;
 const fit = ['fits', 'misfits', 'undecided'] as const;
+const candidateKind = ['diatonic', 'secondary-dominant', 'borrowed'] as const;
+const preference = ['common', 'less-common', 'unstated'] as const;
+const style = ['classical'] as const;
+const moveFunction = ['tonic', 'subdominant', 'dominant'] as const;
 
 // Type checks only (tsc runs them): each list is exactly its enumeration.
 expectTypeOf<(typeof basis)[number]>().toEqualTypeOf<Schemas['Basis']>();
@@ -34,6 +39,11 @@ expectTypeOf<(typeof resolution)[number]>().toEqualTypeOf<
 >();
 expectTypeOf<(typeof cadence)[number]>().toEqualTypeOf<Schemas['CadenceLabel']['cadence']>();
 expectTypeOf<(typeof fit)[number]>().toEqualTypeOf<Schemas['RoleFitLabel']['fit']>();
+expectTypeOf<(typeof candidateKind)[number]>().toEqualTypeOf<Schemas['CandidateKind']>();
+expectTypeOf<(typeof preference)[number]>().toEqualTypeOf<Preference['preference']>();
+expectTypeOf<(typeof style)[number]>().toEqualTypeOf<Preference['style']>();
+expectTypeOf<(typeof moveFunction)[number]>().toEqualTypeOf<Preference['from']>();
+expectTypeOf<(typeof moveFunction)[number]>().toEqualTypeOf<Preference['to']>();
 
 describe('TERMS', () => {
   it.each([
@@ -45,6 +55,10 @@ describe('TERMS', () => {
     { name: 'resolution', table: TERMS.resolution, ids: resolution },
     { name: 'cadence', table: TERMS.cadence, ids: cadence },
     { name: 'fit', table: TERMS.fit, ids: fit },
+    { name: 'candidate kind', table: TERMS.kind, ids: candidateKind },
+    { name: 'preference', table: TERMS.preference, ids: preference },
+    { name: 'style', table: TERMS.style, ids: style },
+    { name: 'function of a move', table: TERMS.function, ids: moveFunction },
   ])('has an entry for every $name of the contract', ({ table, ids }) => {
     const missing = ids.filter((id) => !Object.hasOwn(table, id));
 
