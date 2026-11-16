@@ -41,7 +41,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProgressionReading"
         "400":
-          description: "The body is not JSON, or does not describe a progression: a chord name or a key that cannot be read, an unknown role or content, a slot with both or neither of chord and content, a length of less than one beat, or a slot that crosses the boundary of a phrase. The detail names the slot (counted from 0)."
+          description: "The body is not JSON, or does not describe a progression: a chord name or a key that cannot be read, an unknown role or content, a slot with both or neither of chord and content, a length of less than one beat, or a slot that crosses the boundary of a phrase. The detail names the slot (counted from 0). A field the contract does not have, or a value of the wrong type, is also a 400; the detail gives the place and the type expected (slots[0].beats: expected integer)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          description: "The body is larger than 64 KiB (65536 bytes)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "415":
+          description: "The Content-Type is not application/json (parameters such as charset are allowed)."
           content:
             application/problem+json:
               schema:

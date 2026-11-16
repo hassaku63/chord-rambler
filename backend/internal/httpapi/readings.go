@@ -4,7 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"mime"
 	"net/http"
+	"reflect"
+	"strconv"
+	"strings"
 
 	"github.com/hassaku63/chord-rambler/backend/internal/material"
 	"github.com/hassaku63/chord-rambler/backend/internal/notation"
@@ -28,33 +33,126 @@ type slotBody struct {
 	Role    *string `json:"role"`
 }
 
-// decodeProgression reads the body with the engine's constructors, which check
-// it. Every error it returns is the client's and says what could not be read.
-func decodeProgression(r *http.Request) (progression.Progression, error) {
-	var body progressionBody
-	dec := json.NewDecoder(r.Body)
-	if err := dec.Decode(&body); err != nil {
-		return progression.Progression{}, fmt.Errorf("the body is not a progression in JSON: %w", err)
+// maxBodyBytes is the largest body the API reads. Append copies the progression
+// for every slot, so the work grows with the square of the slots; a bound on
+// the bytes bounds it.
+const maxBodyBytes = 64 << 10
+
+// requestError is a failure of the request, with the status it is answered by.
+// Its detail says where and what, never how the server reads it.
+type requestError struct {
+	status int
+	detail string
+}
+
+func (e *requestError) Error() string { return e.detail }
+
+func badRequest(format string, args ...any) error {
+	return &requestError{status: http.StatusBadRequest, detail: fmt.Sprintf(format, args...)}
+}
+
+// decodeBody is the one place a request body is read into a value: it checks
+// the media type (415), cuts the size (413), refuses a field the contract does
+// not have (400) and a value of the wrong type (400), and wants one JSON value.
+func decodeBody(w http.ResponseWriter, r *http.Request, dst any) error {
+	if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
+		return &requestError{status: http.StatusUnsupportedMediaType, detail: "the Content-Type must be application/json"}
 	}
-	if dec.More() {
-		return progression.Progression{}, errors.New("the body is not one JSON value: it goes on after the progression")
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxBodyBytes))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(dst); err != nil {
+		return describeDecodeError(err)
+	}
+	if err := dec.Decode(new(json.RawMessage)); !errors.Is(err, io.EOF) {
+		if tooLarge := (*http.MaxBytesError)(nil); errors.As(err, &tooLarge) {
+			return describeDecodeError(err)
+		}
+		return badRequest("the body is not one JSON value: it goes on after the progression")
+	}
+	return nil
+}
+
+func describeDecodeError(err error) error {
+	var tooLarge *http.MaxBytesError
+	var typeErr *json.UnmarshalTypeError
+	switch {
+	case errors.As(err, &tooLarge):
+		return &requestError{status: http.StatusRequestEntityTooLarge,
+			detail: fmt.Sprintf("the body is larger than %d bytes", tooLarge.Limit)}
+	case errors.As(err, &typeErr):
+		return badRequest("%s: expected %s", fieldPath(typeErr.Field), jsonTypeName(typeErr.Type))
+	}
+	if name, ok := strings.CutPrefix(err.Error(), "json: unknown field "); ok {
+		return badRequest("unknown field %s", name)
+	}
+	return badRequest("the body is not a progression in JSON")
+}
+
+// fieldPath writes the path of a field as the contract's reader sees it:
+// slots.0.beats becomes slots[0].beats.
+func fieldPath(field string) string {
+	if field == "" {
+		return "body"
+	}
+	var b strings.Builder
+	for i, part := range strings.Split(field, ".") {
+		if _, err := strconv.Atoi(part); err == nil {
+			b.WriteString("[" + part + "]")
+			continue
+		}
+		if i > 0 {
+			b.WriteByte('.')
+		}
+		b.WriteString(part)
+	}
+	return b.String()
+}
+
+// jsonTypeName names a Go type by the JSON type that fits it.
+func jsonTypeName(t reflect.Type) string {
+	for t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	switch t.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return "integer"
+	case reflect.Float32, reflect.Float64:
+		return "number"
+	case reflect.String:
+		return "string"
+	case reflect.Bool:
+		return "boolean"
+	case reflect.Slice, reflect.Array:
+		return "array"
+	default:
+		return "object"
+	}
+}
+
+// decodeProgression reads the body with the engine's constructors, which check
+// it. Every error it returns is a *requestError.
+func decodeProgression(w http.ResponseWriter, r *http.Request) (progression.Progression, error) {
+	var body progressionBody
+	if err := decodeBody(w, r, &body); err != nil {
+		return progression.Progression{}, err
 	}
 	tonic, err := notation.ParseNoteName(body.Key)
 	if err != nil {
-		return progression.Progression{}, fmt.Errorf("key: %w", err)
+		return progression.Progression{}, badRequest("key: %v", err)
 	}
 	key, err := material.NewScale(tonic, material.Ionian)
 	if err != nil {
-		return progression.Progression{}, fmt.Errorf("key %q: %w", body.Key, err)
+		return progression.Progression{}, badRequest("key %q: %v", body.Key, err)
 	}
 	p := progression.New(key, progression.Meter{})
 	for i, sb := range body.Slots {
 		s, err := decodeSlot(sb)
 		if err != nil {
-			return progression.Progression{}, fmt.Errorf("slot %d: %w", i, err)
+			return progression.Progression{}, badRequest("slot %d: %v", i, err)
 		}
 		if p, err = p.Append(s); err != nil {
-			return progression.Progression{}, fmt.Errorf("slot %d: %w", i, err)
+			return progression.Progression{}, badRequest("slot %d: %v", i, err)
 		}
 	}
 	return p, nil
@@ -146,9 +244,13 @@ type (
 
 func (a *api) readings() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		p, err := decodeProgression(r)
+		p, err := decodeProgression(w, r)
 		if err != nil {
-			a.writeProblem(w, http.StatusBadRequest, err.Error())
+			var re *requestError
+			if !errors.As(err, &re) {
+				re = &requestError{status: http.StatusBadRequest, detail: err.Error()}
+			}
+			a.writeProblem(w, re.status, re.detail)
 			return
 		}
 		out, err := readProgression(p)

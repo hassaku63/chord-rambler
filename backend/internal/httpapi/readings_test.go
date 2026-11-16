@@ -167,7 +167,15 @@ func TestReadingsRejectWhatIsNotAProgression(t *testing.T) {
 		{"more after the JSON", `{"key": "C", "slots": []} x`,
 			[]string{"JSON"}},
 		{"beats not an integer", `{"key": "C", "slots": [{"chord": "C", "beats": 2.5}]}`,
-			[]string{"JSON"}},
+			[]string{"slots[0].beats: expected integer"}},
+		{"chord not a string", `{"key": "C", "slots": [{"chord": 5, "beats": 4}]}`,
+			[]string{"slots[0].chord: expected string"}},
+		{"slots not an array", `{"key": "C", "slots": {}}`,
+			[]string{"slots: expected array"}},
+		{"body not an object", `[]`,
+			[]string{"body: expected object"}},
+		{"unknown field", `{"key": "C", "slots": [], "tempo": 120}`,
+			[]string{"unknown field", `"tempo"`}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -241,5 +249,50 @@ func TestReadingsWriteTheRomanNumeralAsRead(t *testing.T) {
 				t.Errorf("roman = %q (%s), want %q (%s)", roman.Numeral, roman.Basis, tt.want, tt.wantBasis)
 			}
 		})
+	}
+}
+
+// TestReadingsRefuseTheBodyBeforeReadingIt checks the 413 and the 415.
+func TestReadingsRefuseTheBodyBeforeReadingIt(t *testing.T) {
+	big := `{"key": "C", "slots": [], "pad": "` + strings.Repeat("a", 64<<10) + `"}`
+	tests := []struct {
+		name        string
+		contentType string
+		body        string
+		want        int
+	}{
+		{"too large", "application/json", big, http.StatusRequestEntityTooLarge},
+		{"text", "text/plain", `{"key": "C", "slots": []}`, http.StatusUnsupportedMediaType},
+		{"none", "", `{"key": "C", "slots": []}`, http.StatusUnsupportedMediaType},
+		{"charset is allowed", "application/json; charset=utf-8", `{"key": "C", "slots": []}`, http.StatusOK},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := httpapi.NewHandler(httpapi.Deps{Logger: slog.New(slog.DiscardHandler)})
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, readingsPath, strings.NewReader(tt.body))
+			if tt.contentType != "" {
+				req.Header.Set("Content-Type", tt.contentType)
+			}
+			handler.ServeHTTP(rec, req)
+			if rec.Code != tt.want {
+				t.Fatalf("status = %d, want %d\n%s", rec.Code, tt.want, rec.Body)
+			}
+			if tt.want != http.StatusOK && rec.Header().Get("Content-Type") != "application/problem+json" {
+				t.Errorf("Content-Type = %q, want a problem", rec.Header().Get("Content-Type"))
+			}
+		})
+	}
+}
+
+// TestReadingsDetailHasNoGoNames checks that a body of the wrong type is
+// described by its place and the type expected, not by the server's types.
+func TestReadingsDetailHasNoGoNames(t *testing.T) {
+	rec := postReadings(t, `{"key": "C", "slots": [{"chord": "C", "beats": 2.5}]}`)
+	body := decode[struct {
+		Detail string `json:"detail"`
+	}](t, rec)
+	if body.Detail != "slots[0].beats: expected integer" {
+		t.Errorf("detail = %q, want %q", body.Detail, "slots[0].beats: expected integer")
 	}
 }
