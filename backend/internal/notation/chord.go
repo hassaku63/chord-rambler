@@ -27,7 +27,8 @@ var ErrTension = errors.New("not a tension: 9, ♭9, ♯9, 11, ♯11, 13 or ♭1
 // ascending order (9, then 11, then 13).
 var ErrTensionOrder = errors.New("tensions must each appear once, in ascending order")
 
-// ErrNoName reports a chord that has no name in the vocabulary, such as C6.
+// ErrNoName reports a chord that has no name in the vocabulary, such as a
+// fifth alone (C5) or a sixth and a ninth (C6/9).
 var ErrNoName = errors.New("chord has no name in the vocabulary")
 
 // kind is one chord kind of the vocabulary: the suffix written after the
@@ -70,6 +71,9 @@ var kinds = []kind{
 	{"sus4", nil, []material.Interval{iv(4, material.Perfect), p5}, false},
 	{"7sus4", nil, []material.Interval{iv(4, material.Perfect), p5, min7}, false},
 	{"add9", nil, []material.Interval{maj3, p5, iv(9, material.Major)}, false},
+	{"6", nil, []material.Interval{maj3, p5, iv(6, material.Major)}, false},
+	{"m6", []string{"min6"}, []material.Interval{min3, p5, iv(6, material.Major)}, false},
+	{"m(add9)", []string{"min(add9)"}, []material.Interval{min3, p5, iv(9, material.Major)}, false},
 }
 
 // tension is a ninth, eleventh or thirteenth with its written name.
