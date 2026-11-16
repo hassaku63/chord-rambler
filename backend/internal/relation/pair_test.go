@@ -124,6 +124,16 @@ func TestSecondaryDominantShapeInCMajor(t *testing.T) {
 		// though the kind of a reading looks at them (#102).
 		{"C(♭6): the sixth A♭ is not looked at", chord(note(material.C, nat), triad+" m6", ""), 0},
 		{"C(add♭2): the second D♭ is not looked at", chord(note(material.C, nat), "m2 "+triad, ""), 0},
+		// A chord with a second, fourth or sixth member has not the shape (the
+		// owner's call on #103), though its notes leave the key or its root
+		// has a fifth below that is a root of the key.
+		{"D6 has a sixth", chord(note(material.D, nat), triad+" M6", ""), 0},
+		{"D7sus4 has a fourth", chord(note(material.D, nat), "P4 P5 m7", ""), 0},
+		{"Dsus4 has a fourth", chord(note(material.D, nat), "P4 P5", ""), 0},
+		{"D(add2) has a second", chord(note(material.D, nat), "M2 "+triad, ""), 0},
+		{"E6 has a sixth", chord(note(material.E, nat), triad+" M6", ""), 0},
+		{"D7(9) keeps the shape: a ninth is a tension", chord(note(material.D, nat), seventh+" M9", ""), 5},
+		{"D/C keeps the shape: the bass is a minor seventh", chord(note(material.D, nat), triad, "m7"), 5},
 		{"G/C♯: C is I", chord(note(material.G, nat), triad, "A4"), 0},
 	}
 	for _, tt := range tests {

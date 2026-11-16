@@ -292,8 +292,13 @@ func bassOf(c material.Chord) string {
 }
 
 // dominantKind reports a major triad or a dominant seventh, whatever the
-// tensions.
+// tensions, with no second, fourth or sixth member.
 func dominantKind(c material.Chord) bool {
+	for _, iv := range c.Intervals() {
+		if n := iv.Number(); n == 2 || n == 4 || n == 6 {
+			return false
+		}
+	}
 	s := c.Seventh()
 	return c.Triad() == material.TriadMajor && (s == material.NoSeventh || s == material.SeventhMinor)
 }

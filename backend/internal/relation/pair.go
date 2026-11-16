@@ -42,6 +42,9 @@ func CommonTones(a, b material.Chord) material.PitchClassSet {
 //
 //   - it is a major triad or a dominant seventh: the triad is major and the
 //     seventh is none or minor, whatever the tensions;
+//   - it has no second, fourth or sixth member: a sus chord, a sixth chord and
+//     an add2 chord are not a secondary dominant (D6, D7sus4, Dsus4 and D(add2)
+//     in C). This is the owner's call on #103;
 //   - a note it is judged by is not in the scale of the key, by pitch class:
 //     the root, the third, the fifth, the minor seventh if any, and a bass a
 //     minor seventh above the root by spelling, member or not (C/B♭ sounds as
@@ -64,9 +67,12 @@ func SecondaryDominantShape(c material.Chord, key material.Scale) (target int, o
 	if s := c.Seventh(); s != material.NoSeventh && s != material.SeventhMinor {
 		return 0, false, nil
 	}
+	if hasSecondFourthOrSixth(c) {
+		return 0, false, nil
+	}
 	var judged []material.PitchClass
-	// The second, fourth and sixth members are not looked at for the shape
-	// (PR #90), though the kind of a reading looks at them (#102).
+	// The chord has no second, fourth or sixth member, so these are all the
+	// members the kind of a reading looks at as well (#102), but the tensions.
 	for _, n := range notesNumbered(c, 1, 3, 5, 7) {
 		judged = append(judged, n.PitchClass())
 	}
@@ -88,6 +94,17 @@ func SecondaryDominantShape(c material.Chord, key material.Scale) (target int, o
 		return degree, true, nil
 	}
 	return 0, false, nil
+}
+
+// hasSecondFourthOrSixth reports whether the chord has a second, a fourth or a
+// sixth member: a sus chord, a sixth chord or an add2 chord.
+func hasSecondFourthOrSixth(c material.Chord) bool {
+	for _, iv := range c.Intervals() {
+		if n := iv.Number(); n == 2 || n == 4 || n == 6 {
+			return true
+		}
+	}
+	return false
 }
 
 // JudgedNotes returns the spelled notes the kind of a reading compares with

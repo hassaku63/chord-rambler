@@ -69,6 +69,10 @@ var (
 	am      = chord(aNat, minTriad, "")
 	a7      = chord(aNat, dom7, "")
 	b7      = chord(bNat, dom7, "")
+	bdim    = chord(bNat, dim, "")
+	d6      = chord(dNat, "M3 P5 M6", "")
+	c6      = chord(cNat, "M3 P5 M6", "")
+	asus4   = chord(aNat, "P4 P5", "")
 )
 
 func readProgression(t *testing.T, p progression.Progression) []reading.SlotReading {
@@ -138,6 +142,13 @@ func TestResolution(t *testing.T) {
 		{"D7 → D7 → G", bars(d7, d7, g), []reading.Resolution{none, expected, none}},
 		// What follows from the calls.
 		{"D → D7 → G: the same target", bars(d, d7, g), []reading.Resolution{none, expected, none}},
+		// A sus or a sixth chord has not the shape of a secondary dominant
+		// (the owner's call on #103), so it says nothing, and what follows a
+		// dominant that is not followed by a chord with a third says nothing.
+		{"D6 → G: not a secondary dominant", bars(d6, g), []reading.Resolution{none, none}},
+		{"G7 → Bdim", bars(g7, bdim), []reading.Resolution{irregular, none}},
+		{"G7 → Asus4: a sus chord", bars(g7, asus4), []reading.Resolution{none, none}},
+		{"D7 → C6: a sixth chord", bars(d7, c6), []reading.Resolution{none, none}},
 		{"D7 → G6: a sixth chord", bars(d7, g6), []reading.Resolution{none, none}},
 		{"A7 → Dm", bars(a7, dm), []reading.Resolution{expected, none}},
 		{"B7 → Em", bars(b7, em), []reading.Resolution{expected, none}},
@@ -206,6 +217,8 @@ func TestCadence(t *testing.T) {
 		{"Gsus4 → C: not V", bars(c, f, gsus4, c), []reading.Cadence{none, none, none, none}},
 		{"ends on Gsus4", bars(c, f, g, gsus4), []reading.Cadence{none, none, none, none}},
 		{"G7 → Csus4", bars(c, f, g7, csus4), []reading.Cadence{none, none, none, none}},
+		{"G7 → Bdim: the end of a full phrase", bars(c, f, g7, bdim), []reading.Cadence{none, none, none, deceptive}},
+		{"D6 → G: ends on V", bars(c, f, d6, g), []reading.Cadence{none, none, none, half}},
 		{"ends on G6: not V", bars(c, f, dm, g6), []reading.Cadence{none, none, none, none}},
 		{"Fsus2 → C: not IV", bars(c, am, fsus2, c), []reading.Cadence{none, none, none, none}},
 		{"Fm → C: borrowed", bars(c, am, fm, c), []reading.Cadence{none, none, none, none}},

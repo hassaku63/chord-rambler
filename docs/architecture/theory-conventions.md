@@ -19,12 +19,13 @@
 
 ## 2. セカンダリー・ドミナント
 
-- **採る立場**: 形で判定する。調の外の音を含む長三和音か属七で、根音の完全 5 度下が、調の長三和音か短三和音（I を除く）の根音であるもの。ローマ数字は「V7/V」のように、向かう先を `/` のあとに書く。
+- **採る立場**: 形で判定する。調の外の音を含む長三和音か属七（sus・6 の和音を除く）で、根音の完全 5 度下が、調の長三和音か短三和音（I を除く）の根音であるもの。ローマ数字は「V7/V」のように、向かう先を `/` のあとに書く。
 - 期待した先へ進まなくても、名前を保つ。解決の仕方を「期待どおり」「変則」として別に述べる。
 - 解決は、セカンダリー・ドミナントと V（5 度の長三和音か属七。バスとテンションは問わない）について述べる。次の和音が期待した先なら「期待どおり」、ほかの和音なら「変則」。期待した先は、次の和音の読みがダイアトニックで、向かう先の度数（V では I）にあり、3 度のある三和音か七の和音であること。C で D7 → G/B は期待どおり、D7 → Gm（借用和音）と A7 → D7 は変則（#103 の所有者の判断）。
 - G → Gsus4 と G7 → Csus4 は、解決を述べない。同じドミナントが続くとき（V → V、向かう先が同じセカンダリー・ドミナントどうし）は、続いた最後の和音でだけ述べる（G → G7 → C は G7 だけ。#103 の所有者の判断）。
 - **別の立場**: 5 度下の和音へ進んだときだけセカンダリー・ドミナントと呼び、進まなければ別の名前（クオリティ・チェンジ）で呼ぶ（SoundQuest）。V/V → IV や V/V → ♭VII を、ポップスで IV や ♭VII が V の代わりになることから説明する（Hutchinson の変則的な解決）。
 - **出どころ**:
+  - 所有者の判断（sus・6 の和音を除く）: https://github.com/hassaku63/chord-rambler/issues/103#issuecomment-6905094291
   - Hutchinson（判定の手順）: https://musictheory.pugetsound.edu/mt21c/AnalyzingSecondaryDominants.html
   - Hutchinson（減三和音はトニック化しない）: https://musictheory.pugetsound.edu/mt21c/Tonicization.html
   - Hutchinson（変則的な解決。V の代わりの IV と ♭VII）: https://musictheory.pugetsound.edu/mt21c/IrregularResoltionsOfSecondaryDominants.html
