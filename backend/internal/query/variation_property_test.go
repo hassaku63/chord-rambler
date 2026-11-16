@@ -62,7 +62,8 @@ func eachAsked(t *testing.T, f func(key material.Scale, c material.Chord, vs []q
 
 // The labels are the facts of reading the variation itself (誤り 5 in
 // docs/architecture/explanations.md): the main reading of reading.ReadChord,
-// the cautions of reading.TensionCautions and the members of the chord.
+// the cautions of reading.TensionCautions, the members of the chord, and the
+// members whose spelling is not in the scale of the key.
 func TestLabelsAreTheReadingOfTheVariation(t *testing.T) {
 	eachAsked(t, func(key material.Scale, c material.Chord, vs []query.Variation) {
 		for _, v := range vs {
@@ -83,6 +84,15 @@ func TestLabelsAreTheReadingOfTheVariation(t *testing.T) {
 			}
 			if !slices.Equal(v.Members.Notes, v.Chord.Notes()) {
 				t.Errorf("%v: members label %v", v.Chord.Notes(), v.Members.Notes)
+			}
+			var outOfKey []material.NoteName
+			for _, n := range v.Chord.Notes() {
+				if !slices.Contains(key.Notes(), n) {
+					outOfKey = append(outOfKey, n)
+				}
+			}
+			if !slices.Equal(v.OutOfKey.Notes, outOfKey) {
+				t.Errorf("%v in %s major (asked %v): out-of-key label %v; want %v", v.Chord.Notes(), key.Tonic(), c.Notes(), v.OutOfKey.Notes, outOfKey)
 			}
 		}
 	})
@@ -152,7 +162,7 @@ func TestVariationsFollowTheKey(t *testing.T) {
 				if !slices.Equal(g.Chord.Intervals(), b.Chord.Intervals()) || g.IsInput != b.IsInput ||
 					gm.Kind != bm.Kind || gm.Function != bm.Function || gm.Target != bm.Target || !slices.Equal(gm.Modes, bm.Modes) ||
 					!slices.Equal(g.Cautions.Cautions, b.Cautions.Cautions) ||
-					!slices.Equal(above(g.Chord.Root(), g.OutOfKey.Added), above(b.Chord.Root(), b.OutOfKey.Added)) {
+					!slices.Equal(above(g.Chord.Root(), g.OutOfKey.Notes), above(b.Chord.Root(), b.OutOfKey.Notes)) {
 					t.Errorf("%v in %s major: variation %d %v differs from %v in C", moved.Notes(), tonic, i, g.Chord.Notes(), b.Chord.Notes())
 				}
 			}

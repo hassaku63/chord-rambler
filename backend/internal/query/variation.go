@@ -3,6 +3,7 @@ package query
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/hassaku63/chord-rambler/backend/internal/material"
 	"github.com/hassaku63/chord-rambler/backend/internal/reading"
@@ -16,8 +17,8 @@ import (
 var ErrNoTriadQuality = errors.New("chord has no major, minor or diminished triad")
 
 // Variation is one variation of a chord: a chord on the same root, without a
-// bass, whose seventh, sus or tension differs (変形 in docs/glossary.md), and
-// its labels.
+// bass, whose sixth, seventh, sus or tension differs (変形 in
+// docs/glossary.md), and its labels.
 type Variation struct {
 	// Chord is the variation.
 	Chord material.Chord
@@ -45,8 +46,8 @@ type ReadingLabel struct {
 	Main reading.Reading
 }
 
-// Basis returns Rule.
-func (ReadingLabel) Basis() Basis { return Rule }
+// Basis returns School.
+func (ReadingLabel) Basis() Basis { return School }
 
 // CautionsLabel holds the tensions of the variation that tend to sound muddy
 // in the key (reading.TensionCautions).
@@ -54,17 +55,16 @@ type CautionsLabel struct {
 	Cautions []reading.TensionCaution
 }
 
-// Basis returns Rule.
-func (CautionsLabel) Basis() Basis { return Rule }
+// Basis returns School.
+func (CautionsLabel) Basis() Basis { return School }
 
-// OutOfKeyLabel holds the notes the variation adds from outside the key:
-// members of the variation whose pitch class is not in the scale of the key
-// and not among the members of the chord asked about (its bass left out), in
-// the order of material.Chord.Notes. No notes means it adds none; the
-// variation may still hold notes from outside the key that the chord asked
-// about has (D in the list of D7, in C).
+// OutOfKeyLabel holds the notes of the variation that are outside the key:
+// members whose spelling is not among the notes of the scale of the key (the
+// same comparison as the kind of a reading, #102), in the order of
+// material.Chord.Notes. No notes means it has none. The chord asked about is
+// not looked at.
 type OutOfKeyLabel struct {
-	Added []material.NoteName
+	Notes []material.NoteName
 }
 
 // Basis returns Computation.
@@ -141,7 +141,7 @@ func interval(number int, q material.Quality) material.Interval {
 //
 // Every variation is on the root of the chord and has no bass. The one equal
 // to the chord itself, bass included, is marked (IsInput), so C/E marks none.
-// Each carries its labels; a variation that adds notes from outside the key is
+// Each carries its labels; a variation that has notes from outside the key is
 // listed as well.
 //
 // It fails for a key other than Ionian (relation.ErrNotMajor), for a chord
@@ -176,19 +176,19 @@ func Variations(c material.Chord, key material.Scale) ([]Variation, error) {
 			Members:  MembersLabel{Notes: v.Notes()},
 			Reading:  ReadingLabel{Main: read.Main},
 			Cautions: CautionsLabel{Cautions: cautions},
-			OutOfKey: OutOfKeyLabel{Added: addedOutOfKey(v, c, key)},
+			OutOfKey: OutOfKeyLabel{Notes: notesOutOfKey(v, key)},
 		})
 	}
 	return out, nil
 }
 
-// addedOutOfKey returns the members of the variation whose pitch class is in
-// neither the scale of the key nor the members of the chord asked about.
-func addedOutOfKey(v, asked material.Chord, key material.Scale) []material.NoteName {
-	known := key.PitchClasses().Union(asked.PitchClasses())
+// notesOutOfKey returns the members of the variation whose spelling is not
+// among the notes of the scale of the key.
+func notesOutOfKey(v material.Chord, key material.Scale) []material.NoteName {
+	inKey := key.Notes()
 	var out []material.NoteName
 	for _, n := range v.Notes() {
-		if !known.Contains(n.PitchClass()) {
+		if !slices.Contains(inKey, n) {
 			out = append(out, n)
 		}
 	}

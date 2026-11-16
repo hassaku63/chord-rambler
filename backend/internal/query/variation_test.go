@@ -97,7 +97,7 @@ var facts = read{kind: reading.FactsOnly}
 
 // variation is one expected variation: its members (on the root of the chord
 // asked about, no bass), whether it is the chord asked about, its main reading
-// and the notes it adds from outside the key.
+// and its notes from outside the key (spellings not in the scale).
 type variation struct {
 	members  string
 	input    bool
@@ -143,8 +143,8 @@ func checkVariations(t *testing.T, c material.Chord, key material.Scale, want []
 		if len(g.Cautions.Cautions) != 0 {
 			t.Errorf("%d (%s): cautions %v; want none", i, w.members, g.Cautions.Cautions)
 		}
-		if s := names(g.OutOfKey.Added); s != w.outOfKey {
-			t.Errorf("%d (%s): adds from outside the key %q; want %q", i, w.members, s, w.outOfKey)
+		if s := names(g.OutOfKey.Notes); s != w.outOfKey {
+			t.Errorf("%d (%s): notes from outside the key %q; want %q", i, w.members, s, w.outOfKey)
 		}
 	}
 }
@@ -188,8 +188,7 @@ func TestVariationsInCMajor(t *testing.T) {
 		want  []variation
 	}{
 		{"G", chord("G", "M3 P5", ""), gList(0)},
-		// G7 has the same list, and the mark moves to G7. Gmaj7 adds F♯; the
-		// F of G7 is in the key anyway.
+		// G7 has the same list, and the mark moves to G7. Gmaj7 has F♯.
 		{"G7", chord("G", "M3 P5 m7", ""), gList(2)},
 		{"Am", chord("A", "m3 P5", ""), []variation{
 			{"A C E", true, dia(reading.Tonic), ""},
@@ -206,13 +205,25 @@ func TestVariationsInCMajor(t *testing.T) {
 			// A♭ and B together are in no church mode on C (#102, #105).
 			{"B D F A♭", false, facts, "A♭"},
 		}},
-		// Fm is borrowed already; only the notes it lacks count as added.
+		// Em(add9) and Em9 have F♯ and are the diatonic tonic all the same:
+		// the kind does not look at the ninth. The F♯ of Esus2 is the second,
+		// which is judged, and so is the C♯ of Em6.
+		{"Em", chord("E", "m3 P5", ""), []variation{
+			{"E G B", true, dia(reading.Tonic), ""},
+			{"E G B D", false, dia(reading.Tonic), ""},
+			{"E G B C♯", false, facts, "C♯"},
+			{"E G B F♯", false, dia(reading.Tonic), "F♯"},
+			{"E G B D F♯", false, dia(reading.Tonic), "F♯"},
+			{"E F♯ B", false, lydian, "F♯"},
+			{"E A B", false, dia(reading.Tonic), ""},
+		}},
+		// Fm is borrowed already; every note it has outside the key counts.
 		{"Fm", chord("F", "m3 P5", ""), []variation{
-			{"F A♭ C", true, fromMinor, ""},
-			{"F A♭ C E♭", false, fromMinor, "E♭"},
-			{"F A♭ C D", false, bor(material.Aeolian), ""},
-			{"F A♭ C G", false, fromMinor, ""},
-			{"F A♭ C E♭ G", false, fromMinor, "E♭"},
+			{"F A♭ C", true, fromMinor, "A♭"},
+			{"F A♭ C E♭", false, fromMinor, "A♭ E♭"},
+			{"F A♭ C D", false, bor(material.Aeolian), "A♭"},
+			{"F A♭ C G", false, fromMinor, "A♭"},
+			{"F A♭ C E♭ G", false, fromMinor, "A♭ E♭"},
 			{"F G C", false, dia(reading.Subdominant), ""},
 			// The sus4 adds B♭ from outside the key, and is borrowed.
 			{"F B♭ C", false, bor(material.Dorian, material.Phrygian, material.Mixolydian, material.Aeolian, material.Locrian), "B♭"},
@@ -220,15 +231,15 @@ func TestVariationsInCMajor(t *testing.T) {
 		// D7 is V7/V. The triad, add9 and 9 keep the shape; maj7, 6 and the
 		// sus chords do not.
 		{"D7", chord("D", "M3 P5 m7", ""), []variation{
-			{"D F♯ A", false, sec(5), ""},
-			{"D F♯ A C♯", false, facts, "C♯"},
-			{"D F♯ A C", true, sec(5), ""},
-			{"D F♯ A B", false, lydian, ""},
-			{"D F♯ A E", false, sec(5), ""},
+			{"D F♯ A", false, sec(5), "F♯"},
+			{"D F♯ A C♯", false, facts, "F♯ C♯"},
+			{"D F♯ A C", true, sec(5), "F♯"},
+			{"D F♯ A B", false, lydian, "F♯"},
+			{"D F♯ A E", false, sec(5), "F♯"},
 			{"D E A", false, dia(reading.Subdominant), ""},
 			{"D G A", false, dia(reading.Subdominant), ""},
 			{"D G A C", false, dia(reading.Subdominant), ""},
-			{"D F♯ A C E", false, sec(5), ""},
+			{"D F♯ A C E", false, sec(5), "F♯"},
 		}},
 		// The bass is left out: C/E has the list of C, and none of the
 		// variations, having no bass, is C/E itself.
@@ -297,8 +308,8 @@ func TestLabelBases(t *testing.T) {
 		want query.Basis
 	}{
 		{"members", query.MembersLabel{}.Basis(), query.Definition},
-		{"reading", query.ReadingLabel{}.Basis(), query.Rule},
-		{"cautions", query.CautionsLabel{}.Basis(), query.Rule},
+		{"reading", query.ReadingLabel{}.Basis(), query.School},
+		{"cautions", query.CautionsLabel{}.Basis(), query.School},
 		{"out of key", query.OutOfKeyLabel{}.Basis(), query.Computation},
 	}
 	for _, tt := range tests {

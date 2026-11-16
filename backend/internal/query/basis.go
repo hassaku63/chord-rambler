@@ -4,22 +4,23 @@ import "fmt"
 
 // Basis is the kind of knowledge a fact rests on (根拠の種類 in
 // docs/glossary.md). The text says a fact in the words its basis allows
-// (docs/architecture/explanations.md). The zero value is Definition.
+// (docs/architecture/explanations.md). The zero value is none of them: a
+// label that never set its basis shows as Basis(0).
 type Basis int
 
 // The bases the queries return so far.
 const (
 	// Definition is what the materials define, such as the members of a
 	// chord.
-	Definition Basis = iota
-	// Computation is a fact computed without a convention, such as whether a
+	Definition Basis = iota + 1
+	// Computation is a fact computed without a rule of a school, such as whether a
 	// note is in the scale of the key.
 	Computation
-	// Rule is a rule of the school of theory the readings follow (流儀,
+	// School is a rule of the school of theory the readings follow (流儀,
 	// docs/architecture/theory-conventions.md), such as the kind or the
 	// function of a chord. It is not a convention of practice (慣習), which
 	// the catalogues hold.
-	Rule
+	School
 )
 
 // String returns the name of the constant, for tests and logs. The words
@@ -30,8 +31,8 @@ func (b Basis) String() string {
 		return "Definition"
 	case Computation:
 		return "Computation"
-	case Rule:
-		return "Rule"
+	case School:
+		return "School"
 	default:
 		return fmt.Sprintf("Basis(%d)", int(b))
 	}
