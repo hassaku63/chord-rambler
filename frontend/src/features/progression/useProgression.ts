@@ -118,6 +118,11 @@ export type ProgressionState = {
   addUnchosen: () => void;
   /** Puts the chord in place of the slot's, keeping its length, its role and its base. */
   replaceChord: (index: number, name: string) => void;
+  /**
+   * Puts a candidate in the slot, keeping its length and its role; the
+   * candidate becomes the base of the slot, as one added after the last.
+   */
+  fillSlot: (index: number, name: string) => void;
   remove: (index: number) => void;
   setBeats: (index: number, beats: number) => void;
   /** Puts a role of the contract on the slot; an empty string takes its role away. */
@@ -200,6 +205,19 @@ export function useProgression(): ProgressionState {
         ),
       [changeSlots],
     ),
+    fillSlot: useCallback((index: number, chord: string) => {
+      if (chord !== '') {
+        setHeld((h) => ({
+          progression: {
+            ...h.progression,
+            slots: h.progression.slots.map((slot, i) =>
+              i === index ? withRole({ chord, beats: slot.beats }, slot.role ?? null) : slot,
+            ),
+          },
+          bases: h.bases.map((base, i) => (i === index ? chord : base)),
+        }));
+      }
+    }, []),
     remove: useCallback((index: number) => {
       setHeld((h) => ({
         progression: { ...h.progression, slots: h.progression.slots.filter((_, i) => i !== index) },

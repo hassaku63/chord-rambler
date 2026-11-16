@@ -1,11 +1,26 @@
-import { useRef } from 'react';
-import type { Candidate, CandidateGroups } from '@/shared/api/client';
-import { candidateMarks, candidateRows } from './labels';
+import { useId, useRef } from 'react';
+import type { Candidate } from '@/shared/api/client';
+import type { LabelRow } from './labels';
 import { LabelList } from './LabelList';
 import { TERMS, wordFor } from './terms';
 
-type ItemProps = {
-  candidate: Candidate;
+/** The words of a list of candidates, which tell one list from another on the screen. */
+export type CandidateListWords = {
+  heading: string;
+  /** The name of a group's list, from the word of its kind. */
+  list: (kind: string) => string;
+  /** The add button: 足す, この枠に入れる. Its name puts the chord before it (F を足す). */
+  add: string;
+  /** The name of a candidate's trial button. */
+  trial: (chord: string) => string;
+};
+
+/** How a list shows its candidates: their short marks and their labels. */
+type Shown<C> = { marksOf: (candidate: C) => string[]; rowsOf: (candidate: C) => LabelRow[] };
+
+type ItemProps<C> = Shown<C> & {
+  candidate: C;
+  words: CandidateListWords;
   auditioning: boolean;
   onAdd: () => void;
   onAudition: () => void;
@@ -15,7 +30,15 @@ type ItemProps = {
  * One candidate: its chord, Roman numeral and short marks, adding and trying,
  * and its labels. The one on trial says so in words, not by colour alone.
  */
-function CandidateItem({ candidate, auditioning, onAdd, onAudition }: ItemProps) {
+function CandidateItem<C extends Candidate>({
+  candidate,
+  words,
+  marksOf,
+  rowsOf,
+  auditioning,
+  onAdd,
+  onAudition,
+}: ItemProps<C>) {
   const name = candidate.chord.name;
   return (
     <li
@@ -25,14 +48,14 @@ function CandidateItem({ candidate, auditioning, onAdd, onAudition }: ItemProps)
       {auditioning && <span className="candidate-auditioning">試聴中</span>}
       <span className="slot-name">{name}</span>
       <span>{candidate.roman.numeral}</span>
-      <span>{candidateMarks(candidate).join(' ')}</span>
+      <span>{marksOf(candidate).join(' ')}</span>
       <span className="candidate-actions">
-        <button type="button" aria-label={`${name} を足す`} onClick={onAdd}>
-          足す
+        <button type="button" aria-label={`${name} を${words.add}`} onClick={onAdd}>
+          {words.add}
         </button>
         <button
           type="button"
-          aria-label={`${name} を試聴する`}
+          aria-label={words.trial(name)}
           aria-pressed={auditioning}
           onClick={onAudition}
         >
@@ -41,16 +64,15 @@ function CandidateItem({ candidate, auditioning, onAdd, onAudition }: ItemProps)
       </span>
       <details>
         <summary>詳しい札</summary>
-        <LabelList rows={candidateRows(candidate)} />
+        <LabelList rows={rowsOf(candidate)} />
       </details>
     </li>
   );
 }
 
-type Props = {
-  groups: CandidateGroups['groups'];
-  /** The beats of the slot a candidate goes in. */
-  beats: number;
+type Props<C> = Shown<C> & {
+  words: CandidateListWords;
+  groups: { kind: string; candidates: C[] }[];
   /** Whether the answer to the latest progression is still awaited: the groups are the last answer. */
   busy: boolean;
   /** The groups the user opened or closed, by kind; the others keep their first state. */
@@ -64,14 +86,16 @@ type Props = {
 };
 
 /**
- * The candidates for the slot after the last, by group (C1 of #112): the
- * diatonic group open, the others opened to be seen. The last answer stays
- * while the next is awaited, and adding a candidate puts the focus on the
- * heading, so that neither the focus nor the open groups are lost.
+ * The candidates for a slot, by group (C1 of #112): the diatonic group open,
+ * the others opened to be seen, each in the order the server gives. The last
+ * answer stays while the next is awaited, and adding a candidate puts the
+ * focus on the heading, so that neither the focus nor the open groups are lost.
  */
-export function CandidateList({
+export function CandidateList<C extends Candidate>({
+  words,
   groups,
-  beats,
+  marksOf,
+  rowsOf,
   busy,
   opened,
   onToggle,
@@ -79,12 +103,13 @@ export function CandidateList({
   onAdd,
   onAudition,
   onStop,
-}: Props) {
+}: Props<C>) {
   const heading = useRef<HTMLHeadingElement>(null);
+  const id = useId();
   return (
-    <section className="candidates" aria-labelledby="candidates-heading" aria-busy={busy}>
-      <h2 id="candidates-heading" ref={heading} tabIndex={-1}>
-        末尾に足す候補（{beats} 拍）
+    <section className="candidates" aria-labelledby={id} aria-busy={busy}>
+      <h2 id={id} ref={heading} tabIndex={-1}>
+        {words.heading}
       </h2>
       {busy && <p>新しい候補を待っています。</p>}
       {groups.map((group) => {
@@ -98,13 +123,16 @@ export function CandidateList({
             <summary>
               {kind}（{group.candidates.length}）
             </summary>
-            <ul className="candidate-list" role="list" aria-label={`${kind}の候補`}>
+            <ul className="candidate-list" role="list" aria-label={words.list(kind)}>
               {group.candidates.map((candidate) => {
                 const name = candidate.chord.name;
                 return (
                   <CandidateItem
                     key={name}
                     candidate={candidate}
+                    words={words}
+                    marksOf={marksOf}
+                    rowsOf={rowsOf}
                     auditioning={auditioning === name}
                     onAdd={() => {
                       onAdd(name);

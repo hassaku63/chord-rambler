@@ -126,6 +126,32 @@ export async function getNextCandidates(
   return { ok: false, problem: parseProblem(body) };
 }
 
+/** The groups of the candidates for a slot to fill, in the contract's order. */
+export type SlotCandidateGroups = Open<components['schemas']['SlotCandidateGroups']>;
+/** One candidate for a slot to fill, with the labels that look at the next slot and the role. */
+export type SlotCandidate = Open<components['schemas']['SlotCandidate']>;
+
+/** The answer to a request for the candidates for a slot: the groups, or the problem. */
+export type SlotCandidatesAnswer =
+  { ok: true; groups: SlotCandidateGroups['groups'] } | { ok: false; problem: Problem };
+
+/**
+ * Asks for the candidates for the slot of the progression (counted from 0).
+ * Resolves with the problem when the server refuses; rejects when the server
+ * cannot be reached or answers with a body the contract does not describe.
+ */
+export async function getSlotCandidates(
+  progression: Progression,
+  slot: number,
+  signal?: AbortSignal,
+): Promise<SlotCandidatesAnswer> {
+  const { ok, body } = await post('/progressions/slot-candidates', { progression, slot }, signal);
+  if (ok) {
+    return { ok: true, groups: parseSlotCandidateGroups(body).groups };
+  }
+  return { ok: false, problem: parseProblem(body) };
+}
+
 /** One variation of a chord and its labels. */
 export type Variation = Open<components['schemas']['Variation']>;
 
@@ -315,8 +341,35 @@ function parseCandidate(value: unknown, where: string): Candidate {
   return candidate;
 }
 
-/** Turns an unknown body into the groups of candidates, or throws. */
-export function parseCandidateGroups(body: unknown): CandidateGroups {
+function parseSlotCandidate(value: unknown, where: string): SlotCandidate {
+  const fields = fieldsAt(value, where);
+  const at = (name: string) => `${where}.${name}`;
+  const candidate: SlotCandidate = parseCandidate(fields, where);
+  if ('nextResolution' in fields) {
+    candidate.nextResolution = oneStringLabel(
+      fields.nextResolution,
+      'resolution',
+      at('nextResolution'),
+    );
+  }
+  if ('nextCadence' in fields) {
+    candidate.nextCadence = oneStringLabel(fields.nextCadence, 'cadence', at('nextCadence'));
+  }
+  if ('roleFit' in fields) {
+    const { fields: r, basis } = labelAt(fields.roleFit, at('roleFit'));
+    const unmet = arrayAt(r, 'unmet', at('roleFit')).map((condition, i) => {
+      if (typeof condition !== 'string') {
+        throw new UnexpectedBody(`${at('roleFit')}.unmet[${i}]`);
+      }
+      return condition;
+    });
+    candidate.roleFit = { basis, fit: stringAt(r, 'fit', at('roleFit')), unmet };
+  }
+  return candidate;
+}
+
+/** The groups of a body, each candidate turned by the function given. */
+function parseGroups<C>(body: unknown, parse: (value: unknown, where: string) => C) {
   const fields = fieldsAt(body, 'body');
   return {
     groups: arrayAt(fields, 'groups', 'body').map((value, i) => {
@@ -325,11 +378,21 @@ export function parseCandidateGroups(body: unknown): CandidateGroups {
       return {
         kind: stringAt(group, 'kind', where),
         candidates: arrayAt(group, 'candidates', where).map((c, j) =>
-          parseCandidate(c, `${where}.candidates[${j}]`),
+          parse(c, `${where}.candidates[${j}]`),
         ),
       };
     }),
   };
+}
+
+/** Turns an unknown body into the groups of candidates, or throws. */
+export function parseCandidateGroups(body: unknown): CandidateGroups {
+  return parseGroups(body, parseCandidate);
+}
+
+/** Turns an unknown body into the groups of the candidates for a slot, or throws. */
+export function parseSlotCandidateGroups(body: unknown): SlotCandidateGroups {
+  return parseGroups(body, parseSlotCandidate);
 }
 
 function parseNotesLabel(value: unknown, where: string) {

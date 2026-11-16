@@ -1,4 +1,4 @@
-import type { Candidate, SlotReading } from '@/shared/api/client';
+import type { Candidate, SlotCandidate, SlotReading } from '@/shared/api/client';
 import { PARALLEL_MINOR, TARGET_NUMERALS, TERMS, wordFor } from './terms';
 
 /** One label of the detailed view: what it is about, its word, and its basis. */
@@ -100,8 +100,11 @@ export function candidateMarks(candidate: Candidate): string[] {
   return marks.filter((mark): mark is string => typeof mark === 'string');
 }
 
-/** The labels of a candidate, in the order its detailed view lists them. */
-export function candidateRows(candidate: Candidate): LabelRow[] {
+/**
+ * The labels of a candidate, in the order its detailed view lists them; the
+ * resolution of the chord before it under the term given.
+ */
+function rowsOf(candidate: Candidate, resolutionTerm: string): LabelRow[] {
   const { rootMotion, commonTones, resolution, cadence, preference } = candidate;
   const grade = preference && preferenceWord(preference);
   return [
@@ -109,11 +112,58 @@ export function candidateRows(candidate: Candidate): LabelRow[] {
     ...(rootMotion ? row('根音の動き', rootMotion.interval, rootMotion.basis) : []),
     ...(commonTones ? row('共通音', `${commonTones.count}`, commonTones.basis) : []),
     ...(resolution
-      ? row('末尾の和音の解決', wordFor(TERMS.resolution, resolution.resolution), resolution.basis)
+      ? row(resolutionTerm, wordFor(TERMS.resolution, resolution.resolution), resolution.basis)
       : []),
     ...(cadence ? row('終止', wordFor(TERMS.cadence, cadence.cadence), cadence.basis) : []),
     ...(preference && grade
       ? row('好み', `${moveOf(preference)}、${grade}`, preference.basis)
       : []),
+  ];
+}
+
+/** The labels of a candidate for the slot after the last. */
+export function candidateRows(candidate: Candidate): LabelRow[] {
+  return rowsOf(candidate, '末尾の和音の解決');
+}
+
+/** A word with what it is about (次の枠へ 解決), or null when there is no word. */
+function about(what: string, word: string | null): string | null {
+  return word === null ? null : `${what} ${word}`;
+}
+
+/**
+ * The short marks of a candidate for a slot to fill: those of a candidate,
+ * then how it goes on to the next slot, the cadence of the next slot, and its
+ * role fit.
+ */
+export function slotCandidateMarks(candidate: SlotCandidate): string[] {
+  const { nextResolution, nextCadence, roleFit } = candidate;
+  const marks = [
+    ...candidateMarks(candidate),
+    nextResolution && about('次の枠へ', wordFor(TERMS.resolution, nextResolution.resolution)),
+    nextCadence && about('次の枠', wordFor(TERMS.cadence, nextCadence.cadence)),
+    fitMark(roleFit),
+  ];
+  return marks.filter((mark): mark is string => typeof mark === 'string');
+}
+
+/** The labels of a candidate for a slot to fill, the conditions it does not meet last. */
+export function slotCandidateRows(candidate: SlotCandidate): LabelRow[] {
+  const { nextResolution, nextCadence, roleFit } = candidate;
+  const unmet = roleFit?.unmet.map((id) => wordFor(TERMS.unmet, id) ?? id).join('、');
+  return [
+    ...rowsOf(candidate, '前の枠の和音の解決'),
+    ...(nextResolution
+      ? row(
+          '次の枠への解決',
+          wordFor(TERMS.resolution, nextResolution.resolution),
+          nextResolution.basis,
+        )
+      : []),
+    ...(nextCadence
+      ? row('次の枠の終止', wordFor(TERMS.cadence, nextCadence.cadence), nextCadence.basis)
+      : []),
+    ...(roleFit ? row('役割に合うか', wordFor(TERMS.fit, roleFit.fit), roleFit.basis) : []),
+    ...(roleFit && unmet ? row('合わない理由', unmet, roleFit.basis) : []),
   ];
 }

@@ -84,6 +84,19 @@ export const TERMS = {
     wistful: '切なさ',
     linger: '余韻',
   } satisfies Record<Schemas['Role'], string>,
+  /**
+   * The conditions of a structural role a slot does not meet, as the table of
+   * docs/architecture/theory-conventions.md (7) names them.
+   */
+  unmet: {
+    shape: '3 度のある三和音か七の和音でない',
+    function: '機能が違う',
+    'previous-v': '前の枠が V でない',
+    'next-dominant': '次の枠がドミナントでない',
+    cadence: '終止が付かない',
+    'another-root': '根音が前の枠と同じ',
+    'expected-resolution': '解決が期待どおりでない',
+  } satisfies Record<Schemas['RoleCondition'], string>,
 } as const;
 
 /** A role, as the contract names it. */
