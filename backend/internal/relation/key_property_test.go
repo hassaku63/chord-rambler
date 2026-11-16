@@ -67,27 +67,6 @@ func TestPositionOfRoundTrip(t *testing.T) {
 	})
 }
 
-// The parallel modes agree with the scales of the modes on the tonic, wherever
-// such a scale can be spelled.
-func TestParallelModesAgreeWithScales(t *testing.T) {
-	chordsInMajorKeys(t, func(key material.Scale, _ material.Position, c material.Chord) {
-		got := relation.ParallelModes(c, key)
-		for m := material.Ionian; m <= material.Locrian; m++ {
-			s, err := material.NewScale(key.Tonic(), m)
-			if errors.Is(err, material.ErrAlterOutOfRange) {
-				continue
-			}
-			if err != nil {
-				t.Fatalf("NewScale(%s, %s): %v", key.Tonic(), m, err)
-			}
-			if want := s.Contains(c.SoundingPitchClasses()); slices.Contains(got, m) != want {
-				t.Errorf("%s with %v: %s in ParallelModes = %v; the scale contains it: %v",
-					c.Root(), c.Intervals(), m, !want, want)
-			}
-		}
-	})
-}
-
 // Every note name (35: seven letters, five alterations) as a
 // root, with every shape, in every key: if the chord has a position, the chord
 // of the position is the chord; if it has none, the error is ErrNoPosition.

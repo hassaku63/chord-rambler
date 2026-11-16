@@ -149,7 +149,7 @@ func readMain(c material.Chord, key material.Scale) (Reading, error) {
 		r.Kind, r.Target = SecondaryDominant, target
 		return r, nil
 	}
-	modes := modesHolding(relation.JudgedNotes(c), key.Tonic())
+	modes := relation.ModesHolding(relation.JudgedNotes(c), key.Tonic())
 	if slices.Contains(modes, material.Ionian) {
 		pos, err := relation.PositionOf(c, key)
 		if err != nil {
@@ -165,36 +165,4 @@ func readMain(c material.Chord, key material.Scale) (Reading, error) {
 		r.Kind, r.Modes = Borrowed, modes
 	}
 	return r, nil
-}
-
-// modesHolding returns the modes on the tonic, in the order of material.Mode,
-// that hold every note by spelling: the interval from the tonic up to the note
-// is the interval from C up to a note of the mode on C.
-func modesHolding(notes []material.NoteName, tonic material.NoteName) []material.Mode {
-	var out []material.Mode
-	for m := material.Ionian; m <= material.Locrian; m++ {
-		// Every mode on C is spelled within a single sharp or flat.
-		onC, _ := material.NewScale(material.NoteName{}, m)
-		var degrees []material.Interval
-		for _, n := range onC.Notes() {
-			// Two notes of a mode on C always have an interval.
-			iv, _ := material.IntervalBetween(material.NoteName{}, n)
-			degrees = append(degrees, iv)
-		}
-		if holdsAll(degrees, notes, tonic) {
-			out = append(out, m)
-		}
-	}
-	return out
-}
-
-func holdsAll(degrees []material.Interval, notes []material.NoteName, tonic material.NoteName) bool {
-	for _, n := range notes {
-		// No interval of the five qualities is no interval of a mode either.
-		iv, err := material.IntervalBetween(tonic, n)
-		if err != nil || !slices.Contains(degrees, iv) {
-			return false
-		}
-	}
-	return true
 }
