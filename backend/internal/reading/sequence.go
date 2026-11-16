@@ -136,16 +136,12 @@ func ReadProgression(p progression.Progression) ([]SlotReading, error) {
 	}
 	places := relation.Places(p)
 	out := make([]SlotReading, len(slots))
-	end := 0 // beats from the start of the progression to the end of the slot
 	for i, r := range read {
-		end += slots[i].Beats()
 		out[i] = SlotReading{HasChord: r.ok, Chord: r.reading}
 		if i+1 < len(read) {
 			out[i].Resolution = resolution(r, read[i+1])
 		}
-		// No slot crosses a phrase, so a phrase is full when its last slot
-		// ends on a multiple of the length of a phrase.
-		if places[i].LastInPhrase && end%p.PhraseBeats() == 0 {
+		if places[i].LastInPhrase && places[i].FullPhrase {
 			var prev slotChord
 			if places[i].IndexInPhrase > 1 {
 				prev = read[i-1]
