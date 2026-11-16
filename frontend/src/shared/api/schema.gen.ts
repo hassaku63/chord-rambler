@@ -445,7 +445,7 @@ export interface operations {
           'application/json': components['schemas']['ProgressionReading'];
         };
       };
-      /** @description The body is not JSON, or does not describe a progression: a chord name or a key that cannot be read, an unknown role or content, a slot with both or neither of chord and content, a length of less than one beat, or a slot that crosses the boundary of a phrase. The detail names the slot (counted from 0). A field the contract does not have, or a value of the wrong type, is also a 400; the detail gives the place and the type expected (slots[0].beats: expected integer). */
+      /** @description The body is not JSON, or does not describe a progression: a chord name or a key that cannot be read, an unknown role or content, a slot with both or neither of chord and content, a length of less than one beat, more than 256 slots, or a slot that crosses the boundary of a phrase. The detail names the slot (counted from 0). A field the contract does not have, or a value of the wrong type, is also a 400; the detail gives the place and the type expected (slots[0].beats: expected integer). */
       400: {
         headers: {
           [name: string]: unknown;

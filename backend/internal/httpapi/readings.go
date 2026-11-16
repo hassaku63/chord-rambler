@@ -37,6 +37,11 @@ type slotBody struct {
 // the bytes bounds it.
 const maxBodyBytes = 64 << 10
 
+// maxSlots is the most slots a progression of a body may have: 64 bars of 4/4
+// cut into single beats. The bytes alone allow some 2,000 short slots, and
+// the work on them grows with the square of the number.
+const maxSlots = 256
+
 // requestError is a failure of the request, with the status it is answered by.
 // Its detail says where and what, never how the server reads it.
 type requestError struct {
@@ -196,6 +201,9 @@ func parseKey(name string) (material.Scale, error) {
 // progression builds the progression of the body with the engine's
 // constructors, which check it. Every error it returns is a *requestError.
 func (body progressionBody) progression() (progression.Progression, error) {
+	if len(body.Slots) > maxSlots {
+		return progression.Progression{}, badRequest("a progression has at most %d slots", maxSlots)
+	}
 	key, err := parseKey(body.Key)
 	if err != nil {
 		return progression.Progression{}, err
