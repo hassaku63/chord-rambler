@@ -32,6 +32,7 @@ type route struct {
 // same operations; a test keeps the two in step.
 var routes = []route{
 	{method: http.MethodGet, path: "/health", handler: (*api).health},
+	{method: http.MethodPost, path: "/progressions/readings", handler: (*api).readings},
 }
 
 type api struct {

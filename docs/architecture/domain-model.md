@@ -406,3 +406,17 @@
 - 強さは定数 `Velocity`（64。0〜127 の中ほど）。
 - 列は枠の順で、1 つの枠の中は、バス、上の声部（根音から、和音の音程の並び `Intervals` の順）。音程の数の順なので、語彙の和音では低い順になる。
 - 上の声部の上の端は決めない。根音が B4 で長 13 度を持つ和音は、92（G♯6）まで届く。
+
+## API
+
+API の形（進行の送り方、経路、応答の札、失敗）は、契約 `docs/api/openapi.yaml` が正。ハンドラ（`backend/internal/httpapi`）は、本文をエンジンの構築子（`notation.ParseNoteName`、`material.NewScale`、`notation.ParseChord`、`progression.NewSlot`、`WithRole`、`Append`）で読み、エンジンを呼び、答えを札に書くだけで、規則を持たない。列挙を契約の識別子に写す関数は `backend/internal/httpapi/names.go` の 1 か所に置く。
+
+#135 の受け入れ条件（所有者が決めた。#134 の A1・B1・C1）: 和音は和音名の文字列で送り、問いごとに `POST` の経路を置き、名前は文字列で、列挙は小文字の英語の識別子で返す。文は返さない。
+
+#135 で決めた。所有者の判断ではない:
+
+- 複数語の識別子は `-` でつなぐ（`secondary-dominant`、`facts-only`）。列挙のゼロ値は省かず `none` に写す（機能、解決、終止）。役割なしの枠と、判定のない枠（`reading.RoleNotJudged`）は、欄を持たない。
+- `detail` の枠の番号は 0 から数える。
+- ローマ数字はバスを書かない（`docs/architecture/theory-conventions.md` の 6）ので、バスを外した和音の位置を書く（G/B は V）。セカンダリー・ドミナントは読みのとおり `V/x` と書き（#83）、札の根拠は流儀。ほかの和音は主音から見た位置（`relation.PositionOf`）で、根拠は計算。位置のない根音（C で D𝄫）は札を持たない。
+- 和音名の札の根拠は定義。読み、解決、終止、テンションの注意、役割に合うかの札の根拠は流儀（`query` の札と同じ）。
+- テンションの注意の音程は、種類の略号と音程の数で書く（`P11`、`M3`。`material.Interval` の書き方）。

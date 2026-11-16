@@ -21,6 +21,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/progressions/readings': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * The reading of every slot of a progression
+     * @description Reads the progression in its key and answers with one reading per slot, in the order of the slots. Each label carries the kind of knowledge it rests on (basis). No sentences are returned.
+     */
+    post: operations['readProgression'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -30,6 +50,115 @@ export interface components {
       status: 'ok';
       /** @description The build's version (a git description, or "dev"). */
       version: string;
+    };
+    /** @description A progression in a major key, in 4/4. Phrases are cut every four bars from the start; no slot may cross the boundary of a phrase. */
+    Progression: {
+      /** @description The tonic of the major key, as a note name (C, F♯, B♭; # and b are read as ♯ and ♭). */
+      key: string;
+      slots: components['schemas']['Slot'][];
+    };
+    /** @description One slot: either a chord (chord) or no chord (content), never both, a length in beats and an optional role. */
+    Slot: {
+      /** @description A chord name, with the aliases the notation reads (Dm7, G7(9), C/E, CM7). */
+      chord?: string;
+      /**
+       * @description A slot with no chord: none sounds nothing, unchosen has no chord chosen yet.
+       * @enum {string}
+       */
+      content?: 'none' | 'unchosen';
+      beats: number;
+      role?: components['schemas']['Role'];
+    };
+    /**
+     * @description One of the six structural roles (stable, link, prepare, rise, resolve, close) or the four colour roles (spread, float, wistful, linger).
+     * @enum {string}
+     */
+    Role:
+      | 'stable'
+      | 'link'
+      | 'prepare'
+      | 'rise'
+      | 'resolve'
+      | 'close'
+      | 'spread'
+      | 'float'
+      | 'wistful'
+      | 'linger';
+    /**
+     * @description The kind of knowledge a label rests on.
+     * @enum {string}
+     */
+    Basis: 'definition' | 'computation' | 'school' | 'convention';
+    ProgressionReading: {
+      /** @description One reading per slot, in the order of the slots. */
+      slots: components['schemas']['SlotReading'][];
+    };
+    /** @description The labels of one slot. A slot with no chord, or none chosen yet, has only the role fit, if any. */
+    SlotReading: {
+      chord?: components['schemas']['ChordNameLabel'];
+      roman?: components['schemas']['RomanLabel'];
+      reading?: components['schemas']['ChordReadingLabel'];
+      resolution?: components['schemas']['ResolutionLabel'];
+      cadence?: components['schemas']['CadenceLabel'];
+      tensionCautions?: components['schemas']['TensionCautionsLabel'];
+      roleFit?: components['schemas']['RoleFitLabel'];
+    };
+    /** @description The chord of the slot, written with its spelling kept. */
+    ChordNameLabel: {
+      basis: components['schemas']['Basis'];
+      name: string;
+    };
+    /** @description The chord seen from the tonic, as a Roman numeral (ii7, ♭VII, V7/V). The bass is not written. Absent when the root has no position in the key. The basis is school for a secondary dominant, whose target is a reading, and computation otherwise. */
+    RomanLabel: {
+      basis: components['schemas']['Basis'];
+      numeral: string;
+    };
+    /** @description The main reading of the chord in the key. */
+    ChordReadingLabel: {
+      basis: components['schemas']['Basis'];
+      /** @enum {string} */
+      kind: 'facts-only' | 'diatonic' | 'borrowed' | 'secondary-dominant';
+      /**
+       * @description Set for a diatonic chord only; none otherwise.
+       * @enum {string}
+       */
+      function: 'none' | 'tonic' | 'subdominant' | 'dominant';
+      /** @description The parallel modes a borrowed chord is borrowed from; empty for the other kinds. */
+      modes: components['schemas']['Mode'][];
+      /** @description Whether a borrowed chord comes from the parallel minor (its modes hold aeolian). */
+      fromParallelMinor: boolean;
+      /** @description The degree a secondary dominant points to; absent for the other kinds. */
+      target?: number;
+    };
+    /** @enum {string} */
+    Mode: 'ionian' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian' | 'aeolian' | 'locrian';
+    /** @description How the chord goes on to the chord of the next slot. */
+    ResolutionLabel: {
+      basis: components['schemas']['Basis'];
+      /** @enum {string} */
+      resolution: 'none' | 'expected' | 'irregular';
+    };
+    /** @description The cadence named on the last slot of a full phrase; none elsewhere. */
+    CadenceLabel: {
+      basis: components['schemas']['Basis'];
+      /** @enum {string} */
+      cadence: 'none' | 'authentic' | 'half' | 'plagal' | 'deceptive';
+    };
+    /** @description The tensions of the chord that tend to sound muddy in the key, from the lowest. */
+    TensionCautionsLabel: {
+      basis: components['schemas']['Basis'];
+      cautions: components['schemas']['TensionCaution'][];
+    };
+    /** @description A tension and the note of the chord a half step below it, each as an interval above the root: a quality (P, M, m, A, d) and a number (P11 over M3). */
+    TensionCaution: {
+      tension: string;
+      chordTone: string;
+    };
+    /** @description Whether the slot fits its structural role. Absent for a slot with no role or a colour role. */
+    RoleFitLabel: {
+      basis: components['schemas']['Basis'];
+      /** @enum {string} */
+      fit: 'fits' | 'misfits' | 'undecided';
     };
     /** @description A problem document (RFC 9457). */
     Problem: {
@@ -75,6 +204,40 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['Health'];
+        };
+      };
+      default: components['responses']['Problem'];
+    };
+  };
+  readProgression: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['Progression'];
+      };
+    };
+    responses: {
+      /** @description The readings of the slots. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProgressionReading'];
+        };
+      };
+      /** @description The body is not JSON, or does not describe a progression: a chord name or a key that cannot be read, an unknown role or content, a slot with both or neither of chord and content, a length of less than one beat, or a slot that crosses the boundary of a phrase. The detail names the slot (counted from 0). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
       default: components['responses']['Problem'];
