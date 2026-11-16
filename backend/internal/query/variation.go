@@ -45,8 +45,8 @@ type ReadingLabel struct {
 	Main reading.Reading
 }
 
-// Basis returns Convention.
-func (ReadingLabel) Basis() Basis { return Convention }
+// Basis returns Rule.
+func (ReadingLabel) Basis() Basis { return Rule }
 
 // CautionsLabel holds the tensions of the variation that tend to sound muddy
 // in the key (reading.TensionCautions).
@@ -54,8 +54,8 @@ type CautionsLabel struct {
 	Cautions []reading.TensionCaution
 }
 
-// Basis returns Convention.
-func (CautionsLabel) Basis() Basis { return Convention }
+// Basis returns Rule.
+func (CautionsLabel) Basis() Basis { return Rule }
 
 // OutOfKeyLabel holds the notes the variation adds from outside the key:
 // members of the variation whose pitch class is not in the scale of the key

@@ -297,8 +297,8 @@ func TestLabelBases(t *testing.T) {
 		want query.Basis
 	}{
 		{"members", query.MembersLabel{}.Basis(), query.Definition},
-		{"reading", query.ReadingLabel{}.Basis(), query.Convention},
-		{"cautions", query.CautionsLabel{}.Basis(), query.Convention},
+		{"reading", query.ReadingLabel{}.Basis(), query.Rule},
+		{"cautions", query.CautionsLabel{}.Basis(), query.Rule},
 		{"out of key", query.OutOfKeyLabel{}.Basis(), query.Computation},
 	}
 	for _, tt := range tests {

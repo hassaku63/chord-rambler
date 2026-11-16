@@ -15,10 +15,11 @@ const (
 	// Computation is a fact computed without a convention, such as whether a
 	// note is in the scale of the key.
 	Computation
-	// Convention is a rule of the conventions the readings follow
-	// (docs/architecture/theory-conventions.md), such as the kind or the
-	// function of a chord.
-	Convention
+	// Rule is a rule of the school of theory the readings follow (流儀,
+	// docs/architecture/theory-conventions.md), such as the kind or the
+	// function of a chord. It is not a convention of practice (慣習), which
+	// the catalogues hold.
+	Rule
 )
 
 // String returns the name of the constant, for tests and logs. The words
@@ -29,8 +30,8 @@ func (b Basis) String() string {
 		return "Definition"
 	case Computation:
 		return "Computation"
-	case Convention:
-		return "Convention"
+	case Rule:
+		return "Rule"
 	default:
 		return fmt.Sprintf("Basis(%d)", int(b))
 	}

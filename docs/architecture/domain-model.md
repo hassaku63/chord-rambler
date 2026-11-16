@@ -262,7 +262,7 @@
 
 ## 7. 問い合わせ
 
-`backend/internal/query`。下のまとまりを組み合わせて、画面の問いに答える。返すのは構造化した事実（札）で、札ごとに根拠の種類（`Basis`。今あるのは `Definition`・`Computation`・`Convention`）を持つ。和音名の文字列は返さない。和音名にするのは画面か文のまとまり。読み込むのは `material`、`notation`、`progression`、`relation`、`reading`、`catalog` だけ。
+`backend/internal/query`。下のまとまりを組み合わせて、画面の問いに答える。返すのは構造化した事実（札）で、札ごとに根拠の種類（`Basis`。今あるのは、定義の `Definition`、計算の `Computation`、流儀の `Rule`。慣習は、カタログの `convention` と同じ語で #116 が足す）を持つ。和音名の文字列は返さない。和音名にするのは画面か文のまとまり。読み込むのは `material`、`notation`、`progression`、`relation`、`reading`、`catalog` だけ。
 
 ### 和音の変形
 
