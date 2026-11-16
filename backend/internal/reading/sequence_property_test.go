@@ -91,7 +91,7 @@ func TestExpectedOnlyOnTheDegreePointedTo(t *testing.T) {
 	}
 	seen := map[reading.Resolution]int{}
 	// After a chord that is not a dominant, a few chords stand for the rest.
-	few := []int{0, len(chords) / 3, len(chords) / 2}
+	few := []int{index(t, chords, chord(cNat, maj, "")), index(t, chords, g7), index(t, chords, am)}
 	for i, prev := range chords {
 		nexts := few
 		if target[i] != 0 {
@@ -181,4 +181,13 @@ func TestSlotsWithoutChordsSayNothing(t *testing.T) {
 		}
 	}
 	walk(nil)
+}
+
+func index(t *testing.T, chords []material.Chord, ch material.Chord) int {
+	t.Helper()
+	if i := slices.Index(chords, ch); i >= 0 {
+		return i
+	}
+	t.Fatalf("%v is not among the chords", ch)
+	return 0
 }
