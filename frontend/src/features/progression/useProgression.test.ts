@@ -39,13 +39,41 @@ describe('useProgression', () => {
     expect(result.current.progression).toEqual({ key: 'C', slots: [] });
   });
 
-  it('adds a chord of the beats given, and ignores beats outside 1 to 16', () => {
+  it('adds a candidate of the beats given, and ignores beats outside 1 to 16', () => {
     const { result } = renderHook(() => useProgression());
 
-    act(() => result.current.addChord('F', 2));
-    act(() => result.current.addChord('G', 0));
+    act(() => result.current.addCandidate('F', 2));
+    act(() => result.current.addCandidate('G', 0));
 
     expect(result.current.progression.slots).toEqual([{ chord: 'F', beats: 2 }]);
+    expect(result.current.bases).toEqual(['F']);
+  });
+
+  it('keeps the base of a candidate with its slot, through a removal and a replacement', () => {
+    const { result } = renderHook(() => useProgression());
+    act(() => result.current.addChord('C'));
+    act(() => result.current.addCandidate('G', 2));
+    act(() => result.current.addNoChord());
+
+    act(() => result.current.remove(0));
+    act(() => result.current.replaceChord(0, 'Gsus4'));
+
+    expect(result.current.progression.slots).toEqual([
+      { chord: 'Gsus4', beats: 2 },
+      { content: 'none', beats: 4 },
+    ]);
+    expect(result.current.bases).toEqual(['G', null]);
+  });
+
+  it('puts a chord in place of an empty slot, keeping its length', () => {
+    const { result } = renderHook(() => useProgression());
+    act(() => result.current.addUnchosen());
+    act(() => result.current.setBeats(0, 2));
+
+    act(() => result.current.replaceChord(0, 'F'));
+
+    expect(result.current.progression.slots).toEqual([{ chord: 'F', beats: 2 }]);
+    expect(result.current.bases).toEqual([null]);
   });
 
   it('changes a length within 1 to 16 beats and ignores one outside', () => {

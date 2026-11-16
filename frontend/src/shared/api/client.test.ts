@@ -5,6 +5,7 @@ import {
   parseProblem,
   parseProgressionNotes,
   parseProgressionReading,
+  parseVariations,
 } from './client';
 
 describe('parseHealth', () => {
@@ -197,5 +198,38 @@ describe('parseCandidateGroups', () => {
     },
   ])('rejects $name', ({ body }) => {
     expect(() => parseCandidateGroups(body)).toThrow('unexpected body');
+  });
+});
+
+describe('parseVariations', () => {
+  const g = {
+    chord: { basis: 'definition', name: 'G' },
+    isInput: true,
+    members: { basis: 'definition', notes: ['G', 'B', 'D'] },
+    reading: {
+      basis: 'school',
+      kind: 'diatonic',
+      function: 'dominant',
+      modes: [],
+      fromParallelMinor: false,
+    },
+    tensionCautions: { basis: 'school', cautions: [] },
+    outOfKey: { basis: 'computation', notes: [] },
+  };
+
+  it('accepts the body the contract describes', () => {
+    expect(parseVariations({ variations: [g] })).toEqual([g]);
+  });
+
+  it.each([
+    { name: 'no variations', body: {} },
+    { name: 'an isInput that is not a boolean', body: { variations: [{ ...g, isInput: 'yes' }] } },
+    {
+      name: 'members that are not strings',
+      body: { variations: [{ ...g, members: { basis: 'definition', notes: [7] } }] },
+    },
+    { name: 'no outOfKey', body: { variations: [{ ...g, outOfKey: undefined }] } },
+  ])('rejects $name', ({ body }) => {
+    expect(() => parseVariations(body)).toThrow('unexpected body');
   });
 });

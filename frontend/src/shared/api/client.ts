@@ -126,6 +126,31 @@ export async function getNextCandidates(
   return { ok: false, problem: parseProblem(body) };
 }
 
+/** One variation of a chord and its labels. */
+export type Variation = Open<components['schemas']['Variation']>;
+
+/** The answer to a request for variations: the list, or the problem the server named. */
+export type VariationsAnswer =
+  { ok: true; variations: Variation[] } | { ok: false; problem: Problem };
+
+/**
+ * Asks for the variations of the chord in the major key. Resolves with the
+ * problem when the server refuses (a chord with no third, among others);
+ * rejects when the server cannot be reached or answers with a body the
+ * contract does not describe.
+ */
+export async function getVariations(
+  key: string,
+  chord: string,
+  signal?: AbortSignal,
+): Promise<VariationsAnswer> {
+  const { ok, body } = await post('/variations', { key, chord }, signal);
+  if (ok) {
+    return { ok: true, variations: parseVariations(body) };
+  }
+  return { ok: false, problem: parseProblem(body) };
+}
+
 async function post(path: string, payload: unknown, signal?: AbortSignal) {
   const response = await fetch(`${API_PREFIX}${path}`, {
     method: 'POST',
@@ -305,6 +330,39 @@ export function parseCandidateGroups(body: unknown): CandidateGroups {
       };
     }),
   };
+}
+
+function parseNotesLabel(value: unknown, where: string) {
+  const { fields, basis } = labelAt(value, where);
+  const notes = arrayAt(fields, 'notes', where).map((note, i) => {
+    if (typeof note !== 'string') {
+      throw new UnexpectedBody(`${where}.notes[${i}]`);
+    }
+    return note;
+  });
+  return { basis, notes };
+}
+
+/** Turns an unknown body into the variations of a chord, or throws. */
+export function parseVariations(body: unknown): Variation[] {
+  const fields = fieldsAt(body, 'body');
+  return arrayAt(fields, 'variations', 'body').map((value, i) => {
+    const where = `variations[${i}]`;
+    const variation = fieldsAt(value, where);
+    const isInput = variation.isInput;
+    if (typeof isInput !== 'boolean') {
+      throw new UnexpectedBody(`${where}.isInput`);
+    }
+    const at = (name: string) => `${where}.${name}`;
+    return {
+      chord: oneStringLabel(variation.chord, 'name', at('chord')),
+      isInput,
+      members: parseNotesLabel(variation.members, at('members')),
+      reading: parseChordReadingLabel(variation.reading, at('reading')),
+      tensionCautions: parseTensionCautionsLabel(variation.tensionCautions, at('tensionCautions')),
+      outOfKey: parseNotesLabel(variation.outOfKey, at('outOfKey')),
+    };
+  });
 }
 
 function integerAt(fields: Fields, name: string, where: string): number {
