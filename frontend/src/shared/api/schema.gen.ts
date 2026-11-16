@@ -101,6 +101,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/variations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * The variations of a chord
+     * @description Answers with the variations of the chord in the major key, as query.Variations gives them: the fixed list for the quality of its triad, on the root of the chord and with no bass. The bass of the chord is not looked at.
+     */
+    post: operations['getVariations'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -244,6 +264,12 @@ export interface components {
       /** @description The slot to fill, counted from 0. */
       slot: number;
     };
+    VariationsRequest: {
+      /** @description The tonic of the major key, as in Progression. */
+      key: string;
+      /** @description A chord name, as in Slot. */
+      chord: string;
+    };
     CandidateGroups: {
       /** @description The groups in order: diatonic, secondary-dominant, borrowed. */
       groups: {
@@ -329,6 +355,25 @@ export interface components {
       | 'cadence'
       | 'another-root'
       | 'expected-resolution';
+    Variations: {
+      /** @description The variations, in the order of the list for the quality of the triad. */
+      variations: components['schemas']['Variation'][];
+    };
+    /** @description A chord on the same root, with no bass, whose sixth, seventh, sus or tension differs, and its labels. */
+    Variation: {
+      chord: components['schemas']['ChordNameLabel'];
+      /** @description Whether the variation is the chord asked about itself, bass included. */
+      isInput: boolean;
+      members: components['schemas']['NotesLabel'];
+      reading: components['schemas']['ChordReadingLabel'];
+      tensionCautions: components['schemas']['TensionCautionsLabel'];
+      outOfKey: components['schemas']['NotesLabel'];
+    };
+    /** @description Note names with their spelling: the members of a chord from the root (definition), or the members outside the scale of the key (computation; empty when none). */
+    NotesLabel: {
+      basis: components['schemas']['Basis'];
+      notes: string[];
+    };
     /** @description A problem document (RFC 9457). */
     Problem: {
       /** @description A short summary of the problem type. */
@@ -557,6 +602,58 @@ export interface operations {
         };
       };
       /** @description The progression cannot be read (as for the next candidates), the slot is left out or is outside 0 to the number of slots - 1, or a candidate cannot be spelt in the key. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The body is larger than 64 KiB (65536 bytes). */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The Content-Type is not application/json (parameters such as charset are allowed). */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      default: components['responses']['Problem'];
+    };
+  };
+  getVariations: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['VariationsRequest'];
+      };
+    };
+    responses: {
+      /** @description The variations. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Variations'];
+        };
+      };
+      /** @description The key or the chord cannot be read, the chord has no major, minor or diminished triad (a sus chord, a power chord, an augmented triad), or a variation cannot be spelt (beyond a double sharp or a double flat, as dim7 on C♭). */
       400: {
         headers: {
           [name: string]: unknown;

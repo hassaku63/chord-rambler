@@ -174,6 +174,44 @@ paths:
                 $ref: "#/components/schemas/Problem"
         default:
           $ref: "#/components/responses/Problem"
+  /variations:
+    post:
+      operationId: getVariations
+      summary: The variations of a chord
+      description: "Answers with the variations of the chord in the major key, as query.Variations gives them: the fixed list for the quality of its triad, on the root of the chord and with no bass. The bass of the chord is not looked at."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VariationsRequest"
+      responses:
+        "200":
+          description: The variations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Variations"
+        "400":
+          description: "The key or the chord cannot be read, the chord has no major, minor or diminished triad (a sus chord, a power chord, an augmented triad), or a variation cannot be spelt (beyond a double sharp or a double flat, as dim7 on C♭)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          description: "The body is larger than 64 KiB (65536 bytes)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "415":
+          description: "The Content-Type is not application/json (parameters such as charset are allowed)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
 components:
   schemas:
     Health:
@@ -393,6 +431,16 @@ components:
           type: integer
           minimum: 0
           description: The slot to fill, counted from 0.
+    VariationsRequest:
+      type: object
+      required: [key, chord]
+      properties:
+        key:
+          type: string
+          description: The tonic of the major key, as in Progression.
+        chord:
+          type: string
+          description: A chord name, as in Slot.
     CandidateGroups:
       type: object
       required: [groups]
@@ -530,6 +578,44 @@ components:
       type: string
       description: "A condition of the rule of a structural role: the shape (a triad with a third or a seventh chord), the function, the previous slot is V, the next slot is a dominant, a cadence is named, another root than the previous slot, V on the previous slot resolves as expected."
       enum: [shape, function, previous-v, next-dominant, cadence, another-root, expected-resolution]
+    Variations:
+      type: object
+      required: [variations]
+      properties:
+        variations:
+          type: array
+          description: The variations, in the order of the list for the quality of the triad.
+          items:
+            $ref: "#/components/schemas/Variation"
+    Variation:
+      type: object
+      description: A chord on the same root, with no bass, whose sixth, seventh, sus or tension differs, and its labels.
+      required: [chord, isInput, members, reading, tensionCautions, outOfKey]
+      properties:
+        chord:
+          $ref: "#/components/schemas/ChordNameLabel"
+        isInput:
+          type: boolean
+          description: Whether the variation is the chord asked about itself, bass included.
+        members:
+          $ref: "#/components/schemas/NotesLabel"
+        reading:
+          $ref: "#/components/schemas/ChordReadingLabel"
+        tensionCautions:
+          $ref: "#/components/schemas/TensionCautionsLabel"
+        outOfKey:
+          $ref: "#/components/schemas/NotesLabel"
+    NotesLabel:
+      type: object
+      description: "Note names with their spelling: the members of a chord from the root (definition), or the members outside the scale of the key (computation; empty when none)."
+      required: [basis, notes]
+      properties:
+        basis:
+          $ref: "#/components/schemas/Basis"
+        notes:
+          type: array
+          items:
+            type: string
     Problem:
       type: object
       description: A problem document (RFC 9457).

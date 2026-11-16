@@ -438,13 +438,14 @@ API の形（進行の送り方、経路、応答の札、失敗）は、契約 
 
 音符の経路（`POST /progressions/notes`）は、同じ本文を同じ変換で進行にし、`performance.Notes` の答えを契約の `Note` に写すだけで、並びは変えない。
 
-候補の経路（`POST /progressions/next-candidates`、`POST /progressions/slot-candidates`。#144）は、`query.NextCandidates`、`query.SlotCandidates` の答えを、まとまりと並びを変えずに札に写す。慣習のカタログ（`catalog.LoadFunctionTransitions`）は、サーバーの起動時に 1 度だけ読み込んで `httpapi.Deps` で渡し、読み込みに失敗したら起動を止める。札の根拠の種類は、`query` の札の `Basis` をそのまま写す。
+候補と変形の経路（`POST /progressions/next-candidates`、`POST /progressions/slot-candidates`、`POST /variations`。#144）は、`query.NextCandidates`、`query.SlotCandidates`、`query.Variations` の答えを、まとまりと並びを変えずに札に写す。慣習のカタログ（`catalog.LoadFunctionTransitions`）は、サーバーの起動時に 1 度だけ読み込んで `httpapi.Deps` で渡し、読み込みに失敗したら起動を止める。札の根拠の種類は、`query` の札の `Basis` をそのまま写す。
 
 #144 で決めた。所有者の判断ではない:
 
-- 本文は `{progression, beats}` と `{progression, slot}`。応答は `{groups: [{kind, candidates}]}`。`slot` を落とした本文は、枠 0 と読まず 400 にする。
+- 本文は `{progression, beats}`、`{progression, slot}`、`{key, chord}`。応答は `{groups: [{kind, candidates}]}` と `{variations: [...]}`。`slot` を落とした本文は、枠 0 と読まず 400 にする。
 - 候補の札は、和音名・ローマ数字・読みを読みの経路と同じ関数で書く。ローマ数字は候補の位置（`Candidate.Position`）から書く。足した札は、根音の動き（`rootMotion`）、共通音の数（`commonTones`）、好み（`preference`。前と次の機能、段階、様式の範囲）、枠を埋める候補の `nextResolution`、`nextCadence`、役割に合うか（`roleFit`。当たらなかった条件の並び `unmet` を持つ）。候補の `resolution` は前の枠の和音から候補への解決で、読みの経路（その和音から次へ）と向きが違う。候補には構成音とテンションの注意を出さない。
-- エンジンが断る問い（`progression.ErrIndex`、`ErrLength`、`ErrCrossesPhrase`、`material.ErrAlterOutOfRange`）は 400 にし、`detail` にエンジンのエラーの文を書く。ほかの失敗は 500。
+- 変形の札は、和音名、入力の印（`isInput`）、構成音、読み、テンションの注意、調の外の音（`outOfKey`）。
+- エンジンが断る問い（`progression.ErrIndex`、`ErrLength`、`ErrCrossesPhrase`、`material.ErrAlterOutOfRange`、`query.ErrNoTriadQuality`）は 400 にし、`detail` にエンジンのエラーの文を書く。ほかの失敗は 500。
 - 複数語の識別子は、カタログの JSON の語（`less_common`）ではなく契約の書き方（`less-common`）にする。札に出ない `unstated` も、全域のテストのため契約の列挙に載せる。
 
 本文の読み方は `decodeBody` の 1 か所に置く。`Content-Type` が `application/json` でなければ 415、本文が 64 KiB を超えれば 413、契約にない欄と型の合わない値は 400 で、後者の `detail` には欄の場所と期待した型だけを書く（例: `slots[0].beats: expected integer`）。

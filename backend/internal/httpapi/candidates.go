@@ -76,7 +76,7 @@ type (
 // what the engine refuses; they are answered with a 400.
 var requestFailures = []error{
 	progression.ErrIndex, progression.ErrLength, progression.ErrCrossesPhrase,
-	material.ErrAlterOutOfRange,
+	material.ErrAlterOutOfRange, query.ErrNoTriadQuality,
 }
 
 // answer reads the body into B, asks the engine with ask and writes what it
