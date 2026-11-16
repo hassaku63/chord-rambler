@@ -1,7 +1,10 @@
 import { useState } from 'react';
+import type { AudioContextFactory } from './usePlayer';
 import type { ReadingState } from './useProgressionReading';
 import { useProgressionReading } from './useProgressionReading';
 import { KEYS, useProgression } from './useProgression';
+import { usePlayback } from './usePlayback';
+import { PlaybackControls } from './PlaybackControls';
 import { SlotCard } from './SlotCard';
 import { SlotDetail } from './SlotDetail';
 import './progression.css';
@@ -17,14 +20,20 @@ function ReadingAlert({ reading }: { reading: ReadingState }) {
   }
 }
 
+type Props = {
+  /** Makes the AudioContext the playing sounds through; tests pass a stand-in. */
+  createAudioContext?: AudioContextFactory;
+};
+
 /**
- * Screen 1 (a provisional layout, A1 of #148): the key on top, the strip of
- * slots in the middle, the labels of the chosen slot below.
+ * Screens 1 and 2 (a provisional layout, A1 of #148): the key and the playing
+ * on top, the strip of slots in the middle, the labels of the chosen slot below.
  */
-export function ProgressionScreen() {
+export function ProgressionScreen({ createAudioContext }: Props) {
   const state = useProgression();
   const { progression, selected } = state;
   const reading = useProgressionReading(progression);
+  const playback = usePlayback(progression, createAudioContext);
   const [chordName, setChordName] = useState('');
   const readings = reading.state === 'read' ? reading.reading.slots : [];
   const unreadable = reading.state === 'refused' ? reading.slot : null;
@@ -42,6 +51,8 @@ export function ProgressionScreen() {
           ))}
         </select>
       </label>
+
+      <PlaybackControls playback={playback} selected={selected} />
 
       <form
         className="add-slot"
@@ -75,6 +86,7 @@ export function ProgressionScreen() {
             reading={readings[i]}
             unreadable={unreadable === i}
             selected={selected === i}
+            sounding={playback.sounding === i}
             onSelect={() => state.select(selected === i ? null : i)}
             onRemove={() => state.remove(i)}
             onBeats={(beats) => state.setBeats(i, beats)}

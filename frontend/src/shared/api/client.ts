@@ -74,17 +74,41 @@ export async function readProgression(
   progression: Progression,
   signal?: AbortSignal,
 ): Promise<ReadingAnswer> {
-  const response = await fetch(`${API_PREFIX}/progressions/readings`, {
+  const { ok, body } = await postProgression('/progressions/readings', progression, signal);
+  if (ok) {
+    return { ok: true, reading: parseProgressionReading(body) };
+  }
+  return { ok: false, problem: parseProblem(body) };
+}
+
+/** The answer to a request for notes: the notes, or the problem the server named. */
+export type NotesAnswer = { ok: true; notes: Note[] } | { ok: false; problem: Problem };
+
+/**
+ * Reads the notes that play a progression. Resolves with the problem when the
+ * server refuses the progression; rejects when the server cannot be reached or
+ * answers with a body the contract does not describe.
+ */
+export async function getProgressionNotes(
+  progression: Progression,
+  signal?: AbortSignal,
+): Promise<NotesAnswer> {
+  const { ok, body } = await postProgression('/progressions/notes', progression, signal);
+  if (ok) {
+    return { ok: true, notes: parseProgressionNotes(body) };
+  }
+  return { ok: false, problem: parseProblem(body) };
+}
+
+async function postProgression(path: string, progression: Progression, signal?: AbortSignal) {
+  const response = await fetch(`${API_PREFIX}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(progression),
     signal: signal ?? null,
   });
   const body: unknown = await response.json();
-  if (response.ok) {
-    return { ok: true, reading: parseProgressionReading(body) };
-  }
-  return { ok: false, problem: parseProblem(body) };
+  return { ok: response.ok, body };
 }
 
 type Fields = Record<string, unknown>;
@@ -95,7 +119,7 @@ function isFields(value: unknown): value is Fields {
 
 class UnexpectedBody extends Error {
   constructor(where: string) {
-    super(`POST /progressions/readings answered with an unexpected body (${where})`);
+    super(`the server answered with an unexpected body (${where})`);
   }
 }
 
@@ -205,15 +229,34 @@ export function parseProgressionReading(body: unknown): ProgressionReading {
   };
 }
 
+function integerAt(fields: Fields, name: string, where: string): number {
+  const value = fields[name];
+  if (typeof value !== 'number' || !Number.isInteger(value)) {
+    throw new UnexpectedBody(`${where}.${name}`);
+  }
+  return value;
+}
+
+/** Turns an unknown body into the notes of a progression, or throws. */
+export function parseProgressionNotes(body: unknown): Note[] {
+  const fields = fieldsAt(body, 'body');
+  return arrayAt(fields, 'notes', 'body').map((value, i) => {
+    const where = `notes[${i}]`;
+    const note = fieldsAt(value, where);
+    return {
+      pitch: integerAt(note, 'pitch', where),
+      start: integerAt(note, 'start', where),
+      beats: integerAt(note, 'beats', where),
+      velocity: integerAt(note, 'velocity', where),
+    };
+  });
+}
+
 /** Turns an unknown body into a Problem, or throws. */
 export function parseProblem(body: unknown): Problem {
   const fields = fieldsAt(body, 'problem');
   const title = stringAt(fields, 'title', 'problem');
-  const status = fields.status;
-  if (typeof status !== 'number' || !Number.isInteger(status)) {
-    throw new UnexpectedBody('problem.status');
-  }
-  const problem: Problem = { title, status };
+  const problem: Problem = { title, status: integerAt(fields, 'status', 'problem') };
   if ('detail' in fields) {
     problem.detail = stringAt(fields, 'detail', 'problem');
   }

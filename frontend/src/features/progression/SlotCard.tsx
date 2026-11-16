@@ -17,6 +17,8 @@ type Props = {
   reading: SlotReading | undefined;
   unreadable: boolean;
   selected: boolean;
+  /** Whether the slot is sounding now. */
+  sounding: boolean;
   onSelect: () => void;
   onRemove: () => void;
   onBeats: (beats: number) => void;
@@ -28,6 +30,7 @@ export function SlotCard({
   reading,
   unreadable,
   selected,
+  sounding,
   onSelect,
   onRemove,
   onBeats,
@@ -42,7 +45,13 @@ export function SlotCard({
   ];
   const shown = lines.filter((line) => typeof line === 'string' && line !== '');
   return (
-    <li className={selected ? 'slot-card selected' : 'slot-card'}>
+    <li
+      className={['slot-card', selected && 'selected', sounding && 'sounding']
+        .filter(Boolean)
+        .join(' ')}
+      aria-current={sounding || undefined}
+    >
+      {sounding && <span className="slot-sounding">鳴っています</span>}
       <button
         type="button"
         className="slot-select"
