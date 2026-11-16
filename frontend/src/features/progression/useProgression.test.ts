@@ -257,6 +257,28 @@ describe('useProgression', () => {
     expect(result.current.shortened).toEqual([]);
   });
 
+  it('leaves a stored slot that crosses as it is until the first change', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      '{"key":"C","slots":[{"chord":"C","beats":12},{"chord":"G","beats":8}]}',
+    );
+    const { result } = renderHook(() => useProgression());
+
+    expect(result.current.progression.slots).toEqual([
+      { chord: 'C', beats: 12 },
+      { chord: 'G', beats: 8 },
+    ]);
+    expect(result.current.shortened).toEqual([]);
+
+    act(() => result.current.setKey('G'));
+
+    expect(result.current.progression.slots).toEqual([
+      { chord: 'C', beats: 12 },
+      { chord: 'G', beats: 4 },
+    ]);
+    expect(result.current.shortened).toEqual([{ chord: 'G', beats: 4 }]);
+  });
+
   it('brings the progression back after a reload', () => {
     const { result: before, unmount } = renderHook(() => useProgression());
     act(() => before.current.setKey('A'));
