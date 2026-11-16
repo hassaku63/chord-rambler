@@ -173,14 +173,31 @@ export interface components {
       /** @description One reading per slot, in the order of the slots. */
       slots: components['schemas']['SlotReading'][];
     };
-    /** @description The labels of one slot. A slot with no chord, or none chosen yet, has only the role fit, if any. */
-    SlotReading: {
-      chord?: components['schemas']['ChordNameLabel'];
+    /** @description The labels of one slot, in one of two shapes told apart by content: a slot with a chord, or a slot with no chord (none sounds nothing, unchosen has no chord chosen yet). */
+    SlotReading:
+      components['schemas']['ChordSlotReading'] | components['schemas']['NoChordSlotReading'];
+    /** @description The labels of a slot with a chord. The chord's labels are always there; the Roman numeral and the role fit only when they apply. */
+    ChordSlotReading: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      content: 'chord';
+      chord: components['schemas']['ChordNameLabel'];
       roman?: components['schemas']['RomanLabel'];
-      reading?: components['schemas']['ChordReadingLabel'];
-      resolution?: components['schemas']['ResolutionLabel'];
-      cadence?: components['schemas']['CadenceLabel'];
-      tensionCautions?: components['schemas']['TensionCautionsLabel'];
+      reading: components['schemas']['ChordReadingLabel'];
+      resolution: components['schemas']['ResolutionLabel'];
+      cadence: components['schemas']['CadenceLabel'];
+      tensionCautions: components['schemas']['TensionCautionsLabel'];
+      roleFit?: components['schemas']['RoleFitLabel'];
+    };
+    /** @description The labels of a slot with no chord: only the role fit, if any. Content is the slot's content as the request gave it. */
+    NoChordSlotReading: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      content: 'none' | 'unchosen';
       roleFit?: components['schemas']['RoleFitLabel'];
     };
     /** @description The chord of the slot, written with its spelling kept. */

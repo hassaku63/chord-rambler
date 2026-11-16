@@ -1,5 +1,5 @@
 import type { Variation } from '@/shared/api/client';
-import { cardMarks } from './labels';
+import { readingMarks } from './labels';
 
 type Props = {
   /** The chord the list comes from: the slot's base, or its chord when it has none. */
@@ -28,7 +28,7 @@ export function VariationList({ base, current, variations, onChoose }: Props) {
               <button type="button" aria-pressed={chosen} onClick={() => onChoose(name)}>
                 {name}
               </button>{' '}
-              <span>{cardMarks({ reading: variation.reading }).join(' ')}</span>
+              <span>{readingMarks(variation.reading).join(' ')}</span>
             </li>
           );
         })}

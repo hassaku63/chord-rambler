@@ -85,9 +85,12 @@ const slotCandidates: Answers['/progressions/slot-candidates'] = ({ slot }) => (
   groups: slot === 1 ? betweenCAndG7 : slot === 2 ? beforeTheLastC : [],
 });
 
-/** The stand-in server's answers: readings with no labels, and the candidates above. */
+/**
+ * The stand-in server's answers: readings that never come, so that a card
+ * shows only its chord, and the candidates above.
+ */
 const answers: Partial<Answers> = {
-  '/progressions/readings': ({ slots }) => ({ slots: slots.map(() => ({})) }),
+  '/progressions/readings': () => new Promise(() => undefined),
   '/progressions/slot-candidates': slotCandidates,
 };
 

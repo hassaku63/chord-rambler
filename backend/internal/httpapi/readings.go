@@ -265,12 +265,15 @@ func decodeSlot(sb slotBody) (progression.Slot, error) {
 	return s.WithRole(role)
 }
 
-// The labels of the contract's SlotReading.
+// The labels of the contract's SlotReading. Content tells the two shapes
+// apart: a slot with a chord (chord) always has the chord's labels; a slot
+// with no chord (none, unchosen) has only the role fit, if any.
 type (
 	progressionReading struct {
 		Slots []slotReading `json:"slots"`
 	}
 	slotReading struct {
+		Content         string                `json:"content"`
 		Chord           *chordNameLabel       `json:"chord,omitempty"`
 		Roman           *romanLabel           `json:"roman,omitempty"`
 		Reading         *chordReadingLabel    `json:"reading,omitempty"`
@@ -365,6 +368,7 @@ func readProgression(p progression.Progression) (progressionReading, error) {
 				return progressionReading{}, fmt.Errorf("slot %d: %w", i, err)
 			}
 		}
+		out.Slots[i].Content = contentID(s.Content())
 		if id := roleFitID(fits[i]); id != "" {
 			out.Slots[i].RoleFit = &roleFitLabel{Basis: basisID(query.School), Fit: id}
 		}

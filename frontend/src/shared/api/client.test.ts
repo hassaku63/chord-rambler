@@ -30,67 +30,83 @@ describe('parseHealth', () => {
 });
 
 describe('parseProgressionReading', () => {
+  const bare = {
+    content: 'chord',
+    chord: { basis: 'definition', name: 'D7' },
+    reading: {
+      basis: 'school',
+      kind: 'secondary-dominant',
+      function: 'none',
+      modes: [],
+      fromParallelMinor: false,
+      target: 5,
+    },
+    resolution: { basis: 'school', resolution: 'expected' },
+    cadence: { basis: 'school', cadence: 'none' },
+    tensionCautions: { basis: 'school', cautions: [{ tension: 'P11', chordTone: 'M3' }] },
+  };
+  const d7 = {
+    ...bare,
+    roman: { basis: 'school', numeral: 'V7/V' },
+    roleFit: { basis: 'school', fit: 'fits' },
+  };
   const full = {
     slots: [
-      {
-        chord: { basis: 'definition', name: 'D7' },
-        roman: { basis: 'school', numeral: 'V7/V' },
-        reading: {
-          basis: 'school',
-          kind: 'secondary-dominant',
-          function: 'none',
-          modes: [],
-          fromParallelMinor: false,
-          target: 5,
-        },
-        resolution: { basis: 'school', resolution: 'expected' },
-        cadence: { basis: 'school', cadence: 'none' },
-        tensionCautions: { basis: 'school', cautions: [{ tension: 'P11', chordTone: 'M3' }] },
-        roleFit: { basis: 'school', fit: 'fits' },
-      },
-      {},
+      d7,
+      bare,
+      { content: 'none' },
+      { content: 'unchosen', roleFit: { basis: 'school', fit: 'undecided' } },
     ],
   };
 
   it('accepts the body the contract describes, leaving out what is absent', () => {
-    expect(parseProgressionReading(full)).toEqual(full);
-    expect(parseProgressionReading({ slots: [{}] }).slots[0]).not.toHaveProperty('chord');
+    const { slots } = parseProgressionReading(full);
+
+    expect(slots).toEqual(full.slots);
+    expect(slots[1]).not.toHaveProperty('roman');
+    expect(slots[1]).not.toHaveProperty('roleFit');
+    expect(slots[2]).not.toHaveProperty('roleFit');
   });
 
   it('keeps an identifier the contract does not list yet', () => {
-    const body = { slots: [{ cadence: { basis: 'association', cadence: 'picardy' } }] };
+    const body = { slots: [{ ...d7, cadence: { basis: 'association', cadence: 'picardy' } }] };
 
     expect(parseProgressionReading(body)).toEqual(body);
   });
+
+  it.each(['chord', 'reading', 'resolution', 'cadence', 'tensionCautions'])(
+    'rejects a slot with a chord without %s',
+    (name) => {
+      const slot = Object.fromEntries(Object.entries(d7).filter(([field]) => field !== name));
+
+      expect(() => parseProgressionReading({ slots: [slot] })).toThrow(`slots[0].${name}`);
+    },
+  );
 
   it.each([
     { name: 'null', body: null },
     { name: 'no slots', body: {} },
     { name: 'a slot that is not an object', body: { slots: ['C'] } },
-    { name: 'a label without basis', body: { slots: [{ chord: { name: 'C' } }] } },
+    { name: 'a slot without content', body: { slots: [{}] } },
+    { name: 'a content the contract does not list', body: { slots: [{ content: 'rest' }] } },
+    { name: 'a label without basis', body: { slots: [{ ...d7, chord: { name: 'C' } }] } },
     {
       name: 'a numeral that is not a string',
-      body: { slots: [{ roman: { basis: 'x', numeral: 1 } }] },
+      body: { slots: [{ ...d7, roman: { basis: 'x', numeral: 1 } }] },
     },
     {
       name: 'modes that are not strings',
-      body: {
-        slots: [
-          {
-            reading: {
-              basis: 'x',
-              kind: 'borrowed',
-              function: 'none',
-              modes: [1],
-              fromParallelMinor: false,
-            },
-          },
-        ],
-      },
+      body: { slots: [{ ...d7, reading: { ...d7.reading, kind: 'borrowed', modes: [1] } }] },
     },
     {
       name: 'a caution without chord tone',
-      body: { slots: [{ tensionCautions: { basis: 'x', cautions: [{ tension: 'P11' }] } }] },
+      body: {
+        slots: [{ ...d7, tensionCautions: { basis: 'x', cautions: [{ tension: 'P11' }] } }],
+      },
+    },
+    {
+      name: 'a role fit that is not a label',
+      body: { slots: [{ content: 'none', roleFit: 'fits' }] },
     },
   ])('rejects $name', ({ body }) => {
     expect(() => parseProgressionReading(body)).toThrow('unexpected body');

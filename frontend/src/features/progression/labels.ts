@@ -8,7 +8,10 @@ function row(term: string, word: string | null, basis: string): LabelRow[] {
   return word === null ? [] : [{ term, word, basis: wordFor(TERMS.basis, basis) ?? basis }];
 }
 
-function borrowedFrom(reading: NonNullable<SlotReading['reading']>): string | null {
+/** The main reading of a chord, as a slot with a chord, a candidate and a variation carry it. */
+type ChordReading = Candidate['reading'];
+
+function borrowedFrom(reading: ChordReading): string | null {
   if (reading.fromParallelMinor) {
     return PARALLEL_MINOR;
   }
@@ -16,10 +19,7 @@ function borrowedFrom(reading: NonNullable<SlotReading['reading']>): string | nu
   return modes.length === 0 ? null : modes.join('、');
 }
 
-function chordRows(reading: SlotReading['reading']): LabelRow[] {
-  if (reading === undefined) {
-    return [];
-  }
+function chordRows(reading: ChordReading): LabelRow[] {
   const target =
     reading.target === undefined ? null : (TARGET_NUMERALS[reading.target] ?? `${reading.target}`);
   return [
@@ -32,21 +32,27 @@ function chordRows(reading: SlotReading['reading']): LabelRow[] {
 
 /** The labels of a slot, in the order the detailed view lists them. */
 export function labelRows(slot: SlotReading): LabelRow[] {
-  const { resolution, cadence, tensionCautions, roleFit } = slot;
-  const cautions = tensionCautions?.cautions
+  const { roleFit } = slot;
+  const fit = roleFit ? row('役割に合うか', wordFor(TERMS.fit, roleFit.fit), roleFit.basis) : [];
+  if (slot.content !== 'chord') {
+    return fit;
+  }
+  const { reading, resolution, cadence, tensionCautions } = slot;
+  const cautions = tensionCautions.cautions
     .map((c) => `${c.tension}（${c.chordTone} の半音上）`)
     .join('、');
   return [
-    ...chordRows(slot.reading),
-    ...(resolution
-      ? row('解決', wordFor(TERMS.resolution, resolution.resolution), resolution.basis)
-      : []),
-    ...(cadence ? row('終止', wordFor(TERMS.cadence, cadence.cadence), cadence.basis) : []),
-    ...(tensionCautions && cautions
-      ? row('テンションの注意', cautions, tensionCautions.basis)
-      : []),
-    ...(roleFit ? row('役割に合うか', wordFor(TERMS.fit, roleFit.fit), roleFit.basis) : []),
+    ...chordRows(reading),
+    ...row('解決', wordFor(TERMS.resolution, resolution.resolution), resolution.basis),
+    ...row('終止', wordFor(TERMS.cadence, cadence.cadence), cadence.basis),
+    ...(cautions ? row('テンションの注意', cautions, tensionCautions.basis) : []),
+    ...fit,
   ];
+}
+
+/** The Roman numeral of a slot with a chord, when the chord has one. */
+export function numeralOf(slot: SlotReading | undefined): string | undefined {
+  return slot?.content === 'chord' ? slot.roman?.numeral : undefined;
 }
 
 /** The mark of a role fit, with what it is about (役割に合うか 合わない). */
@@ -54,16 +60,23 @@ function fitMark(roleFit: SlotReading['roleFit']): string | undefined {
   return roleFit && `役割に合うか ${wordFor(TERMS.fit, roleFit.fit) ?? roleFit.fit}`;
 }
 
+/** The short marks of a chord's reading: kind and function. */
+export function readingMarks(reading: ChordReading): string[] {
+  const marks = [wordFor(TERMS.kind, reading.kind), wordFor(TERMS.functionMark, reading.function)];
+  return marks.filter((mark): mark is string => typeof mark === 'string');
+}
+
 /** The short marks on a slot's card: kind, function, resolution or cadence, and role fit. */
 export function cardMarks(slot: SlotReading): string[] {
-  const { reading, resolution, cadence, roleFit } = slot;
-  const marks = [
-    reading && wordFor(TERMS.kind, reading.kind),
-    reading && wordFor(TERMS.functionMark, reading.function),
-    resolution && wordFor(TERMS.resolution, resolution.resolution),
-    cadence && wordFor(TERMS.cadence, cadence.cadence),
-    fitMark(roleFit),
-  ];
+  const chord =
+    slot.content === 'chord'
+      ? [
+          ...readingMarks(slot.reading),
+          wordFor(TERMS.resolution, slot.resolution.resolution),
+          wordFor(TERMS.cadence, slot.cadence.cadence),
+        ]
+      : [];
+  const marks = [...chord, fitMark(slot.roleFit)];
   return marks.filter((mark): mark is string => typeof mark === 'string');
 }
 

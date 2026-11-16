@@ -272,9 +272,24 @@ components:
           items:
             $ref: "#/components/schemas/SlotReading"
     SlotReading:
+      description: "The labels of one slot, in one of two shapes told apart by content: a slot with a chord, or a slot with no chord (none sounds nothing, unchosen has no chord chosen yet)."
+      oneOf:
+        - $ref: "#/components/schemas/ChordSlotReading"
+        - $ref: "#/components/schemas/NoChordSlotReading"
+      discriminator:
+        propertyName: content
+        mapping:
+          chord: "#/components/schemas/ChordSlotReading"
+          none: "#/components/schemas/NoChordSlotReading"
+          unchosen: "#/components/schemas/NoChordSlotReading"
+    ChordSlotReading:
       type: object
-      description: "The labels of one slot. A slot with no chord, or none chosen yet, has only the role fit, if any."
+      description: "The labels of a slot with a chord. The chord's labels are always there; the Roman numeral and the role fit only when they apply."
+      required: [content, chord, reading, resolution, cadence, tensionCautions]
       properties:
+        content:
+          type: string
+          enum: [chord]
         chord:
           $ref: "#/components/schemas/ChordNameLabel"
         roman:
@@ -287,6 +302,16 @@ components:
           $ref: "#/components/schemas/CadenceLabel"
         tensionCautions:
           $ref: "#/components/schemas/TensionCautionsLabel"
+        roleFit:
+          $ref: "#/components/schemas/RoleFitLabel"
+    NoChordSlotReading:
+      type: object
+      description: "The labels of a slot with no chord: only the role fit, if any. Content is the slot's content as the request gave it."
+      required: [content]
+      properties:
+        content:
+          type: string
+          enum: [none, unchosen]
         roleFit:
           $ref: "#/components/schemas/RoleFitLabel"
     ChordNameLabel:

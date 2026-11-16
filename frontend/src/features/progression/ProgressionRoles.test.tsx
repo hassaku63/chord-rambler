@@ -6,6 +6,7 @@ import { ProgressionScreen } from './ProgressionScreen';
 
 /** The readings of Dm7, and of a slot with no chord, before the role fit. */
 const dm7: Schemas['SlotReading'] = {
+  content: 'chord',
   chord: { basis: 'definition', name: 'Dm7' },
   roman: { basis: 'computation', numeral: 'ii7' },
   reading: {
@@ -28,7 +29,8 @@ const COLOUR_ROLES: readonly Schemas['Role'][] = ['spread', 'float', 'wistful', 
  */
 function readingsOf(progression: Schemas['Progression']): Schemas['ProgressionReading'] {
   const slots = progression.slots.map((slot): Schemas['SlotReading'] => {
-    const reading = slot.chord === undefined ? {} : dm7;
+    const reading: Schemas['SlotReading'] =
+      slot.chord === undefined ? { content: slot.content ?? 'unchosen' } : dm7;
     if (slot.role === undefined || COLOUR_ROLES.includes(slot.role)) {
       return reading;
     }
