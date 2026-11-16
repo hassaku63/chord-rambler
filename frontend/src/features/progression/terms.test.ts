@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { components } from '@/shared/api/schema.gen';
-import { TERMS, wordFor } from './terms';
+import { ROLE_GROUPS, TERMS, wordFor } from './terms';
 
 type Schemas = components['schemas'];
 type ChordReading = Schemas['ChordReadingLabel'];
@@ -28,6 +28,18 @@ const candidateKind = ['diatonic', 'secondary-dominant', 'borrowed'] as const;
 const preference = ['common', 'less-common', 'unstated'] as const;
 const style = ['classical'] as const;
 const moveFunction = ['tonic', 'subdominant', 'dominant'] as const;
+const role = [
+  'stable',
+  'link',
+  'prepare',
+  'rise',
+  'resolve',
+  'close',
+  'spread',
+  'float',
+  'wistful',
+  'linger',
+] as const;
 
 // Type checks only (tsc runs them): each list is exactly its enumeration.
 expectTypeOf<(typeof basis)[number]>().toEqualTypeOf<Schemas['Basis']>();
@@ -44,6 +56,7 @@ expectTypeOf<(typeof preference)[number]>().toEqualTypeOf<Preference['preference
 expectTypeOf<(typeof style)[number]>().toEqualTypeOf<Preference['style']>();
 expectTypeOf<(typeof moveFunction)[number]>().toEqualTypeOf<Preference['from']>();
 expectTypeOf<(typeof moveFunction)[number]>().toEqualTypeOf<Preference['to']>();
+expectTypeOf<(typeof role)[number]>().toEqualTypeOf<Schemas['Role']>();
 
 describe('TERMS', () => {
   it.each([
@@ -59,10 +72,19 @@ describe('TERMS', () => {
     { name: 'preference', table: TERMS.preference, ids: preference },
     { name: 'style', table: TERMS.style, ids: style },
     { name: 'function of a move', table: TERMS.function, ids: moveFunction },
+    { name: 'role', table: TERMS.role, ids: role },
   ])('has an entry for every $name of the contract', ({ table, ids }) => {
     const missing = ids.filter((id) => !Object.hasOwn(table, id));
 
     expect(missing).toEqual([]);
+  });
+
+  it('offers every role of the contract once, in its kind', () => {
+    expect(ROLE_GROUPS).toEqual([
+      { kind: '構造的な役割', roles: ['stable', 'link', 'prepare', 'rise', 'resolve', 'close'] },
+      { kind: '色合いの役割', roles: ['spread', 'float', 'wistful', 'linger'] },
+    ]);
+    expect(ROLE_GROUPS.flatMap((group) => group.roles).toSorted()).toEqual([...role].toSorted());
   });
 
   it('gives the word, nothing for "nothing to name", and an unknown identifier as it is', () => {

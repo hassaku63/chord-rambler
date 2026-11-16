@@ -102,6 +102,7 @@ export function ProgressionScreen({ createAudioContext }: Props) {
             onSelect={() => state.select(selected === i ? null : i)}
             onRemove={() => state.remove(i)}
             onBeats={(beats) => state.setBeats(i, beats)}
+            onRole={(role) => state.setRole(i, role)}
           />
         ))}
       </ol>

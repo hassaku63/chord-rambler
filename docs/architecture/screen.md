@@ -9,7 +9,7 @@
 画面 1 は、進行を組み、読みの札を見る。画面 2 は、それを鳴らす。画面 3 は、末尾の次の和音を候補から選んで足し、変形で彩る（体験 A）。上から次の順に並ぶ。
 
 1. 調の選択（12 の長調。既定は C）。再生の操作（下の「鳴らし方」）。和音名の入力と、枠を足す操作。打った和音の枠の長さは、候補と同じ規則で決める（下の「候補」）。和音のない枠は 1 小節（4 拍）。
-2. 枠の帯。枠を左から右に並べ、折り返す。カードは、和音名・ローマ数字・札の短い印（種別、機能、解決・終止）と、長さ（1〜16 拍）・消す操作を持つ。鳴っている枠は、カードに「鳴っています」の文字と破線の枠を出し、`aria-current` を付ける。
+2. 枠の帯。枠を左から右に並べ、折り返す。カードは、和音名・ローマ数字・札の短い印（種別、機能、解決・終止、役割に合うか）と、長さ（1〜16 拍）・役割（下の「役割」）・消す操作を持つ。鳴っている枠は、カードに「鳴っています」の文字と破線の枠を出し、`aria-current` を付ける。
 3. 選んだ枠の詳しい札。種別、機能、借り先、向かう先、解決、終止、テンションの注意、役割に合うかを、語と根拠の種類の印で出す。文にはしない（#110 の B1）。その下に、選んだ枠の変形（下の「変形」）。
 4. 末尾に足す候補（下の「候補」）。
 
@@ -17,14 +17,14 @@
 
 | 場所 | 中身 |
 | --- | --- |
-| `frontend/src/features/progression/useProgression.ts` | 進行の状態と操作。`localStorage` に API の `Progression` と同じ形で残し、読み出した値は境界で検証する（壊れていれば空の進行）。枠ごとの変形の土台も、枠と同じ状態に持つ（残さない）。末尾に足す枠の長さ（`nextBeats`）を決める |
+| `frontend/src/features/progression/useProgression.ts` | 進行の状態と操作。`localStorage` に API の `Progression` と同じ形（枠の役割を含む）で残し、読み出した値は境界で検証する（壊れていれば空の進行。知らない役割も壊れた値とみる）。枠ごとの変形の土台も、枠と同じ状態に持つ（残さない）。末尾に足す枠の長さ（`nextBeats`）を決める |
 | `frontend/src/features/progression/useVariations.ts` | 選んだ枠の土台が変わるたびに `POST /variations` を呼ぶ。古い応答は捨てる |
 | `frontend/src/features/progression/useProgressionReading.ts` | 進行が変わるたびに `POST /progressions/readings` を呼ぶ。古い応答は捨てる |
 | `frontend/src/features/progression/usePlayback.ts` | 進行が変わるたびに `POST /progressions/notes` を呼び（古い応答は捨てる）、テンポを持ち、進行の全体か 1 枠を鳴らす。候補の試聴も、ここから鳴らす |
 | `frontend/src/features/progression/useNextCandidates.ts` | 進行が変わるたびに、`nextBeats` の長さで `POST /progressions/next-candidates` を呼ぶ。古い応答は捨てる。新しい応答を待つあいだは、前の答えを返し、待っていることを知らせる |
 | `frontend/src/features/progression/schedule.ts` | 音符を発振器の予定（周波数、始まりの秒、長さ、音量）に直す純粋な関数 |
 | `frontend/src/features/progression/usePlayer.ts` | Web Audio で予定を鳴らす。`AudioContext` を作る関数を引数で受ける（テストは `frontend/src/test/fakeAudioContext.ts` を渡す） |
-| `frontend/src/features/progression/terms.ts` | 札の識別子を語にする表。ここ 1 か所に置く |
+| `frontend/src/features/progression/terms.ts` | 札と役割の識別子を語にする表。ここ 1 か所に置く。役割の一覧も、ここの表から引く |
 | `frontend/src/shared/api/client.ts` | API の呼び出しと、応答の検証 |
 
 ## 札の語
@@ -33,6 +33,13 @@
 - 契約が「名付けるものがない」とする値（`none`、`facts-only`）は、札を出さない。
 - 表にない識別子は、表示を落とさずに識別子のまま出す。
 - テンションの注意の音程は、契約の書き方（`P11`、`M3`）のまま出す。
+
+## 役割
+
+- 枠のカードの「役割」の `select` で、なし、構造的な役割の 6 つ、色合いの役割の 4 つ（語は `docs/glossary.md`）から選ぶ。種類ごとに `optgroup` でまとめる。
+- 役割は枠の一部として、`localStorage` と API に送る `Progression` に入る。なしの枠は `role` の欄を持たない。長さを変えても、和音を置き換えても、役割は残る。
+- 役割に合うか（合う、合わない、決められない）は、読みの `roleFit` をそのまま出す。カードには「役割に合うか 合わない」の形の印で、詳しい札には「役割に合うか」の行で出す。役割なしと色合いの役割の枠には、読みが何も言わないので、何も出さない（`docs/architecture/theory-conventions.md` の 7）。
+- 読みの `roleFit` は「合わない」の理由を持たないので、カードと詳しい札には理由を出さない。
 
 ## 候補
 

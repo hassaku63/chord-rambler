@@ -161,6 +161,49 @@ describe('useProgression', () => {
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '')).toEqual(result.current.progression);
   });
 
+  it('puts a role on a slot, keeps it through a length and a chord, and takes it away', () => {
+    const { result } = renderHook(() => useProgression());
+    act(() => result.current.addUnchosen());
+    act(() => result.current.addChord('C'));
+
+    act(() => result.current.setRole(0, 'prepare'));
+    act(() => result.current.setRole(1, 'wistful'));
+    act(() => result.current.setBeats(0, 2));
+    act(() => result.current.replaceChord(0, 'F'));
+
+    expect(result.current.progression.slots).toEqual([
+      { chord: 'F', beats: 2, role: 'prepare' },
+      { chord: 'C', beats: 4, role: 'wistful' },
+    ]);
+
+    act(() => result.current.setRole(1, ''));
+    act(() => result.current.setRole(0, 'tension'));
+
+    expect(result.current.progression.slots).toEqual([
+      { chord: 'F', beats: 2, role: 'prepare' },
+      { chord: 'C', beats: 4 },
+    ]);
+  });
+
+  it('brings the roles back after a reload', () => {
+    const { result: before, unmount } = renderHook(() => useProgression());
+    act(() => before.current.addUnchosen());
+    act(() => before.current.addNoChord());
+    act(() => before.current.addChord('G'));
+    act(() => before.current.setRole(0, 'stable'));
+    act(() => before.current.setRole(1, 'linger'));
+    act(() => before.current.setRole(2, 'rise'));
+    unmount();
+
+    const { result } = renderHook(() => useProgression());
+
+    expect(result.current.progression.slots).toEqual([
+      { content: 'unchosen', beats: 4, role: 'stable' },
+      { content: 'none', beats: 4, role: 'linger' },
+      { chord: 'G', beats: 4, role: 'rise' },
+    ]);
+  });
+
   it.each([
     { name: 'not JSON', stored: '{key' },
     { name: 'not an object', stored: '"C"' },
@@ -174,6 +217,8 @@ describe('useProgression', () => {
     { name: 'an unknown content', stored: '{"key":"C","slots":[{"content":"rest","beats":4}]}' },
     { name: 'a length of 0', stored: '{"key":"C","slots":[{"chord":"C","beats":0}]}' },
     { name: 'a length of 1.5', stored: '{"key":"C","slots":[{"chord":"C","beats":1.5}]}' },
+    { name: 'an unknown role', stored: '{"key":"C","slots":[{"chord":"C","beats":4,"role":"x"}]}' },
+    { name: 'a role of null', stored: '{"key":"C","slots":[{"chord":"C","beats":4,"role":null}]}' },
     {
       name: 'a field the screen does not write',
       stored: '{"key":"C","slots":[{"chord":"C","beats":4,"x":1}]}',

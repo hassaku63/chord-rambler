@@ -49,14 +49,20 @@ export function labelRows(slot: SlotReading): LabelRow[] {
   ];
 }
 
-/** The short marks on a slot's card: kind, function, and resolution or cadence. */
+/** The mark of a role fit, with what it is about (役割に合うか 合わない). */
+function fitMark(roleFit: SlotReading['roleFit']): string | undefined {
+  return roleFit && `役割に合うか ${wordFor(TERMS.fit, roleFit.fit) ?? roleFit.fit}`;
+}
+
+/** The short marks on a slot's card: kind, function, resolution or cadence, and role fit. */
 export function cardMarks(slot: SlotReading): string[] {
-  const { reading, resolution, cadence } = slot;
+  const { reading, resolution, cadence, roleFit } = slot;
   const marks = [
     reading && wordFor(TERMS.kind, reading.kind),
     reading && wordFor(TERMS.functionMark, reading.function),
     resolution && wordFor(TERMS.resolution, resolution.resolution),
     cadence && wordFor(TERMS.cadence, cadence.cadence),
+    fitMark(roleFit),
   ];
   return marks.filter((mark): mark is string => typeof mark === 'string');
 }
