@@ -1,5 +1,6 @@
 import type { Slot, SlotReading } from '@/shared/api/client';
 import { cardMarks } from './labels';
+import { ROLE_GROUPS, TERMS } from './terms';
 import { MAX_BEATS, MIN_BEATS } from './useProgression';
 
 const BEAT_CHOICES = Array.from({ length: MAX_BEATS - MIN_BEATS + 1 }, (_, i) => MIN_BEATS + i);
@@ -22,9 +23,14 @@ type Props = {
   onSelect: () => void;
   onRemove: () => void;
   onBeats: (beats: number) => void;
+  /** Takes the role chosen, or an empty string for none. */
+  onRole: (role: string) => void;
 };
 
-/** One slot in the strip: its chord, Roman numeral and short marks, its length, and removal. */
+/**
+ * One slot in the strip: its chord, Roman numeral and short marks, its length,
+ * its role, and removal.
+ */
 export function SlotCard({
   slot,
   reading,
@@ -34,6 +40,7 @@ export function SlotCard({
   onSelect,
   onRemove,
   onBeats,
+  onRole,
 }: Props) {
   const name = slotName(slot, reading);
   const marks = reading ? cardMarks(reading) : [];
@@ -72,6 +79,21 @@ export function SlotCard({
             <option key={beats} value={beats}>
               {beats} 拍
             </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        役割
+        <select value={slot.role ?? ''} onChange={(e) => onRole(e.target.value)}>
+          <option value="">なし</option>
+          {ROLE_GROUPS.map((group) => (
+            <optgroup key={group.kind} label={group.kind}>
+              {group.roles.map((role) => (
+                <option key={role} value={role}>
+                  {TERMS.role[role]}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </label>

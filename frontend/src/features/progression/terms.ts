@@ -71,7 +71,34 @@ export const TERMS = {
   style: {
     classical: 'クラシック',
   } satisfies Record<Preference['style'], string>,
+  /** The roles a slot may hold: the six structural ones, then the four colour ones. */
+  role: {
+    stable: '安定',
+    link: 'つなぎ',
+    prepare: '準備',
+    rise: '高まり',
+    resolve: '解決',
+    close: '締め',
+    spread: '広がり',
+    float: '浮遊',
+    wistful: '切なさ',
+    linger: '余韻',
+  } satisfies Record<Schemas['Role'], string>,
 } as const;
+
+/** A role, as the contract names it. */
+export type Role = Schemas['Role'];
+
+/** The roles by kind, in the order the choice lists them (docs/glossary.md). */
+export const ROLE_GROUPS: readonly { kind: string; roles: readonly Role[] }[] = [
+  { kind: '構造的な役割', roles: ['stable', 'link', 'prepare', 'rise', 'resolve', 'close'] },
+  { kind: '色合いの役割', roles: ['spread', 'float', 'wistful', 'linger'] },
+];
+
+/** Whether a value is one of the roles of the contract. */
+export function isRole(value: unknown): value is Role {
+  return typeof value === 'string' && Object.hasOwn(TERMS.role, value);
+}
 
 /** What a borrowed chord is borrowed from when its modes hold aeolian. */
 export const PARALLEL_MINOR = '同主短調';

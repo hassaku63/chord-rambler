@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Progression, Slot } from '@/shared/api/client';
+import type { Role } from './terms';
+import { isRole } from './terms';
 
 /** The 12 major keys the screen offers (ADR-0006), round the circle of fifths. */
 export const KEYS = ['C', 'G', 'D', 'A', 'E', 'B', 'F♯', 'D♭', 'A♭', 'E♭', 'B♭', 'F'] as const;
@@ -31,21 +33,33 @@ function isBeats(value: unknown): value is number {
   );
 }
 
+/** The slot with the role, or with none when the role is null: no role leaves no field. */
+function withRole({ chord, content, beats }: Slot, role: Role | null): Slot {
+  const slot: Slot =
+    chord !== undefined ? { chord, beats } : content !== undefined ? { content, beats } : { beats };
+  return role === null ? slot : { ...slot, role };
+}
+
 function parseSlot(value: unknown): Slot | null {
   if (typeof value !== 'object' || value === null) {
     return null;
   }
   const fields = value as Record<string, unknown>;
   const names = Object.keys(fields);
-  if (!isBeats(fields.beats) || names.some((n) => !['chord', 'content', 'beats'].includes(n))) {
+  if (
+    !isBeats(fields.beats) ||
+    names.some((n) => !['chord', 'content', 'beats', 'role'].includes(n)) ||
+    ('role' in fields && !isRole(fields.role))
+  ) {
     return null;
   }
   const { chord, content, beats } = fields;
+  const role = isRole(fields.role) ? fields.role : null;
   if (typeof chord === 'string' && content === undefined && chord.trim() !== '') {
-    return { chord, beats };
+    return withRole({ chord, beats }, role);
   }
   if (chord === undefined && (content === 'none' || content === 'unchosen')) {
-    return { content, beats };
+    return withRole({ content, beats }, role);
   }
   return null;
 }
@@ -102,10 +116,12 @@ export type ProgressionState = {
   addCandidate: (name: string, beats: number) => void;
   addNoChord: () => void;
   addUnchosen: () => void;
-  /** Puts the chord in place of the slot's, keeping its length and its base. */
+  /** Puts the chord in place of the slot's, keeping its length, its role and its base. */
   replaceChord: (index: number, name: string) => void;
   remove: (index: number) => void;
   setBeats: (index: number, beats: number) => void;
+  /** Puts a role of the contract on the slot; an empty string takes its role away. */
+  setRole: (index: number, role: string) => void;
   select: (index: number | null) => void;
 };
 
@@ -178,7 +194,9 @@ export function useProgression(): ProgressionState {
     replaceChord: useCallback(
       (index: number, chord: string) =>
         changeSlots((slot, i) =>
-          i === index && chord !== '' ? { chord, beats: slot.beats } : slot,
+          i === index && chord !== ''
+            ? withRole({ chord, beats: slot.beats }, slot.role ?? null)
+            : slot,
         ),
       [changeSlots],
     ),
@@ -193,6 +211,16 @@ export function useProgression(): ProgressionState {
       (index: number, beats: number) => {
         if (isBeats(beats)) {
           changeSlots((slot, i) => (i === index ? { ...slot, beats } : slot));
+        }
+      },
+      [changeSlots],
+    ),
+    setRole: useCallback(
+      (index: number, role: string) => {
+        if (role === '' || isRole(role)) {
+          changeSlots((slot, i) =>
+            i === index ? withRole(slot, role === '' ? null : role) : slot,
+          );
         }
       },
       [changeSlots],
