@@ -1,0 +1,116 @@
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
+import { STORAGE_KEY, useProgression } from './useProgression';
+
+afterEach(() => localStorage.clear());
+
+describe('useProgression', () => {
+  it('starts empty in C', () => {
+    const { result } = renderHook(() => useProgression());
+
+    expect(result.current.progression).toEqual({ key: 'C', slots: [] });
+    expect(result.current.selected).toBeNull();
+  });
+
+  it('adds slots at the end, one bar long, and changes the key', () => {
+    const { result } = renderHook(() => useProgression());
+
+    act(() => result.current.addChord(' Dm7 '));
+    act(() => result.current.addNoChord());
+    act(() => result.current.addUnchosen());
+    act(() => result.current.setKey('E♭'));
+
+    expect(result.current.progression).toEqual({
+      key: 'E♭',
+      slots: [
+        { chord: 'Dm7', beats: 4 },
+        { content: 'none', beats: 4 },
+        { content: 'unchosen', beats: 4 },
+      ],
+    });
+  });
+
+  it('ignores an empty chord name and a key that is not one of the 12', () => {
+    const { result } = renderHook(() => useProgression());
+
+    act(() => result.current.addChord('  '));
+    act(() => result.current.setKey('E♯'));
+
+    expect(result.current.progression).toEqual({ key: 'C', slots: [] });
+  });
+
+  it('changes a length within 1 to 16 beats and ignores one outside', () => {
+    const { result } = renderHook(() => useProgression());
+    act(() => result.current.addChord('C'));
+
+    act(() => result.current.setBeats(0, 16));
+    act(() => result.current.setBeats(0, 17));
+    act(() => result.current.setBeats(0, 0));
+
+    expect(result.current.progression.slots).toEqual([{ chord: 'C', beats: 16 }]);
+  });
+
+  it('removes a slot and keeps the chosen one chosen', () => {
+    const { result } = renderHook(() => useProgression());
+    act(() => result.current.addChord('C'));
+    act(() => result.current.addChord('F'));
+    act(() => result.current.addChord('G'));
+    act(() => result.current.select(2));
+
+    act(() => result.current.remove(0));
+
+    expect(result.current.progression.slots).toEqual([
+      { chord: 'F', beats: 4 },
+      { chord: 'G', beats: 4 },
+    ]);
+    expect(result.current.selected).toBe(1);
+
+    act(() => result.current.remove(1));
+
+    expect(result.current.selected).toBeNull();
+  });
+
+  it('brings the progression back after a reload', () => {
+    const { result: before, unmount } = renderHook(() => useProgression());
+    act(() => before.current.setKey('A'));
+    act(() => before.current.addChord('F♯m'));
+    act(() => before.current.addUnchosen());
+    unmount();
+
+    const { result } = renderHook(() => useProgression());
+
+    expect(result.current.progression).toEqual({
+      key: 'A',
+      slots: [
+        { chord: 'F♯m', beats: 4 },
+        { content: 'unchosen', beats: 4 },
+      ],
+    });
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '')).toEqual(result.current.progression);
+  });
+
+  it.each([
+    { name: 'not JSON', stored: '{key' },
+    { name: 'not an object', stored: '"C"' },
+    { name: 'a key outside the 12', stored: '{"key":"E♯","slots":[]}' },
+    { name: 'no slots', stored: '{"key":"C"}' },
+    {
+      name: 'a slot with both chord and content',
+      stored: '{"key":"C","slots":[{"chord":"C","content":"none","beats":4}]}',
+    },
+    { name: 'a slot with neither', stored: '{"key":"C","slots":[{"beats":4}]}' },
+    { name: 'an unknown content', stored: '{"key":"C","slots":[{"content":"rest","beats":4}]}' },
+    { name: 'a length of 0', stored: '{"key":"C","slots":[{"chord":"C","beats":0}]}' },
+    { name: 'a length of 1.5', stored: '{"key":"C","slots":[{"chord":"C","beats":1.5}]}' },
+    {
+      name: 'a field the screen does not write',
+      stored: '{"key":"C","slots":[{"chord":"C","beats":4,"x":1}]}',
+    },
+  ])('starts empty when the stored value is $name', ({ stored }) => {
+    localStorage.setItem(STORAGE_KEY, stored);
+
+    const { result } = renderHook(() => useProgression());
+
+    expect(result.current.progression).toEqual({ key: 'C', slots: [] });
+  });
+});
