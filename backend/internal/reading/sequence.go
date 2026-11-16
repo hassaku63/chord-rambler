@@ -121,21 +121,12 @@ type SlotReading struct {
 //
 // It fails for a key other than Ionian (relation.ErrNotMajor).
 func ReadProgression(p progression.Progression) ([]SlotReading, error) {
-	key := p.Key()
-	if key.Mode() != material.Ionian {
-		return nil, fmt.Errorf("read progression in %s %s: %w", key.Tonic(), key.Mode(), relation.ErrNotMajor)
-	}
-	slots := p.Slots()
-	read := make([]slotChord, len(slots))
-	for i, s := range slots {
-		r, err := readSlot(s, key)
-		if err != nil {
-			return nil, err
-		}
-		read[i] = r
+	read, err := readSlots(p)
+	if err != nil {
+		return nil, err
 	}
 	places := relation.Places(p)
-	out := make([]SlotReading, len(slots))
+	out := make([]SlotReading, len(read))
 	for i, r := range read {
 		out[i] = SlotReading{HasChord: r.ok, Chord: r.reading}
 		if i+1 < len(read) {
@@ -148,6 +139,26 @@ func ReadProgression(p progression.Progression) ([]SlotReading, error) {
 			}
 			out[i].Cadence = cadence(prev, r)
 		}
+	}
+	return out, nil
+}
+
+// readSlots returns what the rules look at in every slot of the progression,
+// in order. The rules of the roles (ReadRoleFits) read V from it too, so that
+// V is said in one place.
+func readSlots(p progression.Progression) ([]slotChord, error) {
+	key := p.Key()
+	if key.Mode() != material.Ionian {
+		return nil, fmt.Errorf("read progression in %s %s: %w", key.Tonic(), key.Mode(), relation.ErrNotMajor)
+	}
+	slots := p.Slots()
+	out := make([]slotChord, len(slots))
+	for i, s := range slots {
+		r, err := readSlot(s, key)
+		if err != nil {
+			return nil, err
+		}
+		out[i] = r
 	}
 	return out, nil
 }

@@ -36,11 +36,14 @@ type SlotCandidate struct {
 }
 
 // RoleLabel holds whether the candidate fits the structural role of the slot,
-// as reading.ReadRoleFits reads the progression with the slot filled. It is
-// given when the slot has a structural role, and may say RoleUndecided.
+// and the conditions of the role it does not meet, as reading.ReadRoleVerdicts
+// reads the progression with the slot filled. It is given when the slot has a
+// structural role, and may say RoleUndecided.
 type RoleLabel struct {
 	Role progression.Role
 	Fit  reading.RoleFit
+	// Unmet is set when Fit is RoleMisfits (reading.RoleVerdict).
+	Unmet []reading.RoleCondition
 }
 
 // Basis returns School.
@@ -61,9 +64,9 @@ func (RoleLabel) Basis() Basis { return School }
 // Every candidate carries the labels of NextCandidates, with the slot before
 // in place of the last slot; how it goes on to the next slot when that holds
 // a chord; the cadence of the next slot when it is the last of a full phrase;
-// and whether it fits the role when the role is structural. The readings come
-// from reading.ReadProgression and reading.ReadRoleFits of the progression
-// with the slot filled.
+// and whether it fits the role, with the conditions not met, when the role is
+// structural. The readings come from reading.ReadProgression and
+// reading.ReadRoleVerdicts of the progression with the slot filled.
 //
 // It fails for a key other than Ionian (relation.ErrNotMajor), an index
 // outside 0 to Len()-1 (progression.ErrIndex), and a candidate beyond a double
@@ -128,7 +131,7 @@ func slotCandidate(p progression.Progression, i int, pos material.Position) (Slo
 	if err != nil {
 		return SlotCandidate{}, fmt.Errorf("slot candidate: %w", err)
 	}
-	fits, err := reading.ReadRoleFits(next)
+	verdicts, err := reading.ReadRoleVerdicts(next)
 	if err != nil {
 		return SlotCandidate{}, fmt.Errorf("slot candidate: %w", err)
 	}
@@ -137,8 +140,8 @@ func slotCandidate(p progression.Progression, i int, pos material.Position) (Slo
 		return SlotCandidate{}, err
 	}
 	out := SlotCandidate{Candidate: base}
-	if fits[i] != reading.RoleNotJudged {
-		out.Role = &RoleLabel{Role: next.Slots()[i].Role(), Fit: fits[i]}
+	if v := verdicts[i]; v.Fit != reading.RoleNotJudged {
+		out.Role = &RoleLabel{Role: next.Slots()[i].Role(), Fit: v.Fit, Unmet: v.Unmet}
 	}
 	if i+1 == next.Len() {
 		return out, nil

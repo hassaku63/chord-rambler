@@ -142,7 +142,11 @@ func labels(c query.SlotCandidate) string {
 		out = append(out, "nextcad:"+c.NextCadence.Cadence.String())
 	}
 	if c.Role != nil {
-		out = append(out, "role:"+c.Role.Role.String()+"/"+c.Role.Fit.String())
+		role := "role:" + c.Role.Role.String() + "/" + c.Role.Fit.String()
+		if c.Role.Unmet != nil {
+			role += fmt.Sprint(c.Role.Unmet)
+		}
+		out = append(out, role)
 	}
 	return strings.Join(out, " ")
 }
@@ -189,8 +193,19 @@ func TestSlotCandidatesLabels(t *testing.T) {
 			"motion:M2 common:1 res:NoResolution nextcad:NoCadence"},
 		{"V7 before none chosen", inC(bar("C"), open(none), open(none)), 1, "V7:L",
 			"motion:P5 common:1 res:NoResolution"},
+		// D7 resolves as expected to V, which does not fit 解決: D7 is not V.
 		{"解決: V after D7", inC(bar("D7"), open(progression.RoleResolve)), 1, "V",
-			"motion:P4 common:1 res:ResolutionExpected role:RoleResolve/RoleMisfits"},
+			"motion:P4 common:1 res:ResolutionExpected role:RoleResolve/RoleMisfits[ConditionPreviousV]"},
+		{"解決: vi after G7", inC(bar("G7"), open(progression.RoleResolve)), 1, "vi:C",
+			"motion:M2 common:0 res:ResolutionIrregular role:RoleResolve/RoleMisfits[ConditionExpectedResolution]"},
+		{"解決: I after G7", inC(bar("G7"), open(progression.RoleResolve)), 1, "I:C",
+			"motion:P4 common:1 res:ResolutionExpected role:RoleResolve/RoleFits"},
+		{"高まり: I after C", inC(bar("C"), open(progression.RoleRise)), 1, "I",
+			"motion:P1 common:3 res:NoResolution role:RoleRise/RoleMisfits[ConditionFunction]"},
+		{"準備: I before C", inC(open(progression.RolePrepare), bar("C")), 0, "I",
+			"next:NoResolution role:RolePrepare/RoleMisfits[ConditionFunction ConditionNextDominant]"},
+		{"準備: IV before G7", inC(open(progression.RolePrepare), bar("G7")), 0, "IV",
+			"next:NoResolution role:RolePrepare/RoleFits"},
 		{"締め: I after G7", inC(bar("C"), bar("F"), bar("G7"), open(progression.RoleClose)), 3, "I:C",
 			"motion:P4 common:1 res:ResolutionExpected cad:AuthenticCadence role:RoleClose/RoleFits"},
 		{"締め: I after G7, phrase not full", inC(bar("F"), bar("G7"), open(progression.RoleClose)), 2, "I:C",
