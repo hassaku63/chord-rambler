@@ -21,10 +21,10 @@ func caution(tension, tone string) reading.TensionCaution {
 // https://soundquest.jp/quest/chord/chord-mv6/cst-major-chordscales/): a note
 // of the scale a half step above the root, the third, the fifth or the
 // seventh. On a dominant seventh only the 11 is a caution, so the ♭9 of E7 and
-// the ♭13 of A7 (both F, a half step above E) are not. The 13 of Dm7 (B) is a
-// whole step above the fifth (A). The notes of the scale are compared by
-// spelling, as the kind of a reading is (#102): the ♭9 of E♭maj7 is F♭, not
-// the E of the scale.
+// the ♭13 of A7 (both F, a half step above E) are not; E(♭9) has no seventh,
+// so its ♭9 is. The 13 of Dm7 (B) is a whole step above the fifth (A). The
+// notes of the scale are compared by spelling, as the kind of a reading is
+// (#102): the ♭9 of E♭maj7 is F♭, not the E of the scale.
 func TestTensionCautionsInCMajor(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -44,6 +44,7 @@ func TestTensionCautionsInCMajor(t *testing.T) {
 		{"Am7(11): D is a whole step above C", chord(aNat, "m3 P5 m7 P11", ""), nil},
 		{"A7(11): D over C♯", chord(aNat, "M3 P5 m7 P11", ""), []reading.TensionCaution{caution("P11", "M3")}},
 		{"E7(♭9): only the 11 on a dominant seventh", chord(eNat, "M3 P5 m7 m9", ""), nil},
+		{"E(♭9): F over E, no seventh", chord(eNat, "M3 P5 m9", ""), []reading.TensionCaution{caution("m9", "P1")}},
 		{"A7(♭13): only the 11 on a dominant seventh", chord(aNat, "M3 P5 m7 m13", ""), nil},
 		{"G7(♭9): A♭ is not in the scale", chord(gNat, "M3 P5 m7 m9", ""), nil},
 		{"E♭maj7(♭9): F♭ is not spelled as a note of the scale", chord(eFlat, "M3 P5 M7 m9", ""), nil},

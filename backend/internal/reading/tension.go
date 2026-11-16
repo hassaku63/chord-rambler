@@ -26,7 +26,9 @@ type TensionCaution struct {
 // chord (the root, the third, the fifth or the seventh), by pitch class. On a
 // dominant seventh (a major triad and a minor seventh, on any degree) only an
 // 11 is kept. Nothing else is looked at, so the 13 of IIm7 (B on Dm7 in C) is
-// not a caution: it is a whole step above the fifth.
+// not a caution: it is a whole step above the fifth. A tension that is not a
+// note of the scale is never a caution (#108). No caution does not mean that
+// a tension does not sound muddy.
 //
 // It fails for a key other than Ionian (relation.ErrNotMajor).
 func TensionCautions(c material.Chord, key material.Scale) ([]TensionCaution, error) {

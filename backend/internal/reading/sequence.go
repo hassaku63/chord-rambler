@@ -91,24 +91,30 @@ type SlotReading struct {
 // ReadProgression reads every slot of the progression in its key, in order:
 // the element at i is the slot at i, as relation.Places numbers them.
 //
-// A chord is taken as a degree of the key when it is read as diatonic
-// (ReadChord) and its root is on that degree (the owner's call on #103): in
-// C, G, G7, G/B and G7(♭9) are on the fifth degree, Gm (borrowed) and D7 (a
-// secondary dominant) are not on any. V is a chord on the fifth degree whose
-// triad is major and whose seventh is none or minor, whatever its bass and
-// tensions (G/B, G7/F, G7(9); not Gsus4).
+// A chord is on a degree of the key when it is read as diatonic (ReadChord),
+// its root is on that degree, and it is a triad with a third or a seventh
+// chord, whatever its bass and tensions: no second, fourth or sixth member
+// (the owner's calls on #103). In C, G, G7, G/B and G7(♭9) are on the fifth
+// degree; Gsus4, G6, Gm (borrowed) and D7 (a secondary dominant) are not. V is
+// a chord on the fifth degree whose triad is major and whose seventh is none
+// or minor; I and IV are chords on the first and the fourth degrees.
 //
-// Resolution is said of V and of a secondary dominant, when the next slot
-// holds a chord: expected when that chord is on the degree pointed to (1 for
-// V, the target for a secondary dominant), irregular otherwise. The next slot
-// may be in the next phrase.
+// Resolution is said of V and of a secondary dominant when the next slot
+// holds a triad with a third or a seventh chord: expected when that chord is
+// on the degree pointed to (1 for V, the target for a secondary dominant),
+// irregular otherwise. It is not said when the same dominant goes on (V to V,
+// or a secondary dominant to one with the same target): the last of them
+// says it. The next slot may be in the next phrase.
 //
-// A cadence is named on the last slot of a phrase only:
+// A cadence is named only on the last slot of a phrase that is full (as long
+// as progression.Progression.PhraseBeats), so a phrase still being written at
+// the end gets none:
 //
 //   - half, when the slot holds V, whatever comes before it;
-//   - otherwise only when the slot before it is in the same phrase and both
-//     hold chords: authentic when V goes to I, deceptive when V goes to any
-//     other chord, plagal when IV goes to I.
+//   - otherwise only when the slot holds a triad with a third or a seventh
+//     chord, and the slot before it is in the same phrase and holds a chord:
+//     authentic when V goes to I, deceptive when V goes to any other chord,
+//     plagal when IV goes to I.
 //
 // It fails for a key other than Ionian (relation.ErrNotMajor).
 func ReadProgression(p progression.Progression) ([]SlotReading, error) {
@@ -127,12 +133,16 @@ func ReadProgression(p progression.Progression) ([]SlotReading, error) {
 	}
 	places := relation.Places(p)
 	out := make([]SlotReading, len(slots))
+	end := 0 // beats from the start of the progression to the end of the slot
 	for i, r := range read {
+		end += slots[i].Beats()
 		out[i] = SlotReading{HasChord: r.ok, Chord: r.reading}
 		if i+1 < len(read) {
 			out[i].Resolution = resolution(r, read[i+1])
 		}
-		if places[i].LastInPhrase {
+		// No slot crosses a phrase, so a phrase is full when its last slot
+		// ends on a multiple of the length of a phrase.
+		if places[i].LastInPhrase && end%p.PhraseBeats() == 0 {
 			var prev slotChord
 			if places[i].IndexInPhrase > 1 {
 				prev = read[i-1]
@@ -144,13 +154,31 @@ func ReadProgression(p progression.Progression) ([]SlotReading, error) {
 }
 
 // slotChord is what the rules look at in a slot: whether it holds a chord, the
-// reading, the degree of a chord read as diatonic (0 otherwise), and whether
-// the chord is V.
+// reading, the degree of a chord read as diatonic (0 otherwise), whether the
+// chord is a triad with a third or a seventh chord (tertian), and whether it
+// is V.
 type slotChord struct {
 	ok      bool
 	reading ChordReading
 	degree  int
+	tertian bool
 	v       bool
+}
+
+// on reports whether the chord is on the degree: read as diatonic there, and
+// tertian.
+func (s slotChord) on(degree int) bool { return s.tertian && s.degree == degree }
+
+// target returns the degree a dominant points to (1 for V), or 0.
+func (s slotChord) target() int {
+	switch {
+	case s.reading.Main.Kind == SecondaryDominant:
+		return s.reading.Main.Target
+	case s.v:
+		return 1
+	default:
+		return 0
+	}
 }
 
 func readSlot(s progression.Slot, key material.Scale) (slotChord, error) {
@@ -162,7 +190,7 @@ func readSlot(s progression.Slot, key material.Scale) (slotChord, error) {
 	if err != nil {
 		return slotChord{}, fmt.Errorf("read progression: %w", err)
 	}
-	out := slotChord{ok: true, reading: r}
+	out := slotChord{ok: true, reading: r, tertian: tertian(c)}
 	if r.Main.Kind == Diatonic {
 		pos, err := relation.PositionOf(c, key)
 		if err != nil {
@@ -173,31 +201,45 @@ func readSlot(s progression.Slot, key material.Scale) (slotChord, error) {
 		out.degree = pos.Degree()
 	}
 	seventh := c.Seventh()
-	out.v = out.degree == 5 && c.Triad() == material.TriadMajor &&
+	out.v = out.on(5) && c.Triad() == material.TriadMajor &&
 		(seventh == material.NoSeventh || seventh == material.SeventhMinor)
 	return out, nil
 }
 
-// resolution returns how the chord goes on to the next.
-func resolution(cur, next slotChord) Resolution {
-	var want int
-	switch {
-	case !cur.ok || !next.ok:
-		return NoResolution
-	case cur.reading.Main.Kind == SecondaryDominant:
-		want = cur.reading.Main.Target
-	case cur.v:
-		want = 1
+// tertian reports whether the chord is a triad with a third (major, minor,
+// diminished or augmented), with or without a seventh and tensions, and with
+// no second, fourth or sixth member. The bass is not looked at.
+func tertian(c material.Chord) bool {
+	switch c.Triad() {
+	case material.TriadMajor, material.TriadMinor, material.TriadDiminished, material.TriadAugmented:
 	default:
-		return NoResolution
+		return false
 	}
-	if next.degree == want {
-		return ResolutionExpected
+	for _, iv := range c.Intervals() {
+		if n := iv.Number(); n == 2 || n == 4 || n == 6 {
+			return false
+		}
 	}
-	return ResolutionIrregular
+	return true
 }
 
-// cadence returns the cadence that ends a phrase on last, after prev, the
+// resolution returns how the chord goes on to the next.
+func resolution(cur, next slotChord) Resolution {
+	want := cur.target()
+	switch {
+	case !cur.ok || !next.ok || want == 0 || !next.tertian:
+		return NoResolution
+	case next.target() == want && next.reading.Main.Kind == cur.reading.Main.Kind:
+		// The same dominant goes on: V to V, or V/x to V/x.
+		return NoResolution
+	case next.on(want):
+		return ResolutionExpected
+	default:
+		return ResolutionIrregular
+	}
+}
+
+// cadence returns the cadence that ends a full phrase on last, after prev, the
 // slot before it in the phrase (the zero value when there is none).
 func cadence(prev, last slotChord) Cadence {
 	switch {
@@ -205,13 +247,13 @@ func cadence(prev, last slotChord) Cadence {
 		return NoCadence
 	case last.v:
 		return HalfCadence
-	case !prev.ok:
+	case !last.tertian || !prev.ok:
 		return NoCadence
-	case prev.v && last.degree == 1:
+	case prev.v && last.on(1):
 		return AuthenticCadence
 	case prev.v:
 		return DeceptiveCadence
-	case prev.degree == 4 && last.degree == 1:
+	case prev.on(4) && last.on(1):
 		return PlagalCadence
 	default:
 		return NoCadence

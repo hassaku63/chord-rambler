@@ -48,11 +48,15 @@ var (
 	cOverE  = chord(cNat, maj, "M3")
 	cm      = chord(cNat, minTriad, "")
 	c7      = chord(cNat, dom7, "")
+	csus4   = chord(cNat, "P4 P5", "")
 	dm      = chord(dNat, minTriad, "")
+	d       = chord(dNat, maj, "")
 	d7      = chord(dNat, dom7, "")
 	e       = chord(eNat, maj, "")
 	em      = chord(eNat, minTriad, "")
 	f       = chord(fNat, maj, "")
+	fm      = chord(fNat, minTriad, "")
+	fsus2   = chord(fNat, "M2 P5", "")
 	g       = chord(gNat, maj, "")
 	g7      = chord(gNat, dom7, "")
 	gOverB  = chord(gNat, maj, "M3")
@@ -60,6 +64,7 @@ var (
 	g7OverF = chord(gNat, dom7, "m7")
 	g7n9    = chord(gNat, "M3 P5 m7 M9", "")
 	gsus4   = chord(gNat, "P4 P5", "")
+	g6      = chord(gNat, "M3 P5 M6", "")
 	gm      = chord(gNat, minTriad, "")
 	am      = chord(aNat, minTriad, "")
 	a7      = chord(aNat, dom7, "")
@@ -78,71 +83,100 @@ func readProgression(t *testing.T, p progression.Progression) []reading.SlotRead
 	return got
 }
 
-// How a dominant goes on, read on the first of two slots in C major
+// bars is a slot of one bar for each chord.
+func bars(chords ...material.Chord) []slot {
+	var out []slot
+	for _, ch := range chords {
+		out = append(out, bar(ch))
+	}
+	return out
+}
+
+// How a dominant goes on, read on every slot of progressions in C major
 // (docs/architecture/theory-conventions.md, 2; Hutchinson 17.4,
 // https://musictheory.pugetsound.edu/mt21c/AnalyzingSecondaryDominants.html,
 // and Hutchinson on irregular resolutions,
 // https://musictheory.pugetsound.edu/mt21c/IrregularResoltionsOfSecondaryDominants.html).
-// The chord is expected when the next is read as diatonic and is on the degree
-// pointed to (the owner's call on #103): G7, G/B and G7(♭9) after D7, but not
-// Gm (borrowed) or D7 after A7 (a secondary dominant). V is the major triad or
-// the dominant seventh on the fifth degree, whatever its bass and tensions
-// (#103): G/B, G7/F and G7(9) are V, Gsus4 is not. Nothing is said when no
-// chord follows.
+// The owner's calls on #103: the next chord is expected when it is read as
+// diatonic, is on the degree pointed to, and is a triad with a third or a
+// seventh chord (G7, G/B and G7(♭9) after D7; not Gm, borrowed, nor D7 after
+// A7, a secondary dominant). V is the major triad or the dominant seventh on
+// the fifth degree, whatever its bass and tensions: G/B, G7/F and G7(9) are V;
+// Gsus4 and G6 are not. Nothing is said before a sus or a sixth chord, when no
+// chord follows, or when the same dominant goes on: the last of them says it.
 func TestResolution(t *testing.T) {
+	const (
+		none      = reading.NoResolution
+		expected  = reading.ResolutionExpected
+		irregular = reading.ResolutionIrregular
+	)
 	tests := []struct {
 		name  string
 		slots []slot
-		want  reading.Resolution
+		want  []reading.Resolution
 	}{
 		// The cases of #103.
-		{"D7 → G", []slot{bar(d7), bar(g)}, reading.ResolutionExpected},
-		{"D7 → Em", []slot{bar(d7), bar(em)}, reading.ResolutionIrregular},
-		{"G7 → C", []slot{bar(g7), bar(c)}, reading.ResolutionExpected},
-		{"G7 → Am", []slot{bar(g7), bar(am)}, reading.ResolutionIrregular},
-		// The owner's call on #103.
-		{"D7 → G7", []slot{bar(d7), bar(g7)}, reading.ResolutionExpected},
-		{"D7 → G/B", []slot{bar(d7), bar(gOverB)}, reading.ResolutionExpected},
-		{"D7 → G7(♭9)", []slot{bar(d7), bar(g7b9)}, reading.ResolutionExpected},
-		{"D7 → Gm", []slot{bar(d7), bar(gm)}, reading.ResolutionIrregular},
-		{"A7 → D7", []slot{bar(a7), bar(d7)}, reading.ResolutionIrregular},
-		{"G/B → C", []slot{bar(gOverB), bar(c)}, reading.ResolutionExpected},
-		{"G7/F → C", []slot{bar(g7OverF), bar(c)}, reading.ResolutionExpected},
-		{"G7(9) → C", []slot{bar(g7n9), bar(c)}, reading.ResolutionExpected},
-		{"Gsus4 → C: not V", []slot{bar(gsus4), bar(c)}, reading.NoResolution},
+		{"D7 → G", bars(d7, g), []reading.Resolution{expected, none}},
+		{"D7 → Em", bars(d7, em), []reading.Resolution{irregular, none}},
+		{"G7 → C", bars(g7, c), []reading.Resolution{expected, none}},
+		{"G7 → Am", bars(g7, am), []reading.Resolution{irregular, none}},
+		// The owner's calls on #103.
+		{"D7 → G7", bars(d7, g7), []reading.Resolution{expected, none}},
+		{"D7 → G/B", bars(d7, gOverB), []reading.Resolution{expected, none}},
+		{"D7 → G7(♭9)", bars(d7, g7b9), []reading.Resolution{expected, none}},
+		{"D7 → Gm", bars(d7, gm), []reading.Resolution{irregular, none}},
+		{"A7 → D7 → G", bars(a7, d7, g), []reading.Resolution{irregular, expected, none}},
+		{"G/B → C", bars(gOverB, c), []reading.Resolution{expected, none}},
+		{"G7/F → C", bars(g7OverF, c), []reading.Resolution{expected, none}},
+		{"G7(9) → C", bars(g7n9, c), []reading.Resolution{expected, none}},
+		{"Gsus4 → C: not V", bars(gsus4, c), []reading.Resolution{none, none}},
+		{"G6 → C: not V", bars(g6, c), []reading.Resolution{none, none}},
+		{"G → Gsus4", bars(g, gsus4), []reading.Resolution{none, none}},
+		{"G7 → Csus4", bars(g7, csus4), []reading.Resolution{none, none}},
+		{"G → G7 → C", bars(g, g7, c), []reading.Resolution{none, expected, none}},
+		{"G → G/B → C", bars(g, gOverB, c), []reading.Resolution{none, expected, none}},
+		{"D7 → D7 → G", bars(d7, d7, g), []reading.Resolution{none, expected, none}},
 		// What follows from the calls.
-		{"D7 → Gsus4: diatonic on the fifth degree", []slot{bar(d7), bar(gsus4)}, reading.ResolutionExpected},
-		{"A7 → Dm", []slot{bar(a7), bar(dm)}, reading.ResolutionExpected},
-		{"B7 → Em", []slot{bar(b7), bar(em)}, reading.ResolutionExpected},
-		{"C7 → F", []slot{bar(c7), bar(f)}, reading.ResolutionExpected},
-		{"E → Am", []slot{bar(e), bar(am)}, reading.ResolutionExpected},
-		{"G7 → Cm: borrowed", []slot{bar(g7), bar(cm)}, reading.ResolutionIrregular},
-		{"G7 → C7: a secondary dominant", []slot{bar(g7), bar(c7)}, reading.ResolutionIrregular},
-		{"C → F: not a dominant", []slot{bar(c), bar(f)}, reading.NoResolution},
-		{"Am → Dm: not a dominant", []slot{bar(am), bar(dm)}, reading.NoResolution},
-		{"D7 last", []slot{bar(d7)}, reading.NoResolution},
-		{"D7 → no chord", []slot{bar(d7), noChord}, reading.NoResolution},
-		{"D7 → none chosen", []slot{bar(d7), unchosen}, reading.NoResolution},
-		{"G7 → no chord", []slot{bar(g7), noChord}, reading.NoResolution},
+		{"D → D7 → G: the same target", bars(d, d7, g), []reading.Resolution{none, expected, none}},
+		{"D7 → G6: a sixth chord", bars(d7, g6), []reading.Resolution{none, none}},
+		{"A7 → Dm", bars(a7, dm), []reading.Resolution{expected, none}},
+		{"B7 → Em", bars(b7, em), []reading.Resolution{expected, none}},
+		{"C7 → F", bars(c7, f), []reading.Resolution{expected, none}},
+		{"E → Am", bars(e, am), []reading.Resolution{expected, none}},
+		{"G7 → Cm: borrowed", bars(g7, cm), []reading.Resolution{irregular, none}},
+		{"G7 → C7: a secondary dominant", bars(g7, c7), []reading.Resolution{irregular, none}},
+		{"C → F: not a dominant", bars(c, f), []reading.Resolution{none, none}},
+		{"Am → Dm: not a dominant", bars(am, dm), []reading.Resolution{none, none}},
+		{"D7 last", bars(d7), []reading.Resolution{none}},
+		{"D7 → no chord", []slot{bar(d7), noChord}, []reading.Resolution{none, none}},
+		{"D7 → none chosen", []slot{bar(d7), unchosen}, []reading.Resolution{none, none}},
+		// The next slot may be in the next phrase (decided in #103, not by the
+		// owner).
+		{"G7 | C", bars(c, f, dm, g7, c), []reading.Resolution{none, none, none, expected, none}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := readProgression(t, build(major(cNat), tt.slots...))
-			if got[0].Resolution != tt.want {
-				t.Errorf("Resolution = %s; want %s", got[0].Resolution, tt.want)
+			var got []reading.Resolution
+			for _, r := range readProgression(t, build(major(cNat), tt.slots...)) {
+				got = append(got, r.Resolution)
+			}
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("resolutions = %v; want %v", got, tt.want)
 			}
 		})
 	}
 }
 
 // The cadences of every slot of progressions in C major. A cadence is named
-// on the last slot of a phrase only (docs/architecture/theory-conventions.md,
-// 4; Hutchinson, https://musictheory.pugetsound.edu/mt21c/cadences.html):
-// authentic V → I, half on V, plagal IV → I, deceptive V → other than I. V,
-// I and IV are read as in TestResolution (the owner's calls on #103): G7 → Cm
-// is deceptive. A phrase ending on V is a half cadence whatever comes before
-// it; the other cadences need a chord in the slot before, in the same phrase
-// (decided in #103, not by the owner).
+// on the last slot of a full phrase of four bars only
+// (docs/architecture/theory-conventions.md, 4; Hutchinson,
+// https://musictheory.pugetsound.edu/mt21c/cadences.html): authentic V → I,
+// half on V, plagal IV → I, deceptive V → other than I. V, I and IV are read
+// as in TestResolution (the owner's calls on #103): G7 → Cm is deceptive, and
+// nothing is named before or on a sus or a sixth chord. A phrase still being
+// written at the end gets none. A phrase ending on V is a half cadence
+// whatever comes before it; the other cadences need a chord in the slot
+// before, in the same phrase (decided in #103, not by the owner).
 func TestCadence(t *testing.T) {
 	const (
 		none      = reading.NoCadence
@@ -157,29 +191,44 @@ func TestCadence(t *testing.T) {
 		want  []reading.Cadence
 	}{
 		// The cases of #103: four bars, one phrase.
-		{"authentic: G7 → C", []slot{bar(c), bar(f), bar(g7), bar(c)}, []reading.Cadence{none, none, none, authentic}},
-		{"half: ends on G", []slot{bar(c), bar(am), bar(f), bar(g)}, []reading.Cadence{none, none, none, half}},
-		{"plagal: F → C", []slot{bar(c), bar(am), bar(f), bar(c)}, []reading.Cadence{none, none, none, plagal}},
-		{"deceptive: G → Am", []slot{bar(c), bar(f), bar(g), bar(am)}, []reading.Cadence{none, none, none, deceptive}},
-		{"G7 → C in the middle of the phrase", []slot{bar(c), bar(g7), bar(c), bar(am)}, []reading.Cadence{none, none, none, none}},
-		// The owner's call on #103.
-		{"G7 → Cmaj7", []slot{bar(f), bar(g7), bar(cMaj7)}, []reading.Cadence{none, none, authentic}},
-		{"G7 → C/E", []slot{bar(f), bar(g7), bar(cOverE)}, []reading.Cadence{none, none, authentic}},
-		{"G7 → Cm", []slot{bar(f), bar(g7), bar(cm)}, []reading.Cadence{none, none, deceptive}},
-		{"G/B → C", []slot{bar(f), bar(gOverB), bar(c)}, []reading.Cadence{none, none, authentic}},
-		{"G7/F → C", []slot{bar(f), bar(g7OverF), bar(c)}, []reading.Cadence{none, none, authentic}},
-		{"G7(9) → C", []slot{bar(f), bar(g7n9), bar(c)}, []reading.Cadence{none, none, authentic}},
-		{"Gsus4 → C: not V", []slot{bar(f), bar(gsus4), bar(c)}, []reading.Cadence{none, none, none}},
-		{"ends on Gsus4: not V", []slot{bar(c), bar(f), bar(gsus4)}, []reading.Cadence{none, none, none}},
+		{"authentic: G7 → C", bars(c, f, g7, c), []reading.Cadence{none, none, none, authentic}},
+		{"half: ends on G", bars(c, am, f, g), []reading.Cadence{none, none, none, half}},
+		{"plagal: F → C", bars(c, am, f, c), []reading.Cadence{none, none, none, plagal}},
+		{"deceptive: G → Am", bars(c, f, g, am), []reading.Cadence{none, none, none, deceptive}},
+		{"G7 → C in the middle of the phrase", bars(c, g7, c, am), []reading.Cadence{none, none, none, none}},
+		// The owner's calls on #103.
+		{"G7 → Cmaj7", bars(c, f, g7, cMaj7), []reading.Cadence{none, none, none, authentic}},
+		{"G7 → C/E", bars(c, f, g7, cOverE), []reading.Cadence{none, none, none, authentic}},
+		{"G7 → Cm", bars(c, f, g7, cm), []reading.Cadence{none, none, none, deceptive}},
+		{"G/B → C", bars(c, f, gOverB, c), []reading.Cadence{none, none, none, authentic}},
+		{"G7/F → C", bars(c, f, g7OverF, c), []reading.Cadence{none, none, none, authentic}},
+		{"G7(9) → C", bars(c, f, g7n9, c), []reading.Cadence{none, none, none, authentic}},
+		{"Gsus4 → C: not V", bars(c, f, gsus4, c), []reading.Cadence{none, none, none, none}},
+		{"ends on Gsus4", bars(c, f, g, gsus4), []reading.Cadence{none, none, none, none}},
+		{"G7 → Csus4", bars(c, f, g7, csus4), []reading.Cadence{none, none, none, none}},
+		{"ends on G6: not V", bars(c, f, dm, g6), []reading.Cadence{none, none, none, none}},
+		{"Fsus2 → C: not IV", bars(c, am, fsus2, c), []reading.Cadence{none, none, none, none}},
+		{"Fm → C: borrowed", bars(c, am, fm, c), []reading.Cadence{none, none, none, none}},
+		{"F | G7 | C: three bars", bars(f, g7, c), []reading.Cadence{none, none, none}},
+		{
+			"a full phrase, then three bars",
+			bars(c, f, g7, c, f, g7, c),
+			[]reading.Cadence{none, none, none, authentic, none, none, none},
+		},
 		// What follows from the calls.
-		{"G7 → C7: a secondary dominant is not I", []slot{bar(f), bar(g7), bar(c7)}, []reading.Cadence{none, none, deceptive}},
-		{"D7 → G: ends on V", []slot{bar(c), bar(d7), bar(g)}, []reading.Cadence{none, none, half}},
-		{"Dm → C: not IV", []slot{bar(c), bar(dm), bar(c)}, []reading.Cadence{none, none, none}},
-		{"one slot, C", []slot{bar(c)}, []reading.Cadence{none}},
-		{"one slot, G", []slot{bar(g)}, []reading.Cadence{half}},
+		{"ends on G → G7: V", bars(c, f, g, g7), []reading.Cadence{none, none, none, half}},
+		{"G7 → C7: a secondary dominant is not I", bars(c, f, g7, c7), []reading.Cadence{none, none, none, deceptive}},
+		{"D7 → G: ends on V", bars(c, f, d7, g), []reading.Cadence{none, none, none, half}},
+		{"Dm → C: not IV", bars(c, f, dm, c), []reading.Cadence{none, none, none, none}},
+		{"one slot of four bars, G", []slot{{progression.ChordOf(g), 16}}, []reading.Cadence{half}},
+		{
+			"G and C of two beats end the phrase",
+			[]slot{bar(c), bar(f), bar(dm), {progression.ChordOf(g), 2}, {progression.ChordOf(c), 2}},
+			[]reading.Cadence{none, none, none, none, authentic},
+		},
 		{
 			"each phrase ends on its own",
-			[]slot{bar(c), bar(f), bar(g7), bar(c), bar(am), bar(dm), bar(g7), bar(am)},
+			bars(c, f, g7, c, am, dm, g7, am),
 			[]reading.Cadence{none, none, none, authentic, none, none, none, deceptive},
 		},
 		// Slots with no chord (decided in #103, not by the owner).
@@ -198,13 +247,12 @@ func TestCadence(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := readProgression(t, build(major(cNat), tt.slots...))
-			var cadences []reading.Cadence
-			for _, r := range got {
-				cadences = append(cadences, r.Cadence)
+			var got []reading.Cadence
+			for _, r := range readProgression(t, build(major(cNat), tt.slots...)) {
+				got = append(got, r.Cadence)
 			}
-			if !slices.Equal(cadences, tt.want) {
-				t.Errorf("cadences = %v; want %v", cadences, tt.want)
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("cadences = %v; want %v", got, tt.want)
 			}
 		})
 	}

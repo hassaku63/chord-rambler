@@ -215,6 +215,10 @@ func TestNew(t *testing.T) {
 	if p := progression.New(key, progression.Meter{}); p.Key() != key || p.Len() != 0 {
 		t.Errorf("New(E♭ Aeolian) = %v, %d slots; want E♭ Aeolian, none", p.Key(), p.Len())
 	}
+	// A full phrase is four bars of 4/4 (#91).
+	if got := zero.PhraseBeats(); got != 16 {
+		t.Errorf("PhraseBeats = %d; want 16", got)
+	}
 }
 
 // Transposing moves the tonic and every root by the interval and keeps the
