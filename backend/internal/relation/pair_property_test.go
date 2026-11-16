@@ -161,7 +161,7 @@ func TestSecondaryDominantShapeBothWays(t *testing.T) {
 			if err != nil || !chordsEqual(back, c) {
 				t.Errorf("%s %v in %s major: target %d, but V/%d is %v, %v", c.Root(), c.Intervals(), tonic, target, target, back, err)
 			}
-			if !dominantKind(c) || relation.InScale(c, key) {
+			if !dominantKind(c) || inScale(c, key) {
 				t.Errorf("%s %v in %s major: target %d, but the kind or the key does not fit", c.Root(), c.Intervals(), tonic, target)
 			}
 		}
@@ -231,7 +231,7 @@ func TestSecondaryDominantShapeIgnoresDecorations(t *testing.T) {
 					shaped++
 				}
 				for _, c := range decorated(t, base, tensions, basses) {
-					if relation.InScale(base, key) && !relation.InScale(c, key) {
+					if inScale(base, key) && !inScale(c, key) {
 						outsideOnlyByDecoration++
 					}
 					got, ok, err := relation.SecondaryDominantShape(c, key)
@@ -301,4 +301,9 @@ func dominantKind(c material.Chord) bool {
 	}
 	s := c.Seventh()
 	return c.Triad() == material.TriadMajor && (s == material.NoSeventh || s == material.SeventhMinor)
+}
+
+// inScale reports whether the pitch classes that sound are all in the scale.
+func inScale(c material.Chord, key material.Scale) bool {
+	return key.Contains(c.SoundingPitchClasses())
 }

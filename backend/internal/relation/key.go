@@ -50,30 +50,41 @@ func PositionOf(c material.Chord, key material.Scale) (material.Position, error)
 	return material.NewPosition(steps+1, material.Alteration(alter), material.ShapeOf(c))
 }
 
-// InScale reports whether the pitch classes that sound (the members and the
-// bass, Chord.SoundingPitchClasses) are all in the scale of the key.
-func InScale(c material.Chord, key material.Scale) bool {
-	return key.Contains(c.SoundingPitchClasses())
-}
-
-// ParallelModes returns the modes on the tonic of the key, of the seven church
-// modes, whose scale contains the pitch classes that sound. They come in the
-// order of material.Mode, Ionian first. Only the tonic of the key is used, and
-// the scales are compared by pitch class, so a mode whose spelling on the
-// tonic would need more than a double sharp or a double flat is still
-// compared.
-func ParallelModes(c material.Chord, key material.Scale) []material.Mode {
-	sounding := c.SoundingPitchClasses()
-	shift := key.Tonic().PitchClass().Int()
-	var modes []material.Mode
+// ModesHolding returns the modes on the tonic, of the seven church modes, that
+// hold every note by spelling: the interval from the tonic up to the note is
+// the interval from C up to a note of the mode on C. They come in the order of
+// material.Mode, Ionian first. A note that is a double sharp or a double flat
+// away from its place in a mode (A♯ in C Mixolydian, where B♭ is) is not held
+// by it. The modes are not spelled on the tonic, so a tonic whose mode would
+// need more than a double sharp or a double flat is compared as well. No notes
+// are held by every mode.
+func ModesHolding(notes []material.NoteName, tonic material.NoteName) []material.Mode {
+	var out []material.Mode
 	for m := material.Ionian; m <= material.Locrian; m++ {
 		// Every mode on C is spelled within a single sharp or flat.
 		onC, _ := material.NewScale(material.NoteName{}, m)
-		if sounding.IsSubsetOf(onC.PitchClasses().Transpose(shift)) {
-			modes = append(modes, m)
+		var degrees []material.Interval
+		for _, n := range onC.Notes() {
+			// Two notes of a mode on C always have an interval.
+			iv, _ := material.IntervalBetween(material.NoteName{}, n)
+			degrees = append(degrees, iv)
+		}
+		if holdsAll(degrees, notes, tonic) {
+			out = append(out, m)
 		}
 	}
-	return modes
+	return out
+}
+
+func holdsAll(degrees []material.Interval, notes []material.NoteName, tonic material.NoteName) bool {
+	for _, n := range notes {
+		// No interval of the five qualities is no interval of a mode either.
+		iv, err := material.IntervalBetween(tonic, n)
+		if err != nil || !slices.Contains(degrees, iv) {
+			return false
+		}
+	}
+	return true
 }
 
 // HasLeadingTone reports whether the notes that sound (the members and the
