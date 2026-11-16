@@ -7,6 +7,18 @@ export const KEYS = ['C', 'G', 'D', 'A', 'E', 'B', 'F♯', 'D♭', 'A♭', 'E♭
 export const DEFAULT_BEATS = 4;
 export const MIN_BEATS = 1;
 export const MAX_BEATS = 16;
+/** The beats of a phrase: four bars of 4/4, cut from the start (docs/api/openapi.yaml). */
+export const PHRASE_BEATS = 16;
+
+/**
+ * The length of a slot added after the last: one bar, or the beats left in
+ * the phrase when fewer are left, so that the slot does not cross into the
+ * next phrase (#116).
+ */
+export function nextBeats(slots: Slot[]): number {
+  const used = slots.reduce((sum, slot) => sum + slot.beats, 0) % PHRASE_BEATS;
+  return Math.min(DEFAULT_BEATS, PHRASE_BEATS - used);
+}
 
 /** Where the progression is kept in the browser (the C1 of #110). */
 export const STORAGE_KEY = 'chord-rambler.progression';
@@ -84,6 +96,7 @@ export type ProgressionState = {
    */
   bases: (string | null)[];
   setKey: (key: string) => void;
+  /** Adds a slot holding a typed chord, as long as nextBeats gives. */
   addChord: (name: string) => void;
   /** Adds a slot holding a candidate, which becomes the base of the slot. */
   addCandidate: (name: string, beats: number) => void;
@@ -112,12 +125,16 @@ export function useProgression(): ProgressionState {
 
   useEffect(() => save(progression), [progression]);
 
+  /** Adds a slot after the last; a function makes it from the slots before it. */
   const append = useCallback(
-    (slot: Slot, base: string | null = null) =>
-      setHeld((h) => ({
-        progression: { ...h.progression, slots: [...h.progression.slots, slot] },
-        bases: [...h.bases, base],
-      })),
+    (slot: Slot | ((slots: Slot[]) => Slot), base: string | null = null) =>
+      setHeld((h) => {
+        const added = typeof slot === 'function' ? slot(h.progression.slots) : slot;
+        return {
+          progression: { ...h.progression, slots: [...h.progression.slots, added] },
+          bases: [...h.bases, base],
+        };
+      }),
     [],
   );
   /** Changes the slots in place: the bases stay with them. */
@@ -143,7 +160,7 @@ export function useProgression(): ProgressionState {
       (name: string) => {
         const chord = name.trim();
         if (chord !== '') {
-          append({ chord, beats: DEFAULT_BEATS });
+          append((slots) => ({ chord, beats: nextBeats(slots) }));
         }
       },
       [append],

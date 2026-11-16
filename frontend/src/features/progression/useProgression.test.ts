@@ -1,8 +1,26 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { STORAGE_KEY, useProgression } from './useProgression';
+import type { Slot } from '@/shared/api/client';
+import { STORAGE_KEY, nextBeats, useProgression } from './useProgression';
 
 afterEach(() => localStorage.clear());
+
+function slotsOf(...beats: number[]): Slot[] {
+  return beats.map((b) => ({ content: 'none', beats: b }));
+}
+
+describe('nextBeats', () => {
+  it.each([
+    { name: 'an empty progression', slots: [], want: 4 },
+    { name: 'a phrase with 6 beats left', slots: slotsOf(4, 4, 2), want: 4 },
+    { name: 'a phrase with 3 beats left', slots: slotsOf(4, 4, 4, 1), want: 3 },
+    { name: 'a phrase with 1 beat left', slots: slotsOf(15), want: 1 },
+    { name: 'a full phrase', slots: slotsOf(16), want: 4 },
+    { name: 'the second phrase with 2 beats left', slots: slotsOf(16, 14), want: 2 },
+  ])('gives one bar or the beats left: $name', ({ slots, want }) => {
+    expect(nextBeats(slots)).toBe(want);
+  });
+});
 
 describe('useProgression', () => {
   it('starts empty in C', () => {
@@ -28,6 +46,23 @@ describe('useProgression', () => {
         { content: 'unchosen', beats: 4 },
       ],
     });
+  });
+
+  it('cuts a typed chord to the beats left in the phrase', () => {
+    const { result } = renderHook(() => useProgression());
+    act(() => result.current.addNoChord());
+    act(() => result.current.setBeats(0, 14));
+
+    act(() => {
+      result.current.addChord('F');
+      result.current.addChord('G');
+    });
+
+    expect(result.current.progression.slots).toEqual([
+      { content: 'none', beats: 14 },
+      { chord: 'F', beats: 2 },
+      { chord: 'G', beats: 4 },
+    ]);
   });
 
   it('ignores an empty chord name and a key that is not one of the 12', () => {

@@ -75,6 +75,15 @@
   align-items: baseline;
 }
 
+.candidate.auditioning {
+  outline: 2px dashed currentColor;
+  outline-offset: 2px;
+}
+
+.candidate-auditioning {
+  font-weight: bold;
+}
+
 .candidate > details {
   flex-basis: 100%;
 }
