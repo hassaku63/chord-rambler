@@ -80,6 +80,20 @@ func TestChordNames(t *testing.T) {
 		{"Csus4", c, "P4 P5", ""},
 		{"C7sus4", c, "P4 P5 m7", ""},
 		{"Cadd9", c, "M3 P5 M9", ""},
+		// 6 and m6 add a major sixth to the triad: major-sixth and minor-sixth
+		// in MusicXML 4.0 ("added sixth"), maj6 (3,5,6) and min6 (b3,5,6) in
+		// Harte et al., ISMIR 2005, table 2. m(add9) adds a major ninth to the
+		// minor triad, as add9 does to the major (Harte's min(9)). The owner's
+		// decision in #120.
+		{"C6", c, "M3 P5 M6", ""},
+		{"Cm6", c, "m3 P5 M6", ""},
+		{"Cm(add9)", c, "m3 P5 M9", ""},
+		{"B♭6", note(material.B, -1), "M3 P5 M6", ""},
+		{"F♯m6", note(material.F, 1), "m3 P5 M6", ""},
+		{"Em(add9)", note(material.E, 0), "m3 P5 M9", ""},
+		{"C6/E", c, "M3 P5 M6", "M3"},
+		{"Cm6/A", c, "m3 P5 M6", "M6"},
+		{"Cm(add9)/D", c, "m3 P5 M9", "M2"},
 		{"C7(9)", c, "M3 P5 m7 M9", ""},
 		{"Cmaj7(9)", c, "M3 P5 M7 M9", ""},
 		{"Cm7(9)", c, "m3 P5 m7 M9", ""},
@@ -128,6 +142,9 @@ func TestChordAliases(t *testing.T) {
 		{"Cm7(b5)", "Cm7(♭5)"},
 		{"Cø7", "Cm7(♭5)"},
 		{"Cmin7♭5", "Cm7(♭5)"},
+		// The alias min works inside the kinds of #120 as well (#81).
+		{"Cmin6", "Cm6"},
+		{"Cmin(add9)", "Cm(add9)"},
 		{"C7(b9)", "C7(♭9)"},
 		{"C7(#9)", "C7(♯9)"},
 		{"C7(#11)", "C7(♯11)"},
@@ -168,7 +185,13 @@ func TestParseChordRejects(t *testing.T) {
 		{"Csus", notation.ErrChordKind, "sus"},
 		{"Cø", notation.ErrChordKind, "ø"},
 		{"C+7", notation.ErrChordKind, "+7"},
-		{"C6", notation.ErrChordKind, "6"},
+		// 6/9 and other spellings of the sixth and of add9 are not in the
+		// vocabulary (#120).
+		{"C69", notation.ErrChordKind, "69"},
+		{"Cmadd9", notation.ErrChordKind, "madd9"},
+		{"Cmin6/9", notation.ErrNoteName, "9"},
+		{"Cm6(9)", notation.ErrNoTensions, "(9)"},
+		{"C(add9)", notation.ErrNoTensions, "(add9)"},
 		// 9 chords are written C7(9) (decision B1); C9 is not an alias.
 		{"C9", notation.ErrChordKind, "9"},
 		{"Cmaj9", notation.ErrChordKind, "maj9"},
@@ -219,11 +242,12 @@ func TestFormatChordNoName(t *testing.T) {
 	}{
 		{"the root alone", ""},
 		{"a fifth alone (C5)", "P5"},
-		{"a sixth (C6)", "M3 P5 M6"},
+		{"a minor sixth on a major triad", "M3 P5 m6"},
+		{"a sixth and a ninth (C6/9)", "M3 P5 M6 M9"},
 		{"a third without a fifth", "M3 m7"},
 		{"a minor triad with a major seventh", "m3 P5 M7"},
 		{"a minor ninth without a seventh", "M3 P5 m9"},
-		{"a ninth on a minor triad without a seventh", "m3 P5 M9"},
+		{"a minor ninth on a minor triad without a seventh", "m3 P5 m9"},
 		{"a tension on 7sus4", "P4 P5 m7 M9"},
 		{"a tension on m7(♭5)", "m3 d5 m7 M9"},
 		{"a diminished eleventh", "M3 P5 m7 d11"},
@@ -286,7 +310,7 @@ func TestFormatChordForDisplay(t *testing.T) {
 // bass spellings given: each kind, and 7, maj7 and m7 with each set of
 // tensions, with and without a bass.
 func displayNames(root string, basses []string) []string {
-	kinds := []string{"", "m", "dim", "aug", "7", "maj7", "m7", "m7(♭5)", "dim7", "sus2", "sus4", "7sus4", "add9"}
+	kinds := []string{"", "m", "dim", "aug", "7", "maj7", "m7", "m7(♭5)", "dim7", "sus2", "sus4", "7sus4", "add9", "6", "m6", "m(add9)"}
 	for _, k := range []string{"7", "maj7", "m7"} {
 		for _, n9 := range []string{"", "9", "♭9", "♯9"} {
 			for _, n11 := range []string{"", "11", "♯11"} {
@@ -325,7 +349,7 @@ func displayNames(root string, basses []string) []string {
 //     The number of these is fixed (wantUnreadable), so a name cannot drop out
 //     unnoticed; so is the number that is read (wantRead).
 func TestChordRoundTrip(t *testing.T) {
-	const wantRead, wantUnreadable = 72838, 988
+	const wantRead, wantUnreadable = 74874, 1003
 	var spellings []string
 	for _, n := range allNotes() {
 		spellings = append(spellings, notation.FormatNoteName(n))

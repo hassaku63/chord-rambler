@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hassaku63/chord-rambler/backend/internal/material"
+	"github.com/hassaku63/chord-rambler/backend/internal/notation"
 	"github.com/hassaku63/chord-rambler/backend/internal/query"
 	"github.com/hassaku63/chord-rambler/backend/internal/reading"
 )
@@ -121,6 +122,31 @@ func TestVariationsKeepTheRootAndTheQuality(t *testing.T) {
 		_, hasBass := c.Bass()
 		if inputs > 1 || (hasBass && inputs != 0) {
 			t.Errorf("%v: %d variations marked as the chord asked about", c.Notes(), inputs)
+		}
+	})
+}
+
+// Every variation has a chord name (#120): FormatChord writes it and
+// ParseChord reads it back to the same chord, and the name for display reads
+// back to the same sounding pitch classes. The test sits here, not in
+// notation, because notation does not import query.
+func TestEveryVariationHasAName(t *testing.T) {
+	eachAsked(t, func(key material.Scale, c material.Chord, vs []query.Variation) {
+		for _, v := range vs {
+			name, err := notation.FormatChord(v.Chord)
+			if err != nil {
+				t.Fatalf("variation %v of %v: FormatChord: %v", v.Chord.Notes(), c.Notes(), err)
+			}
+			if back, err := notation.ParseChord(name); err != nil || back != v.Chord {
+				t.Errorf("ParseChord(%q) = %v, %v; want %v", name, back.Notes(), err, v.Chord.Notes())
+			}
+			shown, err := notation.FormatChordForDisplay(v.Chord)
+			if err != nil {
+				t.Fatalf("variation %v of %v: FormatChordForDisplay: %v", v.Chord.Notes(), c.Notes(), err)
+			}
+			if back, err := notation.ParseChord(shown); err != nil || back.SoundingPitchClasses() != v.Chord.SoundingPitchClasses() {
+				t.Errorf("ParseChord(%q) sounds %v, %v; want %v", shown, back.SoundingPitchClasses(), err, v.Chord.SoundingPitchClasses())
+			}
 		}
 	})
 }

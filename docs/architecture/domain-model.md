@@ -64,7 +64,7 @@
 `backend/internal/notation`。文字列と音の素材の値を相互に変換する境界。読んだあとは `material` の値（和音、位置 `Position`、形 `Shape`）だけを扱い、文字列を持ち回らない。表示の形と受ける別名は `docs/architecture/theory-conventions.md` の 6。
 
 - 音名（`ParseNoteName`、`FormatNoteName`）: 大文字の幹音と、変化記号 1 つ（重変化を含む。重シャープは `𝄪`・`x`・`##`・`♯♯`）。書くときは綴りを保つ（B𝄫 は B𝄫）。
-- 和音名（`ParseChord`、`FormatChord`）: 種類は、和音の音程の集合が語彙の種類の音程とちょうど一致するときだけ名前になる。見方からは名前を作らない（C6 は、見方では長三和音だが、名前はない）。語彙にない和音は書けない（`ErrNoName`）。バスは、読むときは根音からの単音程（`IntervalBetween`）にし、書くときは根音を移調した音名にする。書いた名前を読むと、元の和音に戻る。
+- 和音名（`ParseChord`、`FormatChord`）: 種類は、和音の音程の集合が語彙の種類の音程とちょうど一致するときだけ名前になる。見方からは名前を作らない（C6 は、見方では長三和音だが、音程の集合が 6 の種類に一致するので C6 と書く）。語彙にない和音は書けない（`ErrNoName`）。バスは、読むときは根音からの単音程（`IntervalBetween`）にし、書くときは根音を移調した音名にする。書いた名前を読むと、元の和音に戻る。
 - 読めない文字列は `ParseError` を返す。読めなかった所（`Rest`）と理由（`Err`）を持ち、理由は `notation` のエラーか、`material` のエラー（重変化を超える構成音、根音との音程がないバス）を包んだもの。
 - 表示の綴り（`DisplaySpelling`、`FormatChordForDisplay`）: 調のない和音名を書くときだけ、根音を読み替える。調の中（ローマ数字と一緒に出すとき）は読み替えず、`FormatChord` で綴りのまま書く（D♭ で ♭VII は C♭、♭VI は B𝄫）。根音を読み替えたら、バスは読み替えた根音から同じ音程で書く（B𝄫/D♭ は A/C♯）。根音を読み替えないときだけ、バスを単独で読み替える。読み替えた名前を読むと、鳴る音の集合は同じだが、綴りの違う和音になる（B𝄫 は A）。
 - ローマ数字（`ParseRoman`、`FormatRoman`）: `material` の位置と文字列の読み書きだけを持つ。表示の形は `docs/architecture/theory-conventions.md` の 6。一緒に出す和音名は `Position.Chord` の和音を `FormatChord` で書く。和音の形が語彙の種類（とテンション）にちょうど当たるときだけ書ける（`ErrNoName`）。バスのある位置は書かない（`ErrRomanBass`）。書いた文字列を読むと、元の位置に戻る。読むのは表示の形だけで、読めない文字列は和音名と同じ `ParseError` を返す。
@@ -329,7 +329,7 @@
 
 - 3 度のない和音（sus、パワーコード）と増三和音は、質が決まらないのでエラー。分数の和音は、バスを外した和音の質で決める。
 - 名前は `Variations`。1 つの `Variation` は、和音 `Chord`、入力の印 `IsInput`、札 `Members`（`MembersLabel`）、`Reading`（`ReadingLabel`。`Main` に主な読み）、`Cautions`（`CautionsLabel`）、`OutOfKey`（`OutOfKeyLabel`）を持つ。根拠の種類は札の型ごとに決まり（`Basis` のメソッド）、値ごとには持たない。`Basis` のゼロ値は「未設定」で、どの種類でもない。
-- 形の音程は、MusicXML の和音の種類と Harte ほか（`.claude/skills/standards/index.md`）に合わせる。6 と m6 は長 6 度を足す。9 は属七に長 9 度、m9 は短 7 の和音に長 9 度。add9 と m(add9) は 7 度なしで長 9 度を足す。m7♭5 は減三和音に短 7 度、dim7 は減 7 度。6、m6、m(add9) は表記の語彙にない（`notation.FormatChord` が `ErrNoName`）。
+- 形の音程は、MusicXML の和音の種類と Harte ほか（`.claude/skills/standards/index.md`）に合わせる。6 と m6 は長 6 度を足す。9 は属七に長 9 度、m9 は短 7 の和音に長 9 度。add9 と m(add9) は 7 度なしで長 9 度を足す。m7♭5 は減三和音に短 7 度、dim7 は減 7 度。どの変形も表記の語彙の和音名になり、読み戻せる（`TestEveryVariationHasAName`）。
 - 質は `material.Chord.Triad` で決める。長・短・減のほかはエラー（`ErrNoTriadQuality`）で、3 度があって 5 度のない和音も含む。イオニアンでない調はエラー（`relation.ErrNotMajor` を包む）。重変化を超える変形が 1 つでもあれば、一覧の全体をエラーにする（`material.ErrAlterOutOfRange` を包む。C♭ の dim7）。
 - 入力の印は、バスを含めて和音が等しいときだけ付ける。C/E の一覧にも、G7(♭9) の一覧にも、印はない。
 - 調の外の音（`OutOfKeyLabel` の `Notes`）は、変形の構成音のうち、綴りが調の音階の音にないもの。構成音の並びの順で、空なら持たない。入力の和音は見ない。C で、Fm は A♭、Fm7 は A♭ と E♭、D は F♯、Dmaj7 は F♯ と C♯ を持つ。

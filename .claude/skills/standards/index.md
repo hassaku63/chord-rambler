@@ -63,8 +63,8 @@
 | 一次情報 | `kind` の値は https://www.w3.org/2021/06/musicxml40/musicxml-reference/data-types/kind-value/ 、要素は https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/harmony/ 、`kind` は https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/kind/ 、`degree` は https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/degree/ 、`bass` は https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/bass/ 。どれも登録なしで読める |
 | 状態 | 現行。確かめた版は 4.0（Final Community Group Report、2021-06-01）。`function` の要素は 4.0 で非推奨 |
 | 当たるべき場面 | 和音名の読み書きを作る・変えるとき（表記のまとまり）。和音の種類の語彙や、テンションと変化の書き方を決めるとき。楽譜の形式と和音を交換するとき |
-| chord-rambler との接点 | `backend/internal/material` の和音（`Chord`）は、種類の名前を持たず、根音からの音程の集合で持つ（`docs/architecture/domain-model.md`）。種類は見方として導く。食い違い: MusicXML のバスは音名（`bass-step` と `bass-alter`）で、和音のバスは根音からの音程 |
-| 確認 | 2026-11-15 / 間隔 365 日 |
+| chord-rambler との接点 | `backend/internal/material` の和音（`Chord`）は、種類の名前を持たず、根音からの音程の集合で持つ（`docs/architecture/domain-model.md`）。種類は見方として導く。和音名の 6 と m6 は `major-sixth`・`minor-sixth`（三和音に足した 6 度）に当たる。食い違い: MusicXML のバスは音名（`bass-step` と `bass-alter`）で、和音のバスは根音からの音程。add9 と m(add9) に当たる `kind` はなく、MusicXML では三和音の `kind` に `degree` で 9 度を足して表す |
+| 確認 | 2026-11-16 / 間隔 365 日 |
 
 ### Harte の和音の記法（Harte、Sandler、Abdallah、Gómez、ISMIR 2005）
 
@@ -75,8 +75,8 @@
 | 一次情報 | https://archives.ismir.net/ismir2005/paper/000080.pdf （登録なしで読める PDF） |
 | 状態 | 2005 年の論文。開いたのはこの版だけで、のちの改訂は確かめていない |
 | 当たるべき場面 | 和音名の読み書きを作る・変えるとき（表記のまとまり）。和音名の文法や、足す音の書き方、バスの書き方を決めるとき。和音の注釈のデータと和音を交換するとき |
-| chord-rambler との接点 | `backend/internal/notation` の和音名（`docs/architecture/theory-conventions.md` の 6）。同じところ: 根音と、根音からの音程で和音を持つ（`backend/internal/material`）。足す音を括弧の中にコンマで並べる。`B` と `b` を大文字・小文字で分ける。食い違い: 和音名に `:` を書かない。バスは音名で書く（Harte は度）。変化記号に `♯`・`♭` も使う（Harte は `#`・`b` だけ）。種類は短い名前（`m`、`dim`）で書く（Harte は打ち間違いを見つけやすいように長い名前を選ぶ）。Harte の短縮名には sus2 と add9 がない |
-| 確認 | 2026-11-15 / 間隔 365 日 |
+| chord-rambler との接点 | `backend/internal/notation` の和音名（`docs/architecture/theory-conventions.md` の 6）。同じところ: 根音と、根音からの音程で和音を持つ（`backend/internal/material`）。足す音を括弧の中にコンマで並べる。`B` と `b` を大文字・小文字で分ける。6 と m6 の音程（`maj6 (3,5,6)`、`min6 (b3,5,6)`）。食い違い: 和音名に `:` を書かない。バスは音名で書く（Harte は度）。変化記号に `♯`・`♭` も使う（Harte は `#`・`b` だけ）。種類は短い名前（`m`、`dim`）で書く（Harte は打ち間違いを見つけやすいように長い名前を選ぶ）。Harte の短縮名には sus2 と add9 がない（m(add9) は Harte では `min(9)`） |
+| 確認 | 2026-11-16 / 間隔 365 日 |
 
 ### RomanText（Tymoczko、Gotham、Cuthbert、Ariza、ISMIR 2019）
 
@@ -87,5 +87,5 @@
 | 一次情報 | https://archives.ismir.net/ismir2019/paper/000012.pdf （登録なしで読める PDF） |
 | 状態 | 2019 年の論文。開いたのはこの版だけで、のちの改訂は確かめていない |
 | 当たるべき場面 | ローマ数字の読み書きを作る・変えるとき（表記のまとまり）。転回形、足し引き、向かう先の書き方を決めるとき。分析のデータとローマ数字を交換するとき |
-| chord-rambler との接点 | `backend/internal/notation` のローマ数字と主音から見た位置（`docs/architecture/theory-conventions.md` の 6）。同じところ: 大文字・小文字で長・短を分ける。増の `+`。調の音でない根音に前置の変化記号。`/` のあとの向かう先。食い違い: 減は `°`、半減 7 は `ø7`（RomanText は `o` と `/o`）。変化記号は `♭`・`♯`（RomanText は `b`・`#`）。七度とテンションは和音名の書き方（`Imaj7`、`V7(9)`）で、角括弧の足し引きを使わない。転回形と、重ねた向かう先を書かない。調を書かない（位置は調を持たない）。sus の書き方は、論文の和音の一覧にない |
-| 確認 | 2026-11-15 / 間隔 365 日 |
+| chord-rambler との接点 | `backend/internal/notation` のローマ数字と主音から見た位置（`docs/architecture/theory-conventions.md` の 6）。同じところ: 大文字・小文字で長・短を分ける。増の `+`。調の音でない根音に前置の変化記号。`/` のあとの向かう先。食い違い: 減は `°`、半減 7 は `ø7`（RomanText は `o` と `/o`）。変化記号は `♭`・`♯`（RomanText は `b`・`#`）。七度とテンションは和音名の書き方（`Imaj7`、`V7(9)`）で、角括弧の足し引きを使わない。転回形と、重ねた向かう先を書かない。RomanText の `6` は転回形の数字（`I6` は第 1 転回形）だが、ここの `I6` は 6 の和音（`docs/architecture/theory-conventions.md` の 6）。調を書かない（位置は調を持たない）。sus の書き方は、論文の和音の一覧にない |
+| 確認 | 2026-11-16 / 間隔 365 日 |

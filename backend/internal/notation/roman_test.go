@@ -96,6 +96,16 @@ func TestRomanNumerals(t *testing.T) {
 		{"Imaj7(9)", 1, n, "M3 P5 M7 M9", 0, "Cmaj7(9)"},
 		{"ii7(9,11)", 2, n, "m3 P5 m7 M9 P11", 0, "Dm7(9,11)"},
 		{"Iadd9", 1, n, "M3 P5 M9", 0, "Cadd9"},
+		// 6, m6 and m(add9) as in chord names, the m shown by the lowercase
+		// (the owner's decision in #120). 6 is the sixth chord, not an
+		// inversion.
+		{"I6", 1, n, "M3 P5 M6", 0, "C6"},
+		{"IV6", 4, n, "M3 P5 M6", 0, "F6"},
+		{"ii6", 2, n, "m3 P5 M6", 0, "Dm6"},
+		{"iv6", 4, n, "m3 P5 M6", 0, "Fm6"},
+		{"♭VI6", 6, flat, "M3 P5 M6", 0, "A♭6"},
+		{"iadd9", 1, n, "m3 P5 M9", 0, "Cm(add9)"},
+		{"viadd9", 6, n, "m3 P5 M9", 0, "Am(add9)"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.roman, func(t *testing.T) {
@@ -240,9 +250,12 @@ func TestParseRomanRejects(t *testing.T) {
 		{"V7x", notation.ErrRomanKind, "7x"},
 		{"V7(b9)", notation.ErrTension, "b9)"},
 		{"V7(9,#11)", notation.ErrTension, "#11)"},
-		// Inversions are not written.
-		{"I6", notation.ErrRomanKind, "6"},
+		// Inversions are not written. I6 is the sixth chord (#120).
 		{"V65", notation.ErrRomanKind, "65"},
+		{"I64", notation.ErrRomanKind, "64"},
+		{"I6(9)", notation.ErrNoTensions, "(9)"},
+		{"Im(add9)", notation.ErrRomanKind, "m(add9)"},
+		{"Im6", notation.ErrRomanKind, "m6"},
 		// Tensions as in chord names.
 		{"V7(9", notation.ErrUnclosedParen, "(9"},
 		{"V(9)", notation.ErrNoTensions, "(9)"},
@@ -290,7 +303,7 @@ func TestFormatRomanRejects(t *testing.T) {
 	}{
 		{"a bass (V with the third in the bass)", withBass, notation.ErrRomanBass},
 		{"the zero value (the root alone)", material.Position{}, notation.ErrNoName},
-		{"a sixth (C6 on I)", position(1, material.Natural, "M3 P5 M6", 0), notation.ErrNoName},
+		{"a minor triad with a major seventh (on i)", position(1, material.Natural, "m3 P5 M7", 0), notation.ErrNoName},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
