@@ -42,12 +42,52 @@ const maxBodyBytes = 64 << 10
 type requestError struct {
 	status int
 	detail string
+	// cause is the engine's error behind the detail. Only the log gets its text.
+	cause error
 }
 
 func (e *requestError) Error() string { return e.detail }
 
 func badRequest(format string, args ...any) error {
 	return &requestError{status: http.StatusBadRequest, detail: fmt.Sprintf(format, args...)}
+}
+
+// refusal is what a user is told when the engine refuses a request with the
+// error: one sentence, with no name of the engine in it.
+type refusal struct {
+	err  error
+	text string
+}
+
+// refusals is the one table of the engine's sentinel errors that are a 400.
+// The engine's own text, which names Go identifiers and functions, goes to the
+// log. An error that is not here is the server's (500).
+var refusals = []refusal{
+	{progression.ErrIndex, "the slot is outside the progression"},
+	{progression.ErrLength, "a slot must be at least one beat long"},
+	{progression.ErrCrossesPhrase, "a slot must not cross the boundary of a phrase"},
+	{material.ErrAlterOutOfRange, "a note would need more than a double sharp or a double flat"},
+	{query.ErrNoTriadQuality, "variations are made only for a chord whose triad is major, minor or diminished"},
+}
+
+// refusalOf returns the sentence of the first refusal the error is.
+func refusalOf(err error) (string, bool) {
+	for _, r := range refusals {
+		if errors.Is(err, r.err) {
+			return r.text, true
+		}
+	}
+	return "", false
+}
+
+// engineRefused is the 400 for an error of the engine: the sentence of the
+// table when it has one, else the error's own text. The prefix says where.
+func engineRefused(where string, err error) error {
+	text := err.Error()
+	if t, ok := refusalOf(err); ok {
+		text = t
+	}
+	return &requestError{status: http.StatusBadRequest, detail: where + ": " + text, cause: err}
 }
 
 // decodeBody is the one place a request body is read into a value: it checks
@@ -148,7 +188,7 @@ func parseKey(name string) (material.Scale, error) {
 	}
 	key, err := material.NewScale(tonic, material.Ionian)
 	if err != nil {
-		return material.Scale{}, badRequest("key %q: %v", name, err)
+		return material.Scale{}, engineRefused(fmt.Sprintf("key %q", name), err)
 	}
 	return key, nil
 }
@@ -164,10 +204,10 @@ func (body progressionBody) progression() (progression.Progression, error) {
 	for i, sb := range body.Slots {
 		s, err := decodeSlot(sb)
 		if err != nil {
-			return progression.Progression{}, badRequest("slot %d: %v", i, err)
+			return progression.Progression{}, engineRefused(fmt.Sprintf("slot %d", i), err)
 		}
 		if p, err = p.Append(s); err != nil {
-			return progression.Progression{}, badRequest("slot %d: %v", i, err)
+			return progression.Progression{}, engineRefused(fmt.Sprintf("slot %d", i), err)
 		}
 	}
 	return p, nil
@@ -280,6 +320,9 @@ func (a *api) writeRequestError(w http.ResponseWriter, err error) {
 	var re *requestError
 	if !errors.As(err, &re) {
 		re = &requestError{status: http.StatusBadRequest, detail: err.Error()}
+	}
+	if re.cause != nil {
+		a.logger.Info("the engine refused the request", "error", re.cause)
 	}
 	a.writeProblem(w, re.status, re.detail)
 }
