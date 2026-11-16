@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Candidate, Note, Progression, SlotReading } from '@/shared/api/client';
 import { fakeAudio } from '@/test/fakeAudioContext';
@@ -24,6 +24,7 @@ const known: Record<string, SlotReading> = {
     chord: { basis: 'definition', name: 'F' },
     roman: { basis: 'computation', numeral: 'IV' },
   },
+  Fsus4: { chord: { basis: 'definition', name: 'Fsus4' } },
   Fm: {
     chord: { basis: 'definition', name: 'Fm' },
     roman: { basis: 'computation', numeral: 'iv' },
@@ -78,6 +79,22 @@ function candidatesAfter(progression: Progression) {
   };
 }
 
+/** Answers like POST /variations: F and Fsus4 for F, a 400 for a chord with no third. */
+function variationsOf(chord: string): Response {
+  if (chord !== 'F') {
+    return json({ title: 'Bad Request', status: 400, detail: 'the chord has no third' }, 400);
+  }
+  const variation = (name: string) => ({
+    chord: { basis: 'definition', name },
+    isInput: name === chord,
+    members: { basis: 'definition', notes: [] },
+    reading: diatonic,
+    tensionCautions: { basis: 'school', cautions: [] },
+    outOfKey: { basis: 'computation', notes: [] },
+  });
+  return json({ variations: [variation('F'), variation('Fsus4')] });
+}
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status });
 }
@@ -100,6 +117,10 @@ function notesOf(progression: Progression): Note[] {
  * cannot read, and like POST /progressions/notes.
  */
 function standInServer(url: string, init?: RequestInit): Promise<Response> {
+  if (url.endsWith('/variations')) {
+    const { chord } = JSON.parse(init?.body as string) as { chord: string };
+    return Promise.resolve(variationsOf(chord));
+  }
   if (url.endsWith('/progressions/next-candidates')) {
     const { progression } = JSON.parse(init?.body as string) as { progression: Progression };
     return Promise.resolve(json(candidatesAfter(progression)));
@@ -296,6 +317,45 @@ describe('ProgressionScreen', () => {
     const cards = within(screen.getByRole('list', { name: '進行' })).getAllByRole('listitem');
     expect(cards).toHaveLength(2);
     expect(await within(cards[1] ?? document.body).findByText('IV')).toBeInTheDocument();
+  });
+
+  it('puts a variation in place of the chosen chord, keeping its length and the list', async () => {
+    render(<ProgressionScreen />);
+    fireEvent.click(await screen.findByRole('button', { name: 'F を足す' }));
+    fireEvent.change(screen.getByRole('combobox', { name: '長さ' }), { target: { value: '2' } });
+    fireEvent.click(await screen.findByRole('button', { name: /^F IV/ }));
+    const list = await screen.findByRole('list', { name: 'F の変形' });
+    expect(within(list).getByRole('button', { name: 'F' })).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(within(list).getByRole('button', { name: 'Fsus4' }));
+
+    const card = within(screen.getByRole('list', { name: '進行' })).getByRole('listitem');
+    expect(await within(card).findByText('Fsus4')).toBeInTheDocument();
+    expect(within(card).getByRole('combobox', { name: '長さ' })).toHaveValue('2');
+    // The list still comes from F, the chord the slot was added with.
+    const again = await screen.findByRole('list', { name: 'F の変形' });
+    expect(within(again).getByRole('button', { name: 'Fsus4' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('shows no variations for a chord with no third typed in', async () => {
+    render(<ProgressionScreen />);
+    addChord('Fsus4');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Fsus4' }));
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/v1/variations',
+        expect.objectContaining({ body: JSON.stringify({ key: 'C', chord: 'Fsus4' }) }),
+      ),
+    );
+    // Let the refusal come in.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(screen.queryByRole('list', { name: /の変形/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('plays the last chord and then a candidate on trial', async () => {

@@ -6,6 +6,8 @@ import { KEYS, useProgression } from './useProgression';
 import { usePlayback } from './usePlayback';
 import { useNextCandidates } from './useNextCandidates';
 import { CandidateList } from './CandidateList';
+import { useVariations } from './useVariations';
+import { VariationList } from './VariationList';
 import { PlaybackControls } from './PlaybackControls';
 import { SlotCard } from './SlotCard';
 import { SlotDetail } from './SlotDetail';
@@ -29,8 +31,8 @@ type Props = {
 
 /**
  * Screens 1 to 3 (a provisional layout, A1 of #148): the key and the playing
- * on top, the strip of slots in the middle, the labels of the chosen slot and
- * the candidates for the slot after the last below.
+ * on top, the strip of slots in the middle, the labels and the variations of
+ * the chosen slot and the candidates for the slot after the last below.
  */
 export function ProgressionScreen({ createAudioContext }: Props) {
   const state = useProgression();
@@ -42,6 +44,10 @@ export function ProgressionScreen({ createAudioContext }: Props) {
   const readings = reading.state === 'read' ? reading.reading.slots : [];
   const unreadable = reading.state === 'refused' ? reading.slot : null;
   const chosen = selected === null ? undefined : progression.slots[selected];
+  const chord = chosen?.chord;
+  // A slot added from the candidates keeps its variations from that chord (#115).
+  const base = chord === undefined || selected === null ? null : (state.bases[selected] ?? chord);
+  const variations = useVariations(progression.key, base);
 
   return (
     <div className="progression-screen">
@@ -100,13 +106,25 @@ export function ProgressionScreen({ createAudioContext }: Props) {
 
       {chosen && selected !== null && <SlotDetail slot={chosen} reading={readings[selected]} />}
 
+      {chord !== undefined &&
+        selected !== null &&
+        base !== null &&
+        variations.state === 'given' && (
+          <VariationList
+            base={base}
+            current={chord}
+            variations={variations.variations}
+            onChoose={(name) => state.replaceChord(selected, name)}
+          />
+        )}
+
       {candidates.state === 'given' && (
         <CandidateList
           groups={candidates.groups}
           beats={beats}
           auditioning={playback.auditioning}
-          onAdd={(chord) => state.addChord(chord, beats)}
-          onAudition={(chord) => playback.audition(chord, beats)}
+          onAdd={(name) => state.addCandidate(name, beats)}
+          onAudition={(name) => playback.audition(name, beats)}
           onStop={playback.stop}
         />
       )}
