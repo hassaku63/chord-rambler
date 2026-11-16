@@ -59,7 +59,9 @@ func (f RoleFit) String() string {
 //  3. undecided when the slot the role looks at has no chord, none chosen
 //     yet, or is not there: the next for 準備, the previous for つなぎ and
 //     解決 (B1 on #124). For 締め, undecided on the last slot of a phrase that
-//     is not full;
+//     is not full, and, when no cadence is named on the last slot of a full
+//     phrase, when the slot before it in the phrase has no chord, none chosen
+//     yet, or is not there (a half cadence needs no slot before it);
 //  4. fits when the rule of the role is met, and misfits otherwise:
 //     - 安定: tonic.
 //     - 高まり: dominant.
@@ -156,7 +158,16 @@ var structuralRules = map[progression.Role]func(v roleView, i int) RoleFit{
 		if place.LastInPhrase && !place.FullPhrase {
 			return RoleUndecided
 		}
-		return verdict(place.LastInPhrase && v.read[i].Cadence != NoCadence)
+		switch {
+		case !place.LastInPhrase:
+			return RoleMisfits
+		case v.read[i].Cadence != NoCadence:
+			return RoleFits
+		case place.IndexInPhrase == 1 || v.missing(i-1):
+			return RoleUndecided
+		default:
+			return RoleMisfits
+		}
 	},
 }
 
