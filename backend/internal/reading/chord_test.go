@@ -181,6 +181,9 @@ func TestDiatonicInCMajor(t *testing.T) {
 		{"C(♯11)", chord(cNat, "M3 P5 A11", ""), d(reading.Tonic)},
 		{"C/F♯", chord(cNat, maj, "A4"), d(reading.Tonic)},
 		{"F/D♯", chord(fNat, maj, "A6"), d(reading.Subdominant)},
+		// D7sus4 (D G A C) has not the shape of a secondary dominant, and all
+		// its notes are in C major: diatonic on the second degree.
+		{"D7sus4", chord(dNat, "P4 P5 m7", ""), d(reading.Subdominant)},
 	})
 }
 
@@ -225,6 +228,10 @@ func TestBorrowedInCMajor(t *testing.T) {
 		{"Fsus4", chord(fNat, "P4 P5", ""), b(true, material.Dorian, material.Phrygian, material.Mixolydian, material.Aeolian, material.Locrian)},
 		{"Esus2", chord(eNat, "M2 P5", ""), b(false, material.Lydian)},
 		{"D♭sus4", chord(dFlat, "P4 P5", ""), b(false, material.Locrian)},
+		// D6 (D F♯ A B) has not the shape of a secondary dominant (the owner's
+		// call on #103), so the kind is decided by the spelling: F♯ is in
+		// Lydian only.
+		{"D6", chord(dNat, "M3 P5 M6", ""), b(false, material.Lydian)},
 		{"B♭sus4", chord(bFlat, "P4 P5", ""), b(true, material.Dorian, material.Phrygian, material.Aeolian, material.Locrian)},
 	})
 }

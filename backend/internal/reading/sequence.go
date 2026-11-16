@@ -16,11 +16,14 @@ type Resolution int
 // The resolutions.
 const (
 	// NoResolution is said of every chord that is neither V nor a secondary
-	// dominant, and of one that no chord follows.
+	// dominant, of one that no chord follows, of one followed by the same
+	// dominant, and of one followed by a chord that is not a triad with a
+	// third or a seventh chord (a sus or a sixth chord).
 	NoResolution Resolution = iota
 	// ResolutionExpected is a dominant followed by the chord it points to.
 	ResolutionExpected
-	// ResolutionIrregular is a dominant followed by another chord.
+	// ResolutionIrregular is a dominant followed by a triad with a third or a
+	// seventh chord that is not the one it points to.
 	ResolutionIrregular
 )
 
@@ -84,7 +87,7 @@ type SlotReading struct {
 	Chord ChordReading
 	// Resolution is how the chord goes on to the chord of the next slot.
 	Resolution Resolution
-	// Cadence is set on the last slot of a phrase only.
+	// Cadence is set on the last slot of a full phrase only.
 	Cadence Cadence
 }
 
@@ -227,7 +230,7 @@ func tertian(c material.Chord) bool {
 func resolution(cur, next slotChord) Resolution {
 	want := cur.target()
 	switch {
-	case !cur.ok || !next.ok || want == 0 || !next.tertian:
+	case !next.ok || want == 0 || !next.tertian:
 		return NoResolution
 	case next.target() == want && next.reading.Main.Kind == cur.reading.Main.Kind:
 		// The same dominant goes on: V to V, or V/x to V/x.
