@@ -208,10 +208,23 @@ function notesOf(progression: Schemas['Progression']): Schemas['ProgressionNotes
   return { notes };
 }
 
-/** The readings of the chords it knows; a 400 naming the first chord it cannot read. */
+/** The beats of a phrase, as the server cuts them (docs/api/openapi.yaml). */
+const PHRASE_BEATS = 16;
+
+/**
+ * The readings of the chords it knows; a 400 naming the first slot that
+ * crosses into the next phrase, as the server refuses it, or the first chord
+ * it cannot read.
+ */
 function readingsOf(progression: Schemas['Progression']): Schemas['ProgressionReading'] | Refusal {
   const slots: Schemas['SlotReading'][] = [];
+  let start = 0;
   for (const [i, slot] of progression.slots.entries()) {
+    if ((start % PHRASE_BEATS) + slot.beats > PHRASE_BEATS) {
+      const { refused } = refuse(`slot ${i}: a slot must not cross the boundary of a phrase`);
+      return { refused: { ...refused, slot: i } };
+    }
+    start += slot.beats;
     const reading: Schemas['SlotReading'] | undefined =
       slot.chord === undefined ? { content: slot.content ?? 'unchosen' } : known[slot.chord];
     if (reading === undefined) {

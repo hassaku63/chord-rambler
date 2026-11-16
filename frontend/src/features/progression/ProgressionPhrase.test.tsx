@@ -47,6 +47,32 @@ describe('ProgressionScreen and the phrase', () => {
     await screen.findByRole('heading', { name: '末尾に足す候補（4 拍）' });
   });
 
+  it('shortens a slot that a removal makes cross, says so, and reads the progression', async () => {
+    render(<ProgressionScreen />);
+    addChord('Dm7');
+    addChord('F');
+    fireEvent.change(screen.getAllByRole('combobox', { name: '長さ' })[1] ?? document.body, {
+      target: { value: '12' },
+    });
+    addChord('Fm');
+    fireEvent.change(screen.getAllByRole('combobox', { name: '長さ' })[2] ?? document.body, {
+      target: { value: '16' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dm7 の枠を消す' }));
+
+    const strip = screen.getByRole('list', { name: '進行' });
+    // The server reads Fm only when no slot crosses into the next phrase.
+    expect(await within(strip).findByRole('button', { name: /^Fm iv/ })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(lengths(screen.getAllByRole('combobox', { name: '長さ' })[1])).toEqual([1, 2, 3, 4]);
+    expect(screen.getAllByRole('combobox', { name: '長さ' })[1]).toHaveValue('4');
+    expect(screen.getByText('Fm の枠を 4 拍に縮めました（フレーズをまたぐため）。')).toHaveRole(
+      'status',
+    );
+    await screen.findByRole('heading', { name: '末尾に足す候補（4 拍）' });
+  });
+
   it('does not let a candidate be added while the next candidates are awaited', async () => {
     let release: () => void = () => undefined;
     const held = new Promise<void>((resolve) => (release = resolve));

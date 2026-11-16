@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { components } from '@/shared/api/schema.gen';
-import { ROLE_GROUPS, TERMS, wordFor } from './terms';
+import { ROLE_GROUPS, TERMS, shortenedNotice, wordFor } from './terms';
 
 type Schemas = components['schemas'];
 type ChordReading = Schemas['ChordReadingLabel'];
@@ -104,5 +104,27 @@ describe('TERMS', () => {
     expect(wordFor(TERMS.cadence, 'authentic')).toBe('正格終止');
     expect(wordFor(TERMS.cadence, 'none')).toBeNull();
     expect(wordFor(TERMS.cadence, 'picardy')).toBe('picardy');
+  });
+});
+
+describe('shortenedNotice', () => {
+  it.each([
+    { name: 'no slot', slots: [], want: '' },
+    {
+      name: 'a slot with a chord',
+      slots: [{ chord: 'G', beats: 2 }],
+      want: 'G の枠を 2 拍に縮めました（フレーズをまたぐため）。',
+    },
+    {
+      name: 'several slots, empty ones among them',
+      slots: [
+        { chord: 'Am', beats: 4 },
+        { content: 'none' as const, beats: 1 },
+        { content: 'unchosen' as const, beats: 12 },
+      ],
+      want: 'Am の枠を 4 拍に、和音なしの枠を 1 拍に、まだ選んでいない枠を 12 拍に縮めました（フレーズをまたぐため）。',
+    },
+  ])('tells in one sentence which slots were shortened: $name', ({ slots, want }) => {
+    expect(shortenedNotice(slots)).toBe(want);
   });
 });

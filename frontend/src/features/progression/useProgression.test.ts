@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Slot } from '@/shared/api/client';
-import { STORAGE_KEY, maxBeatsAt, nextBeats, useProgression } from './useProgression';
+import { STORAGE_KEY, fitToPhrases, maxBeatsAt, nextBeats, useProgression } from './useProgression';
 
 afterEach(() => localStorage.clear());
 
@@ -30,6 +30,59 @@ describe('maxBeatsAt', () => {
     { name: 'the start of the second phrase', slots: slotsOf(16, 4), index: 1, want: 16 },
   ])('gives the beats to the end of the phrase: $name', ({ slots, index, want }) => {
     expect(maxBeatsAt(slots, index)).toBe(want);
+  });
+});
+
+describe('fitToPhrases', () => {
+  it.each([
+    {
+      name: 'after removing the first of [4, 12, 16]',
+      beats: [12, 16],
+      want: [12, 4],
+      shortened: [1],
+    },
+    {
+      name: 'after shortening the first of [4, 4, 8, 4] to 2',
+      beats: [2, 4, 8, 4],
+      want: [2, 4, 8, 2],
+      shortened: [3],
+    },
+    {
+      name: 'after lengthening the first of [2, 14] to 4',
+      beats: [4, 14],
+      want: [4, 12],
+      shortened: [1],
+    },
+    {
+      name: 'when no slot crosses',
+      beats: [4, 4, 8, 16, 2],
+      want: [4, 4, 8, 16, 2],
+      shortened: [],
+    },
+    {
+      // Shortening the second moves the fourth back by 2 beats, across the end of the second phrase.
+      name: 'when shortening one makes a later one cross',
+      beats: [12, 6, 14, 4],
+      want: [12, 4, 14, 2],
+      shortened: [1, 3],
+    },
+  ])('shortens each slot to the end of its phrase: $name', ({ beats, want, shortened }) => {
+    const fitted = fitToPhrases(slotsOf(...beats));
+
+    expect(fitted.slots).toEqual(slotsOf(...want));
+    expect(fitted.shortened).toEqual(shortened);
+  });
+
+  it('keeps what a shortened slot holds', () => {
+    const fitted = fitToPhrases([
+      { chord: 'C', beats: 12 },
+      { chord: 'G', beats: 8, role: 'rise' },
+    ]);
+
+    expect(fitted.slots).toEqual([
+      { chord: 'C', beats: 12 },
+      { chord: 'G', beats: 4, role: 'rise' },
+    ]);
   });
 });
 
@@ -151,6 +204,57 @@ describe('useProgression', () => {
     act(() => result.current.remove(1));
 
     expect(result.current.selected).toBeNull();
+  });
+
+  it('shortens a slot that a removal makes cross, and tells which', () => {
+    const { result } = renderHook(() => useProgression());
+    act(() => result.current.addChord('C'));
+    act(() => result.current.addChord('F'));
+    act(() => result.current.setBeats(1, 12));
+    act(() => result.current.addChord('G'));
+    act(() => result.current.setBeats(2, 16));
+
+    act(() => result.current.remove(0));
+
+    expect(result.current.progression.slots).toEqual([
+      { chord: 'F', beats: 12 },
+      { chord: 'G', beats: 4 },
+    ]);
+    expect(result.current.shortened).toEqual([{ chord: 'G', beats: 4 }]);
+  });
+
+  it('shortens a slot that a change of length before it makes cross', () => {
+    const { result } = renderHook(() => useProgression());
+    act(() => result.current.addChord('C'));
+    act(() => result.current.setBeats(0, 2));
+    act(() => result.current.addUnchosen());
+    act(() => result.current.setBeats(1, 14));
+
+    act(() => result.current.setBeats(0, 4));
+
+    expect(result.current.progression.slots).toEqual([
+      { chord: 'C', beats: 4 },
+      { content: 'unchosen', beats: 12 },
+    ]);
+    expect(result.current.shortened).toEqual([{ content: 'unchosen', beats: 12 }]);
+  });
+
+  it('forgets what it shortened at the next change of the progression', () => {
+    const { result } = renderHook(() => useProgression());
+    act(() => result.current.addChord('C'));
+    act(() => result.current.addChord('F'));
+    act(() => result.current.setBeats(1, 12));
+    act(() => result.current.addChord('G'));
+    act(() => result.current.setBeats(2, 16));
+    act(() => result.current.remove(0));
+
+    act(() => result.current.select(1));
+
+    expect(result.current.shortened).toHaveLength(1);
+
+    act(() => result.current.setRole(0, 'stable'));
+
+    expect(result.current.shortened).toEqual([]);
   });
 
   it('brings the progression back after a reload', () => {
