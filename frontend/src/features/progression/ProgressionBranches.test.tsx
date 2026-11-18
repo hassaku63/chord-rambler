@@ -88,7 +88,6 @@ describe('ProgressionScreen with branches in the explore tab', () => {
     render(<ProgressionScreen createAudioContext={audio.create} />);
     const f = await branch('F');
     act(() => f.focus());
-    await waitFor(() => expect(f).toHaveAttribute('aria-current', 'true'));
 
     fireEvent.keyDown(f, { key: 'ArrowDown' });
 
@@ -98,7 +97,7 @@ describe('ProgressionScreen with branches in the explore tab', () => {
     expect(d7).toHaveAttribute('tabindex', '0');
     expect(f).toHaveAttribute('aria-pressed', 'false');
     await waitFor(() => expect(d7).toHaveAttribute('aria-current', 'true'));
-    expect(audio.context.oscillators).toHaveLength(2);
+    expect(audio.context.oscillators).toHaveLength(1);
 
     fireEvent.keyDown(d7, { key: 'ArrowUp' });
     fireEvent.keyDown(f, { key: 'ArrowUp' });
@@ -117,7 +116,9 @@ describe('ProgressionScreen with branches in the explore tab', () => {
     expect(chords()).toEqual(['Dm7', 'Fm']);
     const first = await branch('F');
     await waitFor(() => expect(first).toHaveFocus());
-    expect(first).toHaveAttribute('aria-pressed', 'true');
+    // Silently: the focus neither picks it nor plays it.
+    expect(first).toHaveAttribute('aria-pressed', 'false');
+    expect(first).not.toHaveAttribute('aria-current');
     expect(
       within(screen.getByRole('list', { name: '本線' })).getAllByRole('listitem'),
     ).toHaveLength(2);
@@ -142,15 +143,15 @@ describe('ProgressionScreen with branches in the explore tab', () => {
     render(<ProgressionScreen createAudioContext={audio.create} />);
     addChord('Dm7');
     fireEvent.keyDown(await branch('F'), { key: 'Enter' });
-    // The focus goes to the first new branch, which plays it, once they come.
+    // The focus goes to the first new branch once they come.
     await waitFor(() => expect(within(branches()).getAllByRole('button')[0]).toHaveFocus());
 
     expect(within(footprint()).getAllByRole('button').map(text)).toEqual(['D7 V7/V', 'Fm iv']);
     const fm = within(footprint()).getByRole('button', { name: 'Fm iv' });
     fireEvent.click(fm);
-    // Played in the slot it is beside: Dm7, then Fm (after the new first branch, Dm7 and F).
+    // Played in the slot it is beside: Dm7, then Fm.
     await waitFor(() => expect(fm).toHaveAttribute('aria-current', 'true'));
-    expect(audio.context.oscillators.map((o) => o.startedAt).slice(2)).toEqual([
+    expect(audio.context.oscillators.map((o) => o.startedAt)).toEqual([
       1.05,
       expect.closeTo(3.717),
     ]);
@@ -174,8 +175,8 @@ describe('ProgressionScreen with branches in the explore tab', () => {
     fireEvent.keyDown(await branch('F'), { key: 'Enter' });
     expect(await screen.findByRole('toolbar', { name: '探索の足跡' })).toBeInTheDocument();
 
-    // The focus put on the first new branch picks it; the plan tab does not name it.
-    await waitFor(() => expect(within(branches()).getAllByRole('button')[0]).toHaveFocus());
+    // A branch picked in the explore tab is not named in the plan tab.
+    fireEvent.click(await branch('F'));
     fireEvent.click(screen.getByRole('tab', { name: '計画' }));
     expect(within(panel()).getByRole('heading', { level: 2 })).toHaveTextContent(
       '枠を選んでいません',
@@ -188,6 +189,28 @@ describe('ProgressionScreen with branches in the explore tab', () => {
     addChord('Dm7');
 
     expect(screen.queryByRole('toolbar', { name: '探索の足跡' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the chosen slot and plays nothing when the focus comes to a branch, as by Tab', async () => {
+    const audio = fakeAudio();
+    render(<ProgressionScreen createAudioContext={audio.create} />);
+    addChord('Dm7');
+    const node = within(screen.getByRole('list', { name: '本線' })).getByRole('button');
+    fireEvent.click(node);
+    const f = await branch('F');
+
+    act(() => f.focus());
+
+    expect(f).toHaveFocus();
+    expect(f).toHaveAttribute('aria-pressed', 'false');
+    expect(node).toHaveAttribute('aria-pressed', 'true');
+    expect(within(panel()).getByRole('heading', { level: 2 })).toHaveTextContent(
+      'Dm7（1 番目の枠）',
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'この枠だけ鳴らす' })).toBeEnabled(),
+    );
+    expect(audio.context.oscillators).toEqual([]);
   });
 
   it('lets a branch go when a node is chosen', async () => {

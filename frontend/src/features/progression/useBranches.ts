@@ -24,8 +24,6 @@ export type BranchGroup = {
   picked: string | null;
   auditioning: string | null;
   on: {
-    pointerDown: () => void;
-    focus: (candidate: Candidate) => void;
     click: (candidate: Candidate) => void;
     confirm: (candidate: Candidate) => void;
     keyDown: (event: KeyboardEvent<HTMLElement>, candidate: Candidate) => void;
@@ -37,23 +35,31 @@ export type PickedBranch = { candidate: Candidate; place: BranchPlace; at: numbe
 
 type Picked = { chord: string; place: BranchPlace; for: Progression };
 
-/** Moves the focus to another branch of the toolbar with the arrows (WAI-ARIA toolbar). */
-function move(event: KeyboardEvent<HTMLElement>): void {
+/**
+ * Moves the focus to another branch of the toolbar with the arrows (WAI-ARIA
+ * toolbar), and gives its place in the group, or null for another key.
+ */
+function move(event: KeyboardEvent<HTMLElement>): number | null {
   const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key];
   const toolbar = event.currentTarget.closest('[role="toolbar"]');
   const buttons = Array.from(toolbar?.querySelectorAll('button') ?? []);
-  if (step !== undefined) {
-    event.preventDefault();
-    const at = buttons.indexOf(event.currentTarget as HTMLButtonElement) + step;
-    buttons[(at + buttons.length) % buttons.length]?.focus();
+  if (step === undefined) {
+    return null;
   }
+  event.preventDefault();
+  const at = buttons.indexOf(event.currentTarget as HTMLButtonElement) + step;
+  const to = (at + buttons.length) % buttons.length;
+  buttons[to]?.focus();
+  return to;
 }
 
 /**
  * The branches of the explore tab (docs/product/screen-promise.md, 3 and 4):
- * touching one picks it and plays the slot before with it; Enter, a double
- * click or the context panel puts it in, and the focus goes to the first of
- * the new branches. The other branches of the step stay as the footprint.
+ * pressing one, or moving to it with the arrows, picks it and plays the slot
+ * before with it; focus alone does not, so that Tab passes the branches
+ * without letting the chosen slot go. Enter, a double click or the context
+ * panel puts it in, and the focus goes to the first of the new branches,
+ * silently. The other branches of the step stay as the footprint.
  */
 export function useBranches(state: ProgressionState, playback: PlaybackState) {
   const { progression, footprint } = state;
@@ -62,9 +68,8 @@ export function useBranches(state: ProgressionState, playback: PlaybackState) {
   const { beats, candidates, busy } = next;
   const [picked, setPicked] = useState<Picked | null>(null);
   const tailRef = useRef<HTMLDivElement>(null);
-  // Whether the focus goes to the first new branch when the answer comes, and
-  // whether the next focus comes from a pointer, whose click plays instead.
-  const pending = useRef({ focus: false, pointer: false });
+  // Whether the focus goes to the first new branch when the answer comes.
+  const pending = useRef({ focus: false });
 
   const tail = candidates.state === 'given' ? branchesOf(candidates.groups) : [];
   const placed = footprint && progression.slots[footprint.at]?.chord;
@@ -115,27 +120,11 @@ export function useBranches(state: ProgressionState, playback: PlaybackState) {
     }
     pending.current.focus = false;
     const first = tailRef.current?.querySelector('button');
-    // Focusing the first branch plays it; one that has the focus already is given it again.
-    if (first === document.activeElement) {
-      first?.blur();
-    }
     first?.focus();
   }, [busy, candidates]);
 
   const on = (place: BranchPlace): BranchGroup['on'] => ({
-    pointerDown: () => {
-      pending.current.pointer = true;
-    },
-    focus: (candidate) => {
-      if (!pending.current.pointer) {
-        touch(place, candidate);
-      }
-      pending.current.pointer = false;
-    },
-    click: (candidate) => {
-      pending.current.pointer = false;
-      touch(place, candidate);
-    },
+    click: (candidate) => touch(place, candidate),
     confirm: (candidate) => confirm(place, candidate.chord.name),
     keyDown: (event, candidate) => {
       if (event.key === 'Enter') {
@@ -143,7 +132,11 @@ export function useBranches(state: ProgressionState, playback: PlaybackState) {
         event.preventDefault();
         confirm(place, candidate.chord.name);
       }
-      move(event);
+      const to = move(event);
+      const moved = to === null ? undefined : places[place]?.candidates[to];
+      if (moved !== undefined) {
+        touch(place, moved);
+      }
     },
   });
 

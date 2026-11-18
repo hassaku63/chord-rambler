@@ -49,8 +49,6 @@ export function Branches({ group, label, footprint = false, busy = false, toolba
                 aria-pressed={picked === name}
                 aria-current={trial || undefined}
                 tabIndex={name === stop ? 0 : -1}
-                onPointerDown={on.pointerDown}
-                onFocus={() => on.focus(candidate)}
                 onClick={() => on.click(candidate)}
                 onDoubleClick={() => on.confirm(candidate)}
                 onKeyDown={(e) => on.keyDown(e, candidate)}

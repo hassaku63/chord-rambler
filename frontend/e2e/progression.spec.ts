@@ -23,10 +23,11 @@ test('a progression built from branches plays slot by slot', async ({ page }) =>
   await openScreen(page);
   const slots = strip(page).getByRole('listitem');
 
-  // From the start point: Enter on a branch puts it in, and the focus goes to the new first branch.
+  // From the start point: focus alone picks nothing; Enter puts the branch in, and the focus
+  // goes to the new first branch.
   const c = (await branches(page)).getByRole('button', { name: 'C I', exact: true });
   await c.focus();
-  await expect(c).toHaveAttribute('aria-pressed', 'true');
+  await expect(c).toHaveAttribute('aria-pressed', 'false');
   await c.press('Enter');
   await expect(slots).toHaveCount(1);
   await expect(slots.nth(0)).toContainText('C');
@@ -48,6 +49,14 @@ test('a progression built from branches plays slot by slot', async ({ page }) =>
   await expect(slots.nth(1)).toContainText('Dm7');
   await expect(slots.nth(1)).toContainText('ii7');
   await expect(footprint.getByRole('button', { name: 'F IV', exact: true })).toBeVisible();
+
+  // Tab from a chosen node passes the branches without letting the slot go.
+  const node = page.getByRole('button', { name: /^2 Dm7 ii7/ });
+  await node.click();
+  await node.press('Tab');
+  await expect(footprint.getByRole('button').first()).toBeFocused();
+  await expect(node).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('試聴中')).toHaveCount(0);
 
   await page.getByRole('button', { name: '進行を鳴らす', exact: true }).click();
   await expect(slots.nth(0)).toHaveAttribute('aria-current', 'true');
