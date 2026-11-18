@@ -105,11 +105,15 @@ describe('ProgressionScreen', () => {
     const card = within(screen.getByRole('list', { name: '進行' })).getByRole('listitem');
     expect(await within(card).findByText('鳴っています')).toBeInTheDocument();
     expect(card).toHaveAttribute('aria-current', 'true');
+    const node = within(screen.getByRole('list', { name: '本線' })).getByRole('listitem');
+    expect(node).toHaveAttribute('aria-current', 'true');
+    expect(node).toHaveTextContent('鳴っています');
 
     fireEvent.click(play);
 
     expect(play).toHaveAttribute('aria-pressed', 'false');
     expect(within(card).queryByText('鳴っています')).not.toBeInTheDocument();
+    expect(node).not.toHaveAttribute('aria-current');
     expect(audio.context.oscillators[0]?.cut).toBe(true);
   });
 
@@ -203,8 +207,8 @@ describe('ProgressionScreen', () => {
     add.focus();
     fireEvent.click(add);
 
-    const region = screen.getByRole('region', { name: /末尾に足す候補/ });
-    expect(screen.getByRole('heading', { name: /末尾に足す候補/ })).toHaveFocus();
+    const region = screen.getByRole('region', { name: /^他の候補/ });
+    expect(screen.getByRole('heading', { name: /^他の候補/ })).toHaveFocus();
     expect(region).toHaveAttribute('aria-busy', 'true');
     expect(within(region).getByText('新しい候補を待っています。')).toBeInTheDocument();
     expect(within(region).getByRole('list', { name: '借用和音の候補' })).toBeVisible();
@@ -218,7 +222,7 @@ describe('ProgressionScreen', () => {
     expect(within(region).queryByText('新しい候補を待っています。')).not.toBeInTheDocument();
     expect(within(region).getByRole('list', { name: '借用和音の候補' })).toBeVisible();
     expect(within(region).getByRole('list', { name: 'ダイアトニックの候補' })).toBeVisible();
-    expect(screen.getByRole('heading', { name: /末尾に足す候補/ })).toHaveFocus();
+    expect(screen.getByRole('heading', { name: /^他の候補/ })).toHaveFocus();
   });
 
   it('cuts a typed chord to the beats left in the phrase', async () => {
@@ -233,7 +237,7 @@ describe('ProgressionScreen', () => {
     expect(within(cards[1] ?? document.body).getByRole('combobox', { name: '長さ' })).toHaveValue(
       '1',
     );
-    await screen.findByRole('heading', { name: '末尾に足す候補（4 拍）' });
+    await screen.findByRole('heading', { name: '他の候補（末尾に足す、4 拍）' });
   });
 
   it('puts a variation in place of the chosen chord, keeping its length and the list', async () => {

@@ -32,7 +32,7 @@ describe('ProgressionScreen and the phrase', () => {
     expect(within(cards[1] ?? document.body).getByRole('combobox', { name: '長さ' })).toHaveValue(
       '1',
     );
-    await screen.findByRole('heading', { name: '末尾に足す候補（4 拍）' });
+    await screen.findByRole('heading', { name: '他の候補（末尾に足す、4 拍）' });
   });
 
   it('offers a slot only the lengths that stay in its phrase', async () => {
@@ -44,7 +44,7 @@ describe('ProgressionScreen and the phrase', () => {
     const [first, second] = screen.getAllByRole('combobox', { name: '長さ' });
     expect(lengths(first)).toEqual(Array.from({ length: 16 }, (_, i) => i + 1));
     expect(lengths(second)).toEqual([1, 2]);
-    await screen.findByRole('heading', { name: '末尾に足す候補（4 拍）' });
+    await screen.findByRole('heading', { name: '他の候補（末尾に足す、4 拍）' });
   });
 
   it('shortens a slot that a removal makes cross, says so, and reads the progression', async () => {
@@ -70,7 +70,7 @@ describe('ProgressionScreen and the phrase', () => {
     expect(screen.getByText('Fm の枠を 4 拍に縮めました（フレーズをまたぐため）。')).toHaveRole(
       'status',
     );
-    await screen.findByRole('heading', { name: '末尾に足す候補（4 拍）' });
+    await screen.findByRole('heading', { name: '他の候補（末尾に足す、4 拍）' });
   });
 
   it('does not let a candidate be added while the next candidates are awaited', async () => {

@@ -102,8 +102,9 @@ function card(index: number): HTMLElement {
   return cards()[index] ?? document.body;
 }
 
-/** Builds C | (準備) | G7 (高まり) | C, the second slot not chosen yet. */
+/** Builds C | (準備) | G7 (高まり) | C, the second slot not chosen yet, in the plan tab. */
 function plan() {
+  fireEvent.click(screen.getByRole('tab', { name: '計画' }));
   const add = (name: string) => {
     fireEvent.change(screen.getByRole('textbox', { name: '和音名' }), { target: { value: name } });
     fireEvent.click(screen.getByRole('button', { name: '枠を足す' }));
@@ -195,6 +196,7 @@ describe('ProgressionScreen slot fill', () => {
 
   it('shows no candidates for a slot with no chord', async () => {
     render(<ProgressionScreen />);
+    fireEvent.click(screen.getByRole('tab', { name: '計画' }));
     fireEvent.click(screen.getByRole('button', { name: '和音なしの枠を足す' }));
 
     fireEvent.click(within(card(0)).getByRole('button', { name: '和音なし' }));

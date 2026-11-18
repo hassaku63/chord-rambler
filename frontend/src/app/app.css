@@ -1,0 +1,56 @@
+/* The colours of the screen, after the owner's sketch (ADR-0019): cream paper
+   and deep green. Text pairs keep 4.5:1, lines that mark a control or a state 3:1. */
+:root {
+  --color-paper: #f5f3e9;
+  --color-surface: #fffdf6;
+  --color-canvas: #edf0e5;
+  --color-dot: #b6c4b4;
+  --color-ink: #263c36;
+  --color-ink-muted: #4f6258;
+  --color-line: #6f8373;
+  --color-accent: #254c40;
+  --color-on-accent: #ffffff;
+  --color-chosen: #dfebd7;
+  --color-focus: #a35f00;
+  --color-shadow: #bbc9bb;
+  --font-serif: Georgia, 'Times New Roman', serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font:
+    15px/1.5 system-ui,
+    sans-serif;
+}
+
+.app-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.5rem 1.5rem;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.app-header h1 {
+  margin: 0;
+  font: italic bold 1.4rem var(--font-serif);
+}
+
+.app-header p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-ink-muted);
+}
+
+/* At PC width the screen fills the window, so that the canvas, the strip and
+   the context panel show together without scrolling (ADR-0019). */
+@media (min-width: 1000px) {
+  main {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+}

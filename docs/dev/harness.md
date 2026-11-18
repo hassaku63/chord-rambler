@@ -35,7 +35,7 @@ Chromium が要る。手元にないときは `cd frontend && npx playwright ins
 | --- | --- | --- | --- |
 | 通しのシナリオ（和音名で C を足す、候補から G7 を足す、鳴らすと鳴っている枠の印が進む。ヘッドレスの Chromium で `AudioContext` が作れること） | 部品のテストでは見えない、つなぎ目の退行 | `cd frontend && npx playwright test e2e/progression.spec.ts`（先に `make backend-build`） | `make check` |
 | axe-core（WCAG 2.0・2.1・2.2 の A と AA のタグ。空の進行、枠を選んだ状態、候補を開いた状態） | 機械で見えるアクセシビリティの違反（名前の食い違い、小さすぎる操作の的など） | `cd frontend && npx playwright test e2e/accessibility.spec.ts` | `make check` |
-| 配置（幅 360・768・1280 で、ページが横にスクロールしない。調、和音名、再生、候補の「足す」が見えて幅に収まる） | 画面の幅による配置の崩れ | `cd frontend && npx playwright test e2e/layout.spec.ts` | `make check` |
+| 配置（幅 360・768・1280 で、ページが横にスクロールしない。調、和音名、再生、候補の「足す」が見えて幅に収まる。1280×800 で、キャンバス・帯・文脈の欄がスクロールなしで同時に見える） | 画面の幅による配置の崩れ | `cd frontend && npx playwright test e2e/layout.spec.ts` | `make check` |
 
 ## 構造と規約（Go）
 

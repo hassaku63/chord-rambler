@@ -21,7 +21,7 @@ function slotToFill({ slots }: Progression, selected: number | null): number | n
 }
 
 /**
- * The candidates for the chosen slot (screen 4), in the list of the
+ * The candidates for the chosen slot (the plan tab), in the list of the
  * candidates for the slot after the last: filling keeps the slot's length
  * and role, and a trial plays the slots around it. A slot with no chord
  * (none) shows none.

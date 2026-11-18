@@ -13,7 +13,7 @@
 - [architecture/engine.md](architecture/engine.md) — エンジンの構成（土台のデータ、まとまりと責務）
 - [architecture/domain-model.md](architecture/domain-model.md) — エンジンが扱う値の型と規約（音名、音程、音高の集合、移調、和音と見方、音階、音名・和音名・ローマ数字の表記と主音から見た位置、和音 1 つと調、和音の並びの関係の計算）
 - [architecture/theory-conventions.md](architecture/theory-conventions.md) — 読みと表記が従う流儀と、その出どころ
-- [architecture/screen.md](architecture/screen.md) — 画面の構成（仮の配置、札の語の表、進行の保存）
+- [architecture/screen.md](architecture/screen.md) — 画面の構成（配置、札の語の表、進行の保存）
 - [architecture/explanations.md](architecture/explanations.md) — 説明の文の規則（許す単純化、許さない誤り、止め方）
 - [api/openapi.yaml](api/openapi.yaml) — API の契約（OpenAPI）。サーバーのルートと、画面の型の正
 - [architecture/adr/README.md](architecture/adr/README.md) — 設計判断の記録（ADR）の索引

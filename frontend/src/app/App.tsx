@@ -1,6 +1,7 @@
 import { ProgressionScreen } from '@/features/progression/ProgressionScreen';
 import type { BackendHealth } from './useBackendHealth';
 import { useBackendHealth } from './useBackendHealth';
+import './app.css';
 
 function statusText(health: BackendHealth): string {
   switch (health.state) {
@@ -19,8 +20,10 @@ export function App() {
 
   return (
     <main>
-      <h1>chord-rambler</h1>
-      <p role="status">{statusText(health)}</p>
+      <header className="app-header">
+        <h1>chord-rambler</h1>
+        <p role="status">{statusText(health)}</p>
+      </header>
       <ProgressionScreen />
     </main>
   );
