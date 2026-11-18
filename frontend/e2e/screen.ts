@@ -14,7 +14,7 @@ export function strip(page: Page): Locator {
 
 /** The candidates for the slot after the last, once the answer to the latest progression is in. */
 export async function tailCandidates(page: Page): Promise<Locator> {
-  const region = page.getByRole('region', { name: /^末尾に足す候補/ });
+  const region = page.getByRole('region', { name: /^他の候補/ });
   await expect(region).toHaveAttribute('aria-busy', 'false');
   return region;
 }
@@ -23,4 +23,11 @@ export async function tailCandidates(page: Page): Promise<Locator> {
 export async function addByName(page: Page, chord: string): Promise<void> {
   await page.getByRole('textbox', { name: '和音名' }).fill(chord);
   await page.getByRole('button', { name: '枠を足す', exact: true }).click();
+}
+
+/** Chooses the plan tab, where the context panel offers the candidates to fill the chosen slot. */
+export async function planTab(page: Page): Promise<void> {
+  const tab = page.getByRole('tab', { name: '計画', exact: true });
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-selected', 'true');
 }

@@ -12,10 +12,10 @@ export function SlotDetail({ slot, reading }: Props) {
   const numeral = numeralOf(reading);
   return (
     <section className="slot-detail" aria-labelledby="slot-detail-heading">
-      <h2 id="slot-detail-heading">
+      <h3 id="slot-detail-heading">
         {name}
         {numeral !== undefined && `（${numeral}）`} の札
-      </h2>
+      </h3>
       {rows.length === 0 ? <p>この枠に札はありません。</p> : <LabelList rows={rows} />}
     </section>
   );

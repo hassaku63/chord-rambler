@@ -1,68 +1,345 @@
-.progression-screen {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+/* The colours are the tokens on :root (frontend/src/app/app.css). */
+
+/* The key, the chord name and the tabs on top; the canvas and the strip on the
+   left, the context panel on the right (docs/product/screen-promise.md, 2). */
+.workbench {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.75rem 1rem;
+  align-items: center;
+  flex: 1;
+  min-height: 0;
+  padding: 0.75rem 1.5rem 1rem;
 }
 
-.playback,
-.add-slot {
+.workbench-main {
+  grid-column: 1 / -1;
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+  gap: 1rem;
+  min-height: 0;
+}
+
+.workbench-flow,
+.context-panel {
+  min-height: 0;
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+
+.workbench-flow {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.context-panel {
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+}
+
+@media (max-width: 999px) {
+  .workbench,
+  .workbench-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workbench {
+    padding: 0.75rem 1rem 1rem;
+  }
+}
+
+.workbench :is(h2, h3) {
+  margin: 0.5rem 0;
+}
+
+.workbench h2 {
+  font-size: 1.2rem;
+}
+
+.workbench h3 {
+  font-size: 1rem;
+}
+
+.workbench .area-heading,
+.context-where {
+  margin: 0 0 0.5rem;
+  font: 0.75rem var(--font-mono);
+  letter-spacing: 0.08em;
+  color: var(--color-ink-muted);
+}
+
+.workbench :is(button, select, input) {
+  border: 1px solid var(--color-line);
+  border-radius: 7px;
+  padding: 0.2rem 0.6rem;
+  background: var(--color-surface);
+  color: inherit;
+  font: inherit;
+}
+
+.workbench button[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.workbench :focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Targets at least 24 px high (WCAG 2.5.8): closed groups stack without a gap,
+   and the controls sit close together; a target this high needs no spacing. */
+.workbench :is(button, select, input, summary) {
+  min-height: 24px;
+}
+
+.add-slot,
+.playback {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
 }
 
-.slot-strip {
+/* The tabs: the one chosen filled and bold, the context panel naming it in words. */
+.tabs {
   display: flex;
-  flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.workbench .tabs [role='tab'] {
+  border-radius: 24px;
+  padding: 0.3rem 1.1rem;
+}
+
+.workbench .tabs [role='tab'][aria-selected='true'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: bold;
+}
+
+/* The canvas: the main line on a dotted ground. */
+.canvas {
+  flex: 1;
+  min-height: 10rem;
+  overflow: auto;
+  padding: 0.75rem 1.25rem;
+  background-color: var(--color-canvas);
+  background-image: radial-gradient(var(--color-dot) 1px, transparent 1px);
+  background-size: 13px 13px;
+}
+
+.canvas-line {
+  display: flex;
+  align-items: flex-end;
   list-style: none;
   margin: 0;
+  padding: 0.5rem 0;
+}
+
+.node-item {
+  display: flex;
+  align-items: flex-end;
+}
+
+.edge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 2.5rem;
+  padding: 0 0.25rem 1.5rem;
+  font-size: 0.75rem;
+}
+
+.edge-words {
+  max-width: 6rem;
+  text-align: center;
+}
+
+.edge-arrow {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.node-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.node-sounding {
+  min-height: 1.5em;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.workbench .node {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 5.5rem;
+  padding: 0.4rem 0.75rem 0.5rem;
+  border: 2px solid var(--color-line);
+  border-radius: 8px;
+  box-shadow: 2px 3px 0 var(--color-shadow);
+  text-align: left;
+}
+
+.node-index {
+  font: 0.75rem var(--font-mono);
+  color: var(--color-ink-muted);
+}
+
+.node-name {
+  font: 2rem/1.15 var(--font-serif);
+}
+
+.node.empty .node-name {
+  font-size: 1rem;
+  line-height: 2.3;
+}
+
+.node-numeral {
+  font-size: 0.85rem;
+}
+
+/* Chosen: a ground and a thicker line; sounding: a dashed line and the words. */
+.workbench .node[aria-pressed='true'] {
+  background: var(--color-chosen);
+  color: inherit;
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-accent);
+}
+
+.node-item[aria-current] .node {
+  border-style: dashed;
+}
+
+.node[aria-pressed='true'] .node-index {
+  color: var(--color-ink);
+}
+
+/* The strip: a slot as wide as its beats, the bars and phrases marked in it. */
+.strip {
+  padding: 0.75rem 1.25rem 0.5rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.slot-strip {
+  --beat-width: 2.75rem;
+  display: flex;
+  overflow-x: auto;
+  list-style: none;
+  margin: 0 0 0.5rem;
   padding: 0;
 }
 
 .slot-card {
+  flex: none;
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
   gap: 0.25rem;
-  padding: 0.5rem;
-  border: 1px solid #888;
-  border-radius: 4px;
-  min-width: 8rem;
+  width: calc(var(--beats) * var(--beat-width));
+  min-width: 6.5rem;
+  padding: 0 0.35rem 0.35rem;
+  border-top: 3px solid var(--color-line);
+  border-right: 2px solid var(--color-surface);
+  background: var(--color-canvas);
+  font-size: 0.8rem;
+}
+
+.slot-card > :is(.slot-ticks, .slot-sounding, .slot-select) {
+  flex-basis: 100%;
 }
 
 .slot-card.selected {
-  border: 2px solid currentColor;
+  background: var(--color-chosen);
+  border-top-color: var(--color-accent);
+  box-shadow: inset 0 0 0 2px var(--color-accent);
 }
 
 .slot-card.sounding {
-  border-style: dashed;
-  border-width: 2px;
+  outline: 2px dashed var(--color-ink);
+  outline-offset: -5px;
+}
+
+.slot-ticks {
+  position: relative;
+  height: 1.3em;
+  overflow: hidden;
+}
+
+.tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  padding-left: 2px;
+  border-left: 1px solid var(--color-ink-muted);
+  font: 0.7rem var(--font-mono);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+
+.tick.phrase {
+  border-left-width: 3px;
+  color: var(--color-ink);
+  font-weight: bold;
 }
 
 .slot-sounding {
+  min-height: 1.3em;
   font-weight: bold;
 }
 
-.slot-select {
+.workbench .slot-select {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  border: none;
+  padding: 0;
+  background: none;
+  color: inherit;
   text-align: left;
 }
 
-.slot-name {
-  font-weight: bold;
+.workbench .slot-select[aria-pressed='true'] {
+  background: none;
+  color: inherit;
 }
 
-/* Targets at least 24 px high (WCAG 2.5.8): closed groups stack without a gap,
-   and the controls sit close together; a target this high needs no spacing. */
-.progression-screen :is(button, select, input, summary) {
-  min-height: 24px;
+.slot-name {
+  font: 1.25rem var(--font-serif);
+}
+
+.slot-card select {
+  max-width: 100%;
 }
 
 .basis {
   font-size: 0.85em;
+}
+
+.workbench dl {
+  margin: 0.25rem 0;
+}
+
+.label-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.75rem;
+}
+
+.label-row dt {
+  min-width: 5em;
+  color: var(--color-ink-muted);
+}
+
+.label-row dd {
+  margin: 0;
 }
 
 .candidate-list {
@@ -79,6 +356,10 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: baseline;
+}
+
+.candidate .slot-name {
+  font-size: 1.15rem;
 }
 
 .candidate.auditioning {

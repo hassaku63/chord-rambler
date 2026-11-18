@@ -31,6 +31,27 @@ export function maxBeatsAt(slots: Slot[], index: number): number {
   return PHRASE_BEATS - (start % PHRASE_BEATS);
 }
 
+/** The beats of a bar of 4/4. */
+export const BAR_BEATS = 4;
+
+/** The start of a bar within a slot: where (0 at its start, 1 at its end), which bar, and the phrase it starts, if any. */
+export type BarTick = { at: number; bar: number; phrase: number | null };
+
+/** The bars that start within each slot, counted from 1, for the bar ticks of the strip. */
+export function barTicks(slots: Slot[]): BarTick[][] {
+  let start = 0;
+  return slots.map((slot) => {
+    const ticks: BarTick[] = [];
+    const first = Math.ceil(start / BAR_BEATS) * BAR_BEATS;
+    for (let beat = first; beat < start + slot.beats; beat += BAR_BEATS) {
+      const phrase = beat % PHRASE_BEATS === 0 ? beat / PHRASE_BEATS + 1 : null;
+      ticks.push({ at: (beat - start) / slot.beats, bar: beat / BAR_BEATS + 1, phrase });
+    }
+    start += slot.beats;
+    return ticks;
+  });
+}
+
 /**
  * The slots with each that would cross the end of the phrase it starts in
  * shortened to end there, and the indexes of those shortened (#179). Going

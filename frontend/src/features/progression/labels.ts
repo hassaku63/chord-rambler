@@ -102,6 +102,22 @@ export function cardMarks(slot: SlotReading): string[] {
 }
 
 /**
+ * The words the line from one slot to the next carries: how the chord before
+ * goes on to the next (a reading's resolution looks forward), and the cadence
+ * of the slot after. None for "nothing to name" or a slot with no chord.
+ */
+export function edgeWords(
+  before: SlotReading | undefined,
+  after: SlotReading | undefined,
+): string[] {
+  const words = [
+    before?.content === 'chord' ? wordFor(TERMS.resolution, before.resolution.resolution) : null,
+    after?.content === 'chord' ? wordFor(TERMS.cadence, after.cadence.cadence) : null,
+  ];
+  return words.filter((word): word is string => word !== null);
+}
+
+/**
  * The grade of a move between functions with the style it is limited to
  * (「クラシックでは、より少ない」, #114), or null when it names none.
  */

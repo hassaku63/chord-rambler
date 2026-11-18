@@ -18,7 +18,7 @@ type Props = {
 export function VariationList({ base, current, variations, onChoose }: Props) {
   return (
     <section className="variations" aria-labelledby="variations-heading">
-      <h2 id="variations-heading">{base} の変形</h2>
+      <h3 id="variations-heading">{base} の変形</h3>
       <ul className="variation-list" role="list" aria-label={`${base} の変形`}>
         {variations.map((variation) => {
           const name = variation.chord.name;

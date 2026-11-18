@@ -1,6 +1,6 @@
 import type { Locator } from '@playwright/test';
 import { expect, test } from '@playwright/test';
-import { addByName, openScreen, tailCandidates } from './screen';
+import { addByName, openScreen, strip, tailCandidates } from './screen';
 
 /** Fails unless the element is visible and lies within the width of the page. */
 async function expectWithin(control: Locator, width: number) {
@@ -36,3 +36,24 @@ for (const width of [360, 768, 1280]) {
     await expectWithin(candidates.getByRole('button', { name: 'G7 を足す', exact: true }), width);
   });
 }
+
+test('at 1280 by 800 the canvas, the strip and the context panel show together', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openScreen(page);
+  for (const chord of ['C', 'Am', 'F', 'G7']) {
+    await addByName(page, chord);
+  }
+  await tailCandidates(page);
+  await strip(page)
+    .getByRole('button', { name: /^Am vi\b/ })
+    .click();
+  await expect(page.getByRole('list', { name: /変形/ })).toBeVisible();
+
+  const height = await page.evaluate(() => document.documentElement.scrollHeight);
+  expect(height).toBeLessThanOrEqual(800);
+  await expect(page.getByRole('region', { name: '流れ' })).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole('region', { name: '時間と再生' })).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole('complementary')).toBeInViewport({ ratio: 1 });
+});

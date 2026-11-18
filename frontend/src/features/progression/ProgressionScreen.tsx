@@ -1,18 +1,14 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { AudioContextFactory } from './usePlayer';
 import type { ReadingState } from './useProgressionReading';
 import { useProgressionReading } from './useProgressionReading';
-import { KEYS, maxBeatsAt, useProgression } from './useProgression';
-import { triedAt, usePlayback } from './usePlayback';
-import { useNextCandidates } from './useNextCandidates';
-import { CandidateList } from './CandidateList';
-import { candidateMarks, candidateRows } from './labels';
-import { SlotFill } from './SlotFill';
-import { useVariations } from './useVariations';
-import { VariationList } from './VariationList';
+import { KEYS, barTicks, maxBeatsAt, useProgression } from './useProgression';
+import { usePlayback } from './usePlayback';
 import { PlaybackControls } from './PlaybackControls';
+import { Canvas } from './Canvas';
+import type { Tab } from './ContextPanel';
+import { ContextPanel } from './ContextPanel';
 import { SlotCard } from './SlotCard';
-import { SlotDetail } from './SlotDetail';
 import { shortenedNotice } from './terms';
 import './progression.css';
 
@@ -27,36 +23,70 @@ function ReadingAlert({ reading }: { reading: ReadingState }) {
   }
 }
 
+/** The two tabs on the same progression (ADR-0019): exploring from the last slot, and planning. */
+const TABS: readonly { id: Tab; word: string }[] = [
+  { id: 'explore', word: '探索' },
+  { id: 'plan', word: '計画' },
+];
+
+/** The tabs, with the arrow keys moving between them (the WAI-ARIA tabs pattern). */
+function Tabs({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
+  const buttons = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
+  return (
+    <div className="tabs" role="tablist" aria-label="やり方">
+      {TABS.map(({ id, word }) => (
+        <button
+          key={id}
+          ref={(button) => {
+            buttons.current[id] = button;
+          }}
+          type="button"
+          role="tab"
+          id={`tab-${id}`}
+          aria-selected={tab === id}
+          aria-controls="workbench-panel"
+          tabIndex={tab === id ? 0 : -1}
+          onClick={() => onTab(id)}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+              // With two tabs, either arrow goes to the other.
+              const other = id === 'explore' ? 'plan' : 'explore';
+              onTab(other);
+              buttons.current[other]?.focus();
+            }
+          }}
+        >
+          {word}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 type Props = {
   /** Makes the AudioContext the playing sounds through; tests pass a stand-in. */
   createAudioContext?: AudioContextFactory;
 };
 
 /**
- * Screens 1 to 4 (a provisional layout, A1 of #148): the key and the playing
- * on top, the strip of slots in the middle, the labels, the variations and
- * the candidates of the chosen slot and the candidates for the slot after the
- * last below.
+ * The workbench (ADR-0019, docs/product/screen-promise.md): the key, the
+ * chord name and the two tabs on top; the canvas and the strip on the left;
+ * the context panel, which follows the chosen slot, on the right.
  */
 export function ProgressionScreen({ createAudioContext }: Props) {
   const state = useProgression();
   const { progression, selected } = state;
   const reading = useProgressionReading(progression);
   const playback = usePlayback(progression, createAudioContext);
-  const { beats, candidates, busy } = useNextCandidates(progression);
-  // The candidate groups opened or closed, kept here so that a new answer keeps them.
-  const [opened, setOpened] = useState<Partial<Record<string, boolean>>>({});
   const [chordName, setChordName] = useState('');
+  const [tab, setTab] = useState<Tab>('explore');
   const readings = reading.state === 'read' ? reading.reading.slots : [];
   const unreadable = reading.state === 'refused' ? reading.slot : null;
-  const chosen = selected === null ? undefined : progression.slots[selected];
-  const chord = chosen?.chord;
-  // A slot added from the candidates keeps its variations from that chord (#115).
-  const base = chord === undefined || selected === null ? null : (state.bases[selected] ?? chord);
-  const variations = useVariations(progression.key, base);
+  const ticks = barTicks(progression.slots);
+  const select = (i: number) => state.select(selected === i ? null : i);
 
   return (
-    <div className="progression-screen">
+    <div className="workbench">
       <label>
         調
         <select value={progression.key} onChange={(e) => state.setKey(e.target.value)}>
@@ -67,8 +97,6 @@ export function ProgressionScreen({ createAudioContext }: Props) {
           ))}
         </select>
       </label>
-
-      <PlaybackControls playback={playback} selected={selected} />
 
       <form
         className="add-slot"
@@ -91,73 +119,59 @@ export function ProgressionScreen({ createAudioContext }: Props) {
         </button>
       </form>
 
-      <ReadingAlert reading={reading} />
+      <Tabs tab={tab} onTab={setTab} />
 
-      <ol className="slot-strip" role="list" aria-label="進行">
-        {progression.slots.map((slot, i) => (
-          <SlotCard
-            // Slots have no identity of their own; the position is the slot.
-            key={i}
-            slot={slot}
-            maxBeats={maxBeatsAt(progression.slots, i)}
-            reading={readings[i]}
-            unreadable={unreadable === i}
-            selected={selected === i}
-            sounding={playback.sounding === i}
-            onSelect={() => state.select(selected === i ? null : i)}
-            onRemove={() => state.remove(i)}
-            onBeats={(beats) => state.setBeats(i, beats)}
-            onRole={(role) => state.setRole(i, role)}
+      <div
+        className={`workbench-main ${tab}`}
+        id="workbench-panel"
+        role="tabpanel"
+        aria-labelledby={`tab-${tab}`}
+      >
+        <div className="workbench-flow">
+          <Canvas
+            slots={progression.slots}
+            readings={readings}
+            selected={selected}
+            sounding={playback.sounding}
+            onSelect={select}
           />
-        ))}
-      </ol>
 
-      {/* Always there, so that the sentence is read out when it comes (WCAG 4.1.3). */}
-      <p role="status" className="slot-notice">
-        {shortenedNotice(state.shortened)}
-      </p>
+          <section className="strip" aria-labelledby="strip-heading">
+            <h2 id="strip-heading" className="area-heading">
+              時間と再生
+            </h2>
+            <ReadingAlert reading={reading} />
+            <ol className="slot-strip" role="list" aria-label="進行">
+              {progression.slots.map((slot, i) => (
+                <SlotCard
+                  // Slots have no identity of their own; the position is the slot.
+                  key={i}
+                  slot={slot}
+                  maxBeats={maxBeatsAt(progression.slots, i)}
+                  ticks={ticks[i] ?? []}
+                  reading={readings[i]}
+                  unreadable={unreadable === i}
+                  selected={selected === i}
+                  sounding={playback.sounding === i}
+                  onSelect={() => select(i)}
+                  onRemove={() => state.remove(i)}
+                  onBeats={(beats) => state.setBeats(i, beats)}
+                  onRole={(role) => state.setRole(i, role)}
+                />
+              ))}
+            </ol>
 
-      {chosen && selected !== null && <SlotDetail slot={chosen} reading={readings[selected]} />}
+            <PlaybackControls playback={playback} selected={selected} />
 
-      {chord !== undefined &&
-        selected !== null &&
-        base !== null &&
-        variations.state === 'given' && (
-          <VariationList
-            base={base}
-            current={chord}
-            variations={variations.variations}
-            onChoose={(name) => state.replaceChord(selected, name)}
-          />
-        )}
+            {/* Always there, so that the sentence is read out when it comes (WCAG 4.1.3). */}
+            <p role="status" className="slot-notice">
+              {shortenedNotice(state.shortened)}
+            </p>
+          </section>
+        </div>
 
-      <SlotFill
-        progression={progression}
-        selected={selected}
-        playback={playback}
-        onFill={state.fillSlot}
-      />
-
-      {candidates.state === 'given' && (
-        <CandidateList
-          words={{
-            heading: `末尾に足す候補（${beats} 拍）`,
-            list: (kind) => `${kind}の候補`,
-            add: '足す',
-            trial: (chord) => `${chord} を試聴する`,
-          }}
-          groups={candidates.groups}
-          marksOf={candidateMarks}
-          rowsOf={candidateRows}
-          busy={busy}
-          opened={opened}
-          onToggle={(kind, open) => setOpened((o) => ({ ...o, [kind]: open }))}
-          auditioning={triedAt(playback.auditioning, progression.slots.length)}
-          onAdd={(name) => state.addCandidate(name, beats)}
-          onAudition={(name) => playback.audition(name, beats)}
-          onStop={playback.stop}
-        />
-      )}
+        <ContextPanel tab={tab} state={state} readings={readings} playback={playback} />
+      </div>
     </div>
   );
 }

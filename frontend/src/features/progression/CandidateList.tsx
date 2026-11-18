@@ -111,9 +111,9 @@ export function CandidateList<C extends Candidate>({
   const id = useId();
   return (
     <section className="candidates" aria-labelledby={id} aria-busy={busy}>
-      <h2 id={id} ref={heading} tabIndex={-1}>
+      <h3 id={id} ref={heading} tabIndex={-1}>
         {words.heading}
-      </h2>
+      </h3>
       {/* The line keeps its place when empty, so that the list does not move. */}
       <p className="candidates-wait">{busy ? '新しい候補を待っています。' : ''}</p>
       {groups.map((group) => {

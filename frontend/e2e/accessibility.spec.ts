@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
-import { addByName, openScreen, strip, tailCandidates } from './screen';
+import { addByName, openScreen, planTab, strip, tailCandidates } from './screen';
 
 // WCAG 2.0, 2.1 and 2.2 at levels A and AA, as axe-core tags them. axe-core
 // 4.14 has no wcag22a tag: none of its rules checks a level A criterion new
@@ -24,9 +24,10 @@ test('the empty progression has no violations', async ({ page }) => {
   expect(await violations(page)).toEqual([]);
 });
 
-test('a chosen slot has no violations', async ({ page }) => {
+test('a chosen slot in the plan tab has no violations', async ({ page }) => {
   await openScreen(page);
   await addByName(page, 'C');
+  await planTab(page);
   const choose = strip(page).getByRole('button', { name: /^C I\b/ });
   await choose.click();
   await expect(choose).toHaveAttribute('aria-pressed', 'true');

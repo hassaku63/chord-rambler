@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SlotReading, Variation } from '@/shared/api/client';
-import { labelRows, variationMarks } from './labels';
+import { edgeWords, labelRows, variationMarks } from './labels';
 
 const fm7: Extract<SlotReading, { content: 'chord' }> = {
   content: 'chord',
@@ -51,5 +51,22 @@ describe('variationMarks', () => {
     const inKey = { ...variation, outOfKey: { basis: 'computation', notes: [] } };
 
     expect(variationMarks(inKey)).toEqual(['借用和音']);
+  });
+});
+
+describe('edgeWords', () => {
+  const g7 = { ...fm7, resolution: { basis: 'school', resolution: 'expected' } } as const;
+  const c = { ...fm7, cadence: { basis: 'school', cadence: 'authentic' } } as const;
+  const unchosen: SlotReading = { content: 'unchosen' };
+  it.each([
+    { name: 'nothing to name', before: fm7, after: fm7, want: [] },
+    { name: 'the resolution of the chord before', before: g7, after: fm7, want: ['解決'] },
+    { name: 'the cadence of the slot after', before: fm7, after: c, want: ['正格終止'] },
+    { name: 'both', before: g7, after: c, want: ['解決', '正格終止'] },
+    { name: 'not the resolution of the slot after', before: fm7, after: g7, want: [] },
+    { name: 'a slot with no chord', before: unchosen, after: unchosen, want: [] },
+    { name: 'no reading yet', before: undefined, after: undefined, want: [] },
+  ])('names the judgments of the line: $name', ({ before, after, want }) => {
+    expect(edgeWords(before, after)).toEqual(want);
   });
 });

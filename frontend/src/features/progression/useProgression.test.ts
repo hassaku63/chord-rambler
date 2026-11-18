@@ -1,7 +1,14 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Slot } from '@/shared/api/client';
-import { STORAGE_KEY, fitToPhrases, maxBeatsAt, nextBeats, useProgression } from './useProgression';
+import {
+  STORAGE_KEY,
+  barTicks,
+  fitToPhrases,
+  maxBeatsAt,
+  nextBeats,
+  useProgression,
+} from './useProgression';
 
 afterEach(() => localStorage.clear());
 
@@ -30,6 +37,26 @@ describe('maxBeatsAt', () => {
     { name: 'the start of the second phrase', slots: slotsOf(16, 4), index: 1, want: 16 },
   ])('gives the beats to the end of the phrase: $name', ({ slots, index, want }) => {
     expect(maxBeatsAt(slots, index)).toBe(want);
+  });
+});
+
+describe('barTicks', () => {
+  const bar = (at: number, n: number, phrase: number | null = null) => ({ at, bar: n, phrase });
+  it.each([
+    { name: 'no slots', slots: [], want: [] },
+    { name: 'one bar a slot', slots: slotsOf(4, 4), want: [[bar(0, 1, 1)], [bar(0, 2)]] },
+    {
+      name: 'a slot over two bars, then one starting mid-bar',
+      slots: slotsOf(6, 2, 8),
+      want: [[bar(0, 1, 1), bar(4 / 6, 2)], [], [bar(0, 3), bar(0.5, 4)]],
+    },
+    {
+      name: 'the second phrase',
+      slots: slotsOf(14, 4),
+      want: [[0, 4, 8, 12].map((b, i) => bar(b / 14, i + 1, i === 0 ? 1 : null)), [bar(0.5, 5, 2)]],
+    },
+  ])('marks where each bar and each phrase starts: $name', ({ slots, want }) => {
+    expect(barTicks(slots)).toEqual(want);
   });
 });
 

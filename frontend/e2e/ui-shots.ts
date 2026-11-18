@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
-import { addByName, openScreen, strip, tailCandidates } from './screen';
+import { addByName, openScreen, planTab, strip, tailCandidates } from './screen';
 
 // Shots for the ui-review skill (.claude/skills/ui-review/SKILL.md): each
 // state at each width, as an image of the whole page and as the
@@ -38,11 +38,28 @@ const states: { name: string; reach: (page: Page) => Promise<void> }[] = [
       await openScreen(page);
       await addByName(page, 'C');
       await tailCandidates(page);
+      await planTab(page);
       const choose = strip(page).getByRole('button', { name: /^C I\b/ });
       await choose.click();
       await expect(choose).toHaveAttribute('aria-pressed', 'true');
       const fill = page.getByRole('region', { name: /^選んだ枠を埋める候補/ });
       await expect(fill).toHaveAttribute('aria-busy', 'false');
+      await expect(page.getByRole('list', { name: /変形/ })).toBeVisible();
+    },
+  },
+  {
+    name: '4-explored',
+    reach: async (page) => {
+      await openScreen(page);
+      for (const chord of ['C', 'Am', 'F', 'G7', 'C']) {
+        await addByName(page, chord);
+      }
+      await tailCandidates(page);
+      const choose = page
+        .getByRole('list', { name: '本線' })
+        .getByRole('button', { name: /^4 G7/ });
+      await choose.click();
+      await expect(choose).toHaveAttribute('aria-pressed', 'true');
       await expect(page.getByRole('list', { name: /変形/ })).toBeVisible();
     },
   },
