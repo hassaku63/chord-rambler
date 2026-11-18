@@ -51,7 +51,7 @@ const states: { name: string; reach: (page: Page) => Promise<void> }[] = [
     name: '4-explored',
     reach: async (page) => {
       await openScreen(page);
-      for (const chord of ['C', 'Am', 'F', 'G7', 'C']) {
+      for (const chord of ['C', 'Am', 'F', 'G7', 'C', 'Am', 'Dm', 'G7']) {
         await addByName(page, chord);
       }
       await tailCandidates(page);

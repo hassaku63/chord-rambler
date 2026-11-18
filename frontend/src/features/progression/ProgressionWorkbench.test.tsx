@@ -82,8 +82,13 @@ describe('ProgressionScreen as the workbench', () => {
       'G7（2 番目の枠）',
     );
     expect(within(panel()).getByRole('region', { name: 'G7（V7） の札' })).toBeInTheDocument();
-    // In the explore tab the candidates for the slot after the last make way for the chosen slot.
+    // In the explore tab the candidates for the slot after the last make way for the chosen slot,
+    // and those to fill it are for the plan tab.
     expect(screen.queryByRole('region', { name: /^他の候補/ })).not.toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalledWith(
+      '/api/v1/progressions/slot-candidates',
+      expect.anything(),
+    );
 
     fireEvent.click(node);
 

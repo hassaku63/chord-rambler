@@ -24,11 +24,18 @@ test('the empty progression has no violations', async ({ page }) => {
   expect(await violations(page)).toEqual([]);
 });
 
-test('a chosen slot in the plan tab has no violations', async ({ page }) => {
+test('a chosen slot in the plan tab, with judgments on the lines, has no violations', async ({
+  page,
+}) => {
   await openScreen(page);
-  await addByName(page, 'C');
+  for (const chord of ['C', 'F', 'G7', 'C']) {
+    await addByName(page, chord);
+  }
+  await expect(page.getByRole('list', { name: '本線' })).toContainText('解決 正格終止');
   await planTab(page);
-  const choose = strip(page).getByRole('button', { name: /^C I\b/ });
+  const choose = strip(page)
+    .getByRole('button', { name: /^C I\b/ })
+    .first();
   await choose.click();
   await expect(choose).toHaveAttribute('aria-pressed', 'true');
   const fill = page.getByRole('region', { name: /^選んだ枠を埋める候補/ });

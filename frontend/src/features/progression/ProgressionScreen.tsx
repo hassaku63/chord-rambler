@@ -56,9 +56,12 @@ function Tabs({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
           onKeyDown={(e) => {
             if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
               // With two tabs, either arrow goes to the other.
-              const other = id === 'explore' ? 'plan' : 'explore';
-              onTab(other);
-              document.getElementById(`tab-${other}`)?.focus();
+              const other =
+                e.currentTarget.nextElementSibling ?? e.currentTarget.previousElementSibling;
+              onTab(id === 'explore' ? 'plan' : 'explore');
+              if (other instanceof HTMLElement) {
+                other.focus();
+              }
             }
           }}
         >
