@@ -73,6 +73,15 @@
   font: inherit;
 }
 
+/* A control that cannot be used now (元に戻す with nothing to undo, 止める when
+   nothing sounds): a dashed border and muted text, so it reads as unusable by
+   shape as well as by colour. */
+.workbench :is(button, select, input):disabled {
+  border-style: dashed;
+  color: var(--color-ink-muted);
+  cursor: not-allowed;
+}
+
 /* Pressed and chosen: filled; the chosen tab also bold, and named in the context panel. */
 .workbench :is([aria-pressed='true'], [aria-selected='true']) {
   background: var(--color-accent);
