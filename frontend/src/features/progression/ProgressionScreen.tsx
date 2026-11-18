@@ -1,3 +1,4 @@
+import type { RefObject } from 'react';
 import { useState } from 'react';
 import type { SlotReading } from '@/shared/api/client';
 import type { AudioContextFactory } from './usePlayer';
@@ -9,6 +10,7 @@ import type { PlaybackState } from './usePlayback';
 import { triedAt, usePlayback } from './usePlayback';
 import type { BranchesState } from './useBranches';
 import { useBranches } from './useBranches';
+import { usePlanFill } from './usePlanFill';
 import { BranchDetail } from './BranchDetail';
 import { CandidateList } from './CandidateList';
 import { candidateMarks, candidateRows } from './labels';
@@ -90,6 +92,7 @@ export function ProgressionScreen({ createAudioContext }: Props) {
   const reading = useProgressionReading(progression);
   const playback = usePlayback(progression, createAudioContext);
   const branches = useBranches(state, playback);
+  const { fill, headingRef } = usePlanFill(state);
   const [chordName, setChordName] = useState('');
   const [tab, setTab] = useState<Tab>('explore');
   const readings = reading.state === 'read' ? reading.reading.slots : [];
@@ -102,16 +105,22 @@ export function ProgressionScreen({ createAudioContext }: Props) {
 
   return (
     <div className="workbench">
-      <label>
-        調
-        <select value={progression.key} onChange={(e) => state.setKey(e.target.value)}>
-          {KEYS.map((key) => (
-            <option key={key} value={key}>
-              {key} major
-            </option>
-          ))}
-        </select>
-      </label>
+      {/* Outside the tabs: the same key and undo in both (screen-promise.md, 2). */}
+      <div className="key-and-undo">
+        <label>
+          調
+          <select value={progression.key} onChange={(e) => state.setKey(e.target.value)}>
+            {KEYS.map((key) => (
+              <option key={key} value={key}>
+                {key} major
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="button" disabled={!state.canUndo} onClick={state.undo}>
+          元に戻す
+        </button>
+      </div>
 
       <form
         className="add-slot"
@@ -150,6 +159,7 @@ export function ProgressionScreen({ createAudioContext }: Props) {
             sounding={playback.sounding}
             onSelect={select}
             branches={tab === 'explore' ? branches : null}
+            roles={tab === 'plan'}
           />
 
           <section className="strip" aria-labelledby="strip-heading">
@@ -186,7 +196,7 @@ export function ProgressionScreen({ createAudioContext }: Props) {
           </section>
         </div>
 
-        <ContextPanel {...{ tab, state, readings, playback, branches }} />
+        <ContextPanel {...{ tab, state, readings, playback, branches, headingRef }} onFill={fill} />
       </div>
     </div>
   );
@@ -226,6 +236,10 @@ type PanelProps = {
   readings: SlotReading[];
   playback: PlaybackState;
   branches: BranchesState;
+  /** The heading, which the focus goes to when filling moves the choice on. */
+  headingRef: RefObject<HTMLHeadingElement | null>;
+  /** Fills a slot in the plan tab. */
+  onFill: (index: number, chord: string) => void;
 };
 
 /**
@@ -235,7 +249,15 @@ type PanelProps = {
  * with no slot chosen, all the candidates for the slot after the last, as the
  * other candidates.
  */
-function ContextPanel({ tab, state, readings, playback, branches }: PanelProps) {
+function ContextPanel({
+  tab,
+  state,
+  readings,
+  playback,
+  branches,
+  headingRef,
+  onFill,
+}: PanelProps) {
   const { progression, selected } = state;
   const { beats, candidates, busy } = branches.next;
   // Branches are picked in the explore tab only.
@@ -247,7 +269,7 @@ function ContextPanel({ tab, state, readings, playback, branches }: PanelProps) 
   return (
     <aside className="context-panel" aria-labelledby="context-heading">
       <p className="context-where">{TABS.find(({ id }) => id === tab)?.word}のタブ</p>
-      <h2 id="context-heading">
+      <h2 id="context-heading" ref={headingRef} tabIndex={-1}>
         {chosen !== undefined && selected !== null
           ? `${slotName(chosen, readings[selected])}（${String(selected + 1)} 番目の枠）`
           : picked === null
@@ -268,7 +290,7 @@ function ContextPanel({ tab, state, readings, playback, branches }: PanelProps) 
         progression={progression}
         selected={tab === 'plan' ? selected : null}
         playback={playback}
-        onFill={state.fillSlot}
+        onFill={onFill}
       />
 
       {tab === 'plan' && selected === null && <p>枠を選ぶと、その枠を埋める候補が出ます。</p>}

@@ -86,6 +86,7 @@
 }
 
 .playback,
+.key-and-undo,
 .add-slot,
 .tabs {
   display: flex;
@@ -185,6 +186,11 @@
 
 .node-index {
   font: 0.75rem var(--font-mono);
+}
+
+/* The role of the slot, in the plan tab. */
+.node-role {
+  font-size: 0.8rem;
 }
 
 .node-name {

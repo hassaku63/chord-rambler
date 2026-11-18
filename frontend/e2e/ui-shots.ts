@@ -92,6 +92,31 @@ const states: { name: string; reach: (page: Page) => Promise<void> }[] = [
       await expect(page.getByRole('toolbar', { name: '探索の足跡' })).toBeVisible();
     },
   },
+  {
+    name: '7-plan',
+    reach: async (page) => {
+      await openScreen(page);
+      await planTab(page);
+      const roles = ['安定', '準備', '高まり', '解決'];
+      for (const role of roles) {
+        await page.getByRole('button', { name: 'まだ選んでいない枠を足す' }).click();
+        await strip(page)
+          .getByRole('listitem')
+          .last()
+          .getByRole('combobox', { name: '役割' })
+          .selectOption({ label: role });
+      }
+      const card = (i: number) =>
+        strip(page).getByRole('listitem').nth(i).getByRole('button').first();
+      await card(0).click();
+      const fill = page.getByRole('region', { name: /^選んだ枠を埋める候補/ });
+      await expect(fill).toHaveAttribute('aria-busy', 'false');
+      await page.getByRole('button', { name: 'C をこの枠に入れる', exact: true }).click();
+      // Filling goes on to the next slot not chosen yet, whose candidates come.
+      await expect(card(1)).toHaveAttribute('aria-pressed', 'true');
+      await expect(fill).toHaveAttribute('aria-busy', 'false');
+    },
+  },
 ];
 
 for (const width of widths) {

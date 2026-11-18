@@ -3,6 +3,7 @@ import { Fragment } from 'react';
 import { edgeWords, numeralOf } from './labels';
 import { slotName } from './SlotCard';
 import { Branches } from './Branches';
+import { TERMS } from './terms';
 import type { BranchesState } from './useBranches';
 
 type Props = {
@@ -15,6 +16,8 @@ type Props = {
   onSelect: (index: number) => void;
   /** The branches and the footprint, in the explore tab. */
   branches: BranchesState | null;
+  /** Whether each node shows the role of its slot, as in the plan tab. */
+  roles?: boolean;
 };
 
 /**
@@ -22,9 +25,10 @@ type Props = {
  * place, chord and Roman numeral, and between the nodes the judgments of the
  * reading in words, not by colour alone. Choosing a node chooses its slot, as
  * the strip does. In the explore tab, the branches grow from the last node,
- * or from a start point, and the footprint lies under the node put in.
+ * or from a start point, and the footprint lies under the node put in. In
+ * the plan tab, a node shows the role of its slot.
  */
-export function Canvas({ slots, readings, selected, sounding, onSelect, branches }: Props) {
+export function Canvas({ slots, readings, selected, sounding, onSelect, branches, roles }: Props) {
   return (
     <section className="canvas" aria-labelledby="canvas-heading">
       <h2 id="canvas-heading" className="area-heading">
@@ -72,6 +76,12 @@ export function Canvas({ slots, readings, selected, sounding, onSelect, branches
                       <>
                         {' '}
                         <span className="node-numeral">{numeral}</span>
+                      </>
+                    )}
+                    {roles && slot.role !== undefined && (
+                      <>
+                        {' '}
+                        <span className="node-role">{TERMS.role[slot.role]}</span>
                       </>
                     )}
                   </button>
