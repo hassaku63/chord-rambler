@@ -105,6 +105,7 @@ const known: Record<string, Schemas['ChordSlotReading']> = {
       fromParallelMinor: true,
     },
     ...alone,
+    outOfKey: { basis: 'computation', notes: ['B♭'] },
   },
   Fm: {
     content: 'chord',
@@ -118,6 +119,7 @@ const known: Record<string, Schemas['ChordSlotReading']> = {
       fromParallelMinor: true,
     },
     ...alone,
+    outOfKey: { basis: 'computation', notes: ['A♭'] },
   },
 };
 

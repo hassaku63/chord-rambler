@@ -313,6 +313,7 @@ function parseSlotReading(value: unknown, where: string): SlotReading {
     ...roleFit,
   };
   if ('roman' in fields) slot.roman = oneStringLabel(fields.roman, 'numeral', at('roman'));
+  if ('outOfKey' in fields) slot.outOfKey = parseNotesLabel(fields.outOfKey, at('outOfKey'));
   return slot;
 }
 

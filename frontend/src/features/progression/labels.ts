@@ -37,15 +37,17 @@ export function labelRows(slot: SlotReading): LabelRow[] {
   if (slot.content !== 'chord') {
     return fit;
   }
-  const { reading, resolution, cadence, tensionCautions } = slot;
+  const { reading, resolution, cadence, tensionCautions, outOfKey } = slot;
   const cautions = tensionCautions.cautions
     .map((c) => `${c.tension}（${c.chordTone} の半音上）`)
     .join('、');
+  const outside = outOfKey?.notes.join('、');
   return [
     ...chordRows(reading),
     ...row('解決', wordFor(TERMS.resolution, resolution.resolution), resolution.basis),
     ...row('終止', wordFor(TERMS.cadence, cadence.cadence), cadence.basis),
     ...(cautions ? row('テンションの注意', cautions, tensionCautions.basis) : []),
+    ...(outOfKey && outside ? row('調の外の音', outside, outOfKey.basis) : []),
     ...fit,
   ];
 }

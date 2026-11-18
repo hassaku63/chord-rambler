@@ -176,7 +176,7 @@ export interface components {
     /** @description The labels of one slot, in one of two shapes told apart by content: a slot with a chord, or a slot with no chord (none sounds nothing, unchosen has no chord chosen yet). */
     SlotReading:
       components['schemas']['ChordSlotReading'] | components['schemas']['NoChordSlotReading'];
-    /** @description The labels of a slot with a chord. The chord's labels are always there; the Roman numeral and the role fit only when they apply. */
+    /** @description The labels of a slot with a chord. The chord's labels are always there; the Roman numeral, the notes outside the key (outOfKey: the members, tensions included and the bass not, whose spelling is not in the scale of the key, as for a variation) and the role fit only when they apply. */
     ChordSlotReading: {
       /**
        * @description discriminator enum property added by openapi-typescript
@@ -189,6 +189,7 @@ export interface components {
       resolution: components['schemas']['ResolutionLabel'];
       cadence: components['schemas']['CadenceLabel'];
       tensionCautions: components['schemas']['TensionCautionsLabel'];
+      outOfKey?: components['schemas']['NotesLabel'];
       roleFit?: components['schemas']['RoleFitLabel'];
     };
     /** @description The labels of a slot with no chord: only the role fit, if any. Content is the slot's content as the request gave it. */
@@ -386,7 +387,7 @@ export interface components {
       tensionCautions: components['schemas']['TensionCautionsLabel'];
       outOfKey: components['schemas']['NotesLabel'];
     };
-    /** @description Note names with their spelling: the members of a chord from the root (definition), or the members outside the scale of the key (computation; empty when none). */
+    /** @description Note names with their spelling: the members of a chord from the root (definition), or the members outside the scale of the key (computation). A variation's outOfKey is empty when there are none; a slot's is absent instead. */
     NotesLabel: {
       basis: components['schemas']['Basis'];
       notes: string[];

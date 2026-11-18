@@ -284,7 +284,7 @@ components:
           unchosen: "#/components/schemas/NoChordSlotReading"
     ChordSlotReading:
       type: object
-      description: "The labels of a slot with a chord. The chord's labels are always there; the Roman numeral and the role fit only when they apply."
+      description: "The labels of a slot with a chord. The chord's labels are always there; the Roman numeral, the notes outside the key (outOfKey: the members, tensions included and the bass not, whose spelling is not in the scale of the key, as for a variation) and the role fit only when they apply."
       required: [content, chord, reading, resolution, cadence, tensionCautions]
       properties:
         content:
@@ -302,6 +302,8 @@ components:
           $ref: "#/components/schemas/CadenceLabel"
         tensionCautions:
           $ref: "#/components/schemas/TensionCautionsLabel"
+        outOfKey:
+          $ref: "#/components/schemas/NotesLabel"
         roleFit:
           $ref: "#/components/schemas/RoleFitLabel"
     NoChordSlotReading:
@@ -633,7 +635,7 @@ components:
           $ref: "#/components/schemas/NotesLabel"
     NotesLabel:
       type: object
-      description: "Note names with their spelling: the members of a chord from the root (definition), or the members outside the scale of the key (computation; empty when none)."
+      description: "Note names with their spelling: the members of a chord from the root (definition), or the members outside the scale of the key (computation). A variation's outOfKey is empty when there are none; a slot's is absent instead."
       required: [basis, notes]
       properties:
         basis:

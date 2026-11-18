@@ -75,7 +75,8 @@ func TestReadingsOfFourBarsInC(t *testing.T) {
 		{
 			// A secondary dominant (D7, written V7/V on the school), a borrowed
 			// chord from the parallel minor (Fm) and a chord with a bass (G/B,
-			// whose numeral leaves the bass out) ending on a half cadence.
+			// whose numeral leaves the bass out) ending on a half cadence. D7
+			// and Fm have a note outside the key.
 			name: "borrowed chord",
 			body: `{"key": "C", "slots": [
 				{"chord": "C", "beats": 4},
@@ -88,10 +89,12 @@ func TestReadingsOfFourBarsInC(t *testing.T) {
 				 "resolution": {"basis": "school", "resolution": "none"}, "cadence": {"basis": "school", "cadence": "none"}, "tensionCautions": {"basis": "school", "cautions": []}},
 				{"content": "chord", "chord": {"basis": "definition", "name": "D7"}, "roman": {"basis": "school", "numeral": "V7/V"},
 				 "reading": {"basis": "school", "kind": "secondary-dominant", "function": "none", "modes": [], "fromParallelMinor": false, "target": 5},
-				 "resolution": {"basis": "school", "resolution": "irregular"}, "cadence": {"basis": "school", "cadence": "none"}, "tensionCautions": {"basis": "school", "cautions": []}},
+				 "resolution": {"basis": "school", "resolution": "irregular"}, "cadence": {"basis": "school", "cadence": "none"}, "tensionCautions": {"basis": "school", "cautions": []},
+				 "outOfKey": {"basis": "computation", "notes": ["F♯"]}},
 				{"content": "chord", "chord": {"basis": "definition", "name": "Fm"}, "roman": {"basis": "computation", "numeral": "iv"},
 				 "reading": {"basis": "school", "kind": "borrowed", "function": "none", "modes": ["phrygian", "aeolian", "locrian"], "fromParallelMinor": true},
-				 "resolution": {"basis": "school", "resolution": "none"}, "cadence": {"basis": "school", "cadence": "none"}, "tensionCautions": {"basis": "school", "cautions": []}},
+				 "resolution": {"basis": "school", "resolution": "none"}, "cadence": {"basis": "school", "cadence": "none"}, "tensionCautions": {"basis": "school", "cautions": []},
+				 "outOfKey": {"basis": "computation", "notes": ["A♭"]}},
 				{"content": "chord", "chord": {"basis": "definition", "name": "G/B"}, "roman": {"basis": "computation", "numeral": "V"},
 				 "reading": {"basis": "school", "kind": "diatonic", "function": "dominant", "modes": [], "fromParallelMinor": false},
 				 "resolution": {"basis": "school", "resolution": "none"}, "cadence": {"basis": "school", "cadence": "half"}, "tensionCautions": {"basis": "school", "cautions": []}}]}`,
@@ -208,8 +211,8 @@ func TestReadingsRejectWhatIsNotAProgression(t *testing.T) {
 
 // TestReadingsHaveTheShapeOfTheirContent checks the two shapes of the
 // contract's SlotReading, told apart by content: a slot with a chord always
-// has the chord's labels, and roman and roleFit only when they apply; a slot
-// with no chord has only the role fit, if any.
+// has the chord's labels, and roman, outOfKey and roleFit only when they
+// apply; a slot with no chord has only the role fit, if any.
 func TestReadingsHaveTheShapeOfTheirContent(t *testing.T) {
 	rec := postReadings(t, `{"key": "C", "slots": [
 		{"chord": "C", "beats": 4, "role": "stable"},
@@ -231,7 +234,7 @@ func TestReadingsHaveTheShapeOfTheirContent(t *testing.T) {
 		allowed  []string
 	}{
 		{"chord", chord, []string{"roman", "roleFit"}},
-		{"chord", chord, nil}, // D𝄫 has no position in C, so no numeral
+		{"chord", chord, []string{"outOfKey"}}, // D𝄫 has no position in C, so no numeral
 		{"none", []string{"content", "roleFit"}, nil},
 		{"none", []string{"content"}, nil},
 		{"unchosen", []string{"content", "roleFit"}, nil},
@@ -300,6 +303,54 @@ func TestReadingsWriteTheRomanNumeralAsRead(t *testing.T) {
 				t.Errorf("roman = none, want %q", tt.want)
 			case roman.Numeral != tt.want || roman.Basis != tt.wantBasis:
 				t.Errorf("roman = %q (%s), want %q (%s)", roman.Numeral, roman.Basis, tt.want, tt.wantBasis)
+			}
+		})
+	}
+}
+
+// TestReadingsNameTheNotesOutsideTheKey checks the out-of-key label of one
+// chord in C: the members, tensions included, whose spelling is not in the
+// scale, and no label when there are none. The kind of the chord does not
+// change with it: G7(♭9) is still diatonic.
+func TestReadingsNameTheNotesOutsideTheKey(t *testing.T) {
+	tests := []struct {
+		chord string
+		want  []string // nil for no label
+		kind  string
+	}{
+		{"G7(♭9)", []string{"A♭"}, "diatonic"},
+		{"G7", nil, "diatonic"},
+		{"Fm", []string{"A♭"}, "borrowed"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.chord, func(t *testing.T) {
+			rec := postReadings(t, `{"key": "C", "slots": [{"chord": "`+tt.chord+`", "beats": 4}]}`)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d\n%s", rec.Code, http.StatusOK, rec.Body)
+			}
+			body := decode[struct {
+				Slots []struct {
+					Reading struct {
+						Kind string `json:"kind"`
+					} `json:"reading"`
+					OutOfKey *struct {
+						Basis string   `json:"basis"`
+						Notes []string `json:"notes"`
+					} `json:"outOfKey"`
+				} `json:"slots"`
+			}](t, rec)
+			slot := body.Slots[0]
+			if slot.Reading.Kind != tt.kind {
+				t.Errorf("kind = %q, want %q", slot.Reading.Kind, tt.kind)
+			}
+			switch got := slot.OutOfKey; {
+			case tt.want == nil && got != nil:
+				t.Errorf("outOfKey = %+v, want none", *got)
+			case tt.want == nil:
+			case got == nil:
+				t.Errorf("outOfKey = none, want %q", tt.want)
+			case !slices.Equal(got.Notes, tt.want) || got.Basis != "computation":
+				t.Errorf("outOfKey = %q (%s), want %q (computation)", got.Notes, got.Basis, tt.want)
 			}
 		})
 	}

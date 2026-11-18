@@ -58,17 +58,30 @@ type CautionsLabel struct {
 // Basis returns School.
 func (CautionsLabel) Basis() Basis { return School }
 
-// OutOfKeyLabel holds the notes of the variation that are outside the key:
-// members whose spelling is not among the notes of the scale of the key (the
-// same comparison as the kind of a reading, #102), in the order of
-// material.Chord.Notes. No notes means it has none. The chord asked about is
-// not looked at.
+// OutOfKeyLabel holds the notes of a chord that are outside the key (OutOfKey).
+// No notes means it has none.
 type OutOfKeyLabel struct {
 	Notes []material.NoteName
 }
 
 // Basis returns Computation.
 func (OutOfKeyLabel) Basis() Basis { return Computation }
+
+// OutOfKey returns the members of the chord, tensions included, whose
+// spelling is not among the notes of the scale of the key (the same comparison
+// as the kind of a reading, #102), in the order of material.Chord.Notes. A
+// bass is not a member, so it is not looked at. The label of a variation and
+// the reading of a slot both come from here.
+func OutOfKey(c material.Chord, key material.Scale) OutOfKeyLabel {
+	inKey := key.Notes()
+	var out []material.NoteName
+	for _, n := range c.Notes() {
+		if !slices.Contains(inKey, n) {
+			out = append(out, n)
+		}
+	}
+	return OutOfKeyLabel{Notes: out}
+}
 
 // variationShapes is the fixed list of variations for each quality of triad,
 // in order, as intervals above the root (the owner's list on #115). The
@@ -176,21 +189,8 @@ func Variations(c material.Chord, key material.Scale) ([]Variation, error) {
 			Members:  MembersLabel{Notes: v.Notes()},
 			Reading:  ReadingLabel{Main: read.Main},
 			Cautions: CautionsLabel{Cautions: cautions},
-			OutOfKey: OutOfKeyLabel{Notes: notesOutOfKey(v, key)},
+			OutOfKey: OutOfKey(v, key),
 		})
 	}
 	return out, nil
-}
-
-// notesOutOfKey returns the members of the variation whose spelling is not
-// among the notes of the scale of the key.
-func notesOutOfKey(v material.Chord, key material.Scale) []material.NoteName {
-	inKey := key.Notes()
-	var out []material.NoteName
-	for _, n := range v.Notes() {
-		if !slices.Contains(inKey, n) {
-			out = append(out, n)
-		}
-	}
-	return out
 }
