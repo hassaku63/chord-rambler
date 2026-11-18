@@ -5,6 +5,7 @@
 ## プロダクト
 
 - [product/concept.md](product/concept.md) — コンセプト、体験の基本原則、扱う情報、未決定事項
+- [product/screen-promise.md](product/screen-promise.md) — 目標の画面の約束（満たす体験 E1〜E5、区画ごとの主目的・主操作・出すもの）
 - [glossary.md](glossary.md) — 画面と文書で使う語の定義
 
 ## 設計

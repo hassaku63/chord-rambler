@@ -22,3 +22,4 @@
 | [0016](0016-deployed-images-are-distroless.md) | 配備するイメージは distroless を基本にする |
 | [0017](0017-screen-checks-in-a-real-browser.md) | 画面の通しの操作・アクセシビリティ・配置を、Playwright と axe-core で実ブラウザで検査する |
 | [0018](0018-hci-index.md) | HCI の知見の索引を、標準とプラクティスの索引の隣に置く |
+| [0019](0019-screen-of-canvas-strip-and-context-panel.md) | 画面は、キャンバス・帯・文脈の欄の骨組みに、同じ進行への 2 つのタブを載せる |
