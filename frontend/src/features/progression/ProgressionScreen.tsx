@@ -8,6 +8,10 @@ import { KEYS, barTicks, maxBeatsAt, useProgression } from './useProgression';
 import type { PlaybackState } from './usePlayback';
 import { triedAt, usePlayback } from './usePlayback';
 import { useNextCandidates } from './useNextCandidates';
+import type { BranchesState } from './useBranches';
+import { useBranches } from './useBranches';
+import { Branches } from './Branches';
+import { BranchDetail } from './BranchDetail';
 import { CandidateList } from './CandidateList';
 import { candidateMarks, candidateRows } from './labels';
 import { SlotFill } from './SlotFill';
@@ -72,33 +76,14 @@ function Tabs({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
   );
 }
 
-type Props = {
-  /** Makes the AudioContext the playing sounds through; tests pass a stand-in. */
-  createAudioContext?: AudioContextFactory;
-};
-
-/**
- * The workbench (ADR-0019, docs/product/screen-promise.md): the key, the
- * chord name and the two tabs on top; the canvas and the strip on the left;
- * the context panel, which follows the chosen slot, on the right.
- */
-export function ProgressionScreen({ createAudioContext }: Props) {
-  const state = useProgression();
-  const { progression, selected } = state;
-  const reading = useProgressionReading(progression);
-  const playback = usePlayback(progression, createAudioContext);
+/** The key, and adding a slot by its chord name or with no chord. */
+function Controls({ state }: { state: ProgressionState }) {
   const [chordName, setChordName] = useState('');
-  const [tab, setTab] = useState<Tab>('explore');
-  const readings = reading.state === 'read' ? reading.reading.slots : [];
-  const unreadable = reading.state === 'refused' ? reading.slot : null;
-  const ticks = barTicks(progression.slots);
-  const select = (i: number) => state.select(selected === i ? null : i);
-
   return (
-    <div className="workbench">
+    <>
       <label>
         調
-        <select value={progression.key} onChange={(e) => state.setKey(e.target.value)}>
+        <select value={state.progression.key} onChange={(e) => state.setKey(e.target.value)}>
           {KEYS.map((key) => (
             <option key={key} value={key}>
               {key} major
@@ -127,6 +112,41 @@ export function ProgressionScreen({ createAudioContext }: Props) {
           まだ選んでいない枠を足す
         </button>
       </form>
+    </>
+  );
+}
+
+type Props = {
+  /** Makes the AudioContext the playing sounds through; tests pass a stand-in. */
+  createAudioContext?: AudioContextFactory;
+};
+
+/**
+ * The workbench (ADR-0019, docs/product/screen-promise.md): the key, the
+ * chord name and the two tabs on top; the canvas and the strip on the left;
+ * the context panel, which follows the chosen slot, on the right.
+ */
+export function ProgressionScreen({ createAudioContext }: Props) {
+  const state = useProgression();
+  const { progression, selected } = state;
+  const reading = useProgressionReading(progression);
+  const playback = usePlayback(progression, createAudioContext);
+  // Asked for even while hidden, so that the last answer is there when the slot is let go.
+  const next = useNextCandidates(progression);
+  const branches = useBranches(state, next, playback);
+  const [tab, setTab] = useState<Tab>('explore');
+  const readings = reading.state === 'read' ? reading.reading.slots : [];
+  const unreadable = reading.state === 'refused' ? reading.slot : null;
+  const ticks = barTicks(progression.slots);
+  const select = (i: number) => {
+    branches.unpick();
+    state.select(selected === i ? null : i);
+  };
+  const explore = tab === 'explore';
+
+  return (
+    <div className="workbench">
+      <Controls state={state} />
 
       <Tabs tab={tab} onTab={setTab} />
 
@@ -143,6 +163,24 @@ export function ProgressionScreen({ createAudioContext }: Props) {
             selected={selected}
             sounding={playback.sounding}
             onSelect={select}
+            branches={
+              explore && (
+                <Branches
+                  group={branches.tail}
+                  label="枝"
+                  busy={branches.busy}
+                  toolbarRef={branches.tailRef}
+                />
+              )
+            }
+            footprint={
+              explore && branches.footprint
+                ? {
+                    at: branches.footprint.at,
+                    element: <Branches group={branches.footprint} label="探索の足跡" footprint />,
+                  }
+                : null
+            }
           />
 
           <section className="strip" aria-labelledby="strip-heading">
@@ -179,7 +217,14 @@ export function ProgressionScreen({ createAudioContext }: Props) {
           </section>
         </div>
 
-        <ContextPanel tab={tab} state={state} readings={readings} playback={playback} />
+        <ContextPanel
+          tab={tab}
+          state={state}
+          readings={readings}
+          playback={playback}
+          next={next}
+          branches={branches}
+        />
       </div>
     </div>
   );
@@ -218,33 +263,53 @@ type PanelProps = {
   state: ProgressionState;
   readings: SlotReading[];
   playback: PlaybackState;
+  next: ReturnType<typeof useNextCandidates>;
+  branches: BranchesState;
 };
 
-/**
- * The context panel, which follows what is chosen: always which slot it is;
- * for a chosen slot its labels and variations, and in the plan tab the
- * candidates to fill it; in the explore tab with nothing chosen, the
- * candidates for the slot after the last, as the other candidates (the
- * branches come in a later slice).
- */
-function ContextPanel({ tab, state, readings, playback }: PanelProps) {
+/** What the context panel names as chosen: a slot, a branch, or nothing. */
+function chosenWords(state: ProgressionState, readings: SlotReading[], branches: BranchesState) {
   const { progression, selected } = state;
-  // Asked for even while hidden, so that the last answer is there when the slot is let go.
-  const { beats, candidates, busy } = useNextCandidates(progression);
+  const chosen = selected === null ? undefined : progression.slots[selected];
+  if (chosen !== undefined && selected !== null) {
+    return `${slotName(chosen, readings[selected])}（${String(selected + 1)} 番目の枠）`;
+  }
+  const { picked } = branches;
+  return picked === null
+    ? '枠を選んでいません'
+    : `${picked.candidate.chord.name}（${String(picked.at + 1)} 番目の枠の枝）`;
+}
+
+/**
+ * The context panel, which follows what is chosen: always which slot or
+ * branch it is; for a chosen slot its labels and variations, and in the plan
+ * tab the candidates to fill it; in the explore tab, the labels of the branch
+ * picked and, with no slot chosen, all the candidates for the slot after the
+ * last, as the other candidates.
+ */
+function ContextPanel({ tab, state, readings, playback, next, branches }: PanelProps) {
+  const { progression, selected } = state;
+  const { beats, candidates, busy } = next;
   // The candidate groups opened or closed, kept here so that a new answer keeps them.
   const [opened, setOpened] = useState<Partial<Record<string, boolean>>>({});
-  const chosen = selected === null ? undefined : progression.slots[selected];
+  const { picked } = branches;
 
   return (
     <aside className="context-panel" aria-labelledby="context-heading">
       <p className="context-where">{TABS.find(({ id }) => id === tab)?.word}のタブ</p>
-      <h2 id="context-heading">
-        {chosen === undefined || selected === null
-          ? '枠を選んでいません'
-          : `${slotName(chosen, readings[selected])}（${String(selected + 1)} 番目の枠）`}
-      </h2>
+      <h2 id="context-heading">{chosenWords(state, readings, branches)}</h2>
 
       <ChosenSlot state={state} readings={readings} />
+
+      {tab === 'explore' && picked !== null && (
+        <BranchDetail
+          picked={picked}
+          auditioning={triedAt(playback.auditioning, picked.at) === picked.candidate.chord.name}
+          onAudition={() => branches.audition(picked)}
+          onStop={playback.stop}
+          onConfirm={() => branches.confirm(picked.place, picked.candidate.chord.name)}
+        />
+      )}
 
       <SlotFill
         progression={progression}

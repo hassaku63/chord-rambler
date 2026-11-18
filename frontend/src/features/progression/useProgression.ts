@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { Progression, Slot } from '@/shared/api/client';
+import type { Candidate, Progression, Slot } from '@/shared/api/client';
 import type { Role } from './terms';
 import { isRole } from './terms';
 
@@ -151,6 +151,13 @@ function save(progression: Progression) {
   }
 }
 
+/**
+ * The branches of the step before, kept beside the slot a branch was put in
+ * (the footprint, docs/product/screen-promise.md, 4): where, and all the
+ * branches of that step, the one in the slot among them.
+ */
+export type Footprint = { at: number; branches: Candidate[] };
+
 /** The progression being built, the slot chosen in it, and the operations on them. */
 export type ProgressionState = {
   progression: Progression;
@@ -165,11 +172,18 @@ export type ProgressionState = {
    * their phrase, as they are now; empty when it shortened none.
    */
   shortened: Slot[];
+  /** The footprint of the last branch put in; any other change of the progression clears it. */
+  footprint: Footprint | null;
   setKey: (key: string) => void;
   /** Adds a slot holding a typed chord, as long as nextBeats gives. */
   addChord: (name: string) => void;
-  /** Adds a slot holding a candidate, which becomes the base of the slot. */
-  addCandidate: (name: string, beats: number) => void;
+  /**
+   * Adds a slot holding a candidate, which becomes the base of the slot. For
+   * a branch, the branches of its step are given, and kept as the footprint.
+   */
+  addCandidate: (name: string, beats: number, branches?: Candidate[]) => void;
+  /** Puts a branch of the footprint in the slot it is beside, as fillSlot does, keeping the footprint. */
+  replaceFromFootprint: (name: string) => void;
   addNoChord: () => void;
   addUnchosen: () => void;
   /** Puts the chord in place of the slot's, keeping its length, its role and its base. */
@@ -186,29 +200,58 @@ export type ProgressionState = {
   select: (index: number | null) => void;
 };
 
-/** The slots, their bases and what the last change shortened, which change together. */
-type Held = { progression: Progression; bases: (string | null)[]; shortened: Slot[] };
+/** The slots, their bases, what the last change shortened and the footprint, which change together. */
+type Held = {
+  progression: Progression;
+  bases: (string | null)[];
+  shortened: Slot[];
+  footprint: Footprint | null;
+};
+
+/** What a change gives: the footprint only when the change keeps or makes one. */
+type Changed = Omit<Held, 'shortened' | 'footprint'> & { footprint?: Footprint | null };
 
 function initial(): Held {
   const progression = load();
-  return { progression, bases: progression.slots.map(() => null), shortened: [] };
+  return { progression, bases: progression.slots.map(() => null), shortened: [], footprint: null };
 }
 
 /**
  * The state after a change: no slot crosses into the next phrase, and the
  * slots shortened for that are the ones the change shortened.
  */
-function fitted({ progression, bases }: Omit<Held, 'shortened'>): Held {
+function fitted({ progression, bases, footprint = null }: Changed): Held {
   const { slots, shortened } = fitToPhrases(progression.slots);
   return {
     progression: { ...progression, slots },
     bases,
     shortened: slots.filter((_, i) => shortened.includes(i)),
+    footprint,
   };
 }
 
+/** The slots and their bases with the chord in the slot at the index, which keeps its length and role. */
+function filled({ progression, bases }: Held, index: number, chord: string): Changed {
+  return {
+    progression: {
+      ...progression,
+      slots: progression.slots.map((slot, i) =>
+        i === index ? withRole({ chord, beats: slot.beats }, slot.role ?? null) : slot,
+      ),
+    },
+    bases: bases.map((base, i) => (i === index ? chord : base)),
+  };
+}
+
+/** The branch of the footprint in the slot it is beside, keeping the footprint. */
+function refilled(h: Held, chord: string): Changed {
+  return h.footprint === null || chord === ''
+    ? h
+    : { ...filled(h, h.footprint.at, chord), footprint: h.footprint };
+}
+
 /** The slots and their bases without the slot at the index. */
-function without({ progression, bases }: Held, index: number): Omit<Held, 'shortened'> {
+function without({ progression, bases }: Held, index: number): Changed {
   return {
     progression: { ...progression, slots: progression.slots.filter((_, i) => i !== index) },
     bases: bases.filter((_, i) => i !== index),
@@ -219,23 +262,24 @@ function without({ progression, bases }: Held, index: number): Omit<Held, 'short
 export function useProgression(): ProgressionState {
   const [held, setHeld] = useState(initial);
   const [selected, setSelected] = useState<number | null>(null);
-  const { progression, bases, shortened } = held;
-  /** Changes the progression; every change goes through here, so none leaves a slot crossing. */
-  const change = useCallback(
-    (next: (h: Held) => Omit<Held, 'shortened'>) => setHeld((h) => fitted(next(h))),
-    [],
-  );
+  const { progression, bases, shortened, footprint } = held;
+  /**
+   * Changes the progression; every change goes through here, so none leaves a
+   * slot crossing, and none keeps the footprint unless it says so.
+   */
+  const change = useCallback((next: (h: Held) => Changed) => setHeld((h) => fitted(next(h))), []);
 
   useEffect(() => save(progression), [progression]);
 
   /** Adds a slot after the last; a function makes it from the slots before it. */
   const append = useCallback(
-    (slot: Slot | ((slots: Slot[]) => Slot), base: string | null = null) =>
+    (slot: Slot | ((slots: Slot[]) => Slot), base: string | null = null, branches?: Candidate[]) =>
       change((h) => {
         const added = typeof slot === 'function' ? slot(h.progression.slots) : slot;
         return {
           progression: { ...h.progression, slots: [...h.progression.slots, added] },
           bases: [...h.bases, base],
+          footprint: branches ? { at: h.progression.slots.length, branches } : null,
         };
       }),
     [change],
@@ -244,7 +288,7 @@ export function useProgression(): ProgressionState {
   const changeSlots = useCallback(
     (each: (slot: Slot, i: number) => Slot) =>
       change((h) => ({
-        ...h,
+        bases: h.bases,
         progression: { ...h.progression, slots: h.progression.slots.map(each) },
       })),
     [change],
@@ -255,10 +299,11 @@ export function useProgression(): ProgressionState {
     selected,
     bases,
     shortened,
+    footprint,
     setKey: useCallback(
       (key: string) => {
         if (KEYS.some((k) => k === key)) {
-          change((h) => ({ ...h, progression: { ...h.progression, key } }));
+          change((h) => ({ bases: h.bases, progression: { ...h.progression, key } }));
         }
       },
       [change],
@@ -273,12 +318,16 @@ export function useProgression(): ProgressionState {
       [append],
     ),
     addCandidate: useCallback(
-      (chord: string, beats: number) => {
+      (chord: string, beats: number, branches?: Candidate[]) => {
         if (chord !== '' && isBeats(beats)) {
-          append({ chord, beats }, chord);
+          append({ chord, beats }, chord, branches);
         }
       },
       [append],
+    ),
+    replaceFromFootprint: useCallback(
+      (chord: string) => change((h) => refilled(h, chord)),
+      [change],
     ),
     addNoChord: useCallback(
       () => append((slots) => ({ content: 'none', beats: nextBeats(slots) })),
@@ -300,15 +349,7 @@ export function useProgression(): ProgressionState {
     fillSlot: useCallback(
       (index: number, chord: string) => {
         if (chord !== '') {
-          change((h) => ({
-            progression: {
-              ...h.progression,
-              slots: h.progression.slots.map((slot, i) =>
-                i === index ? withRole({ chord, beats: slot.beats }, slot.role ?? null) : slot,
-              ),
-            },
-            bases: h.bases.map((base, i) => (i === index ? chord : base)),
-          }));
+          change((h) => filled(h, index, chord));
         }
       },
       [change],
