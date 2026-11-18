@@ -54,10 +54,11 @@ describe('ProgressionScreen', () => {
 
     const detail = screen.getByRole('region', { name: 'Fm（iv） の札' });
     const text = (el: HTMLElement) => el.textContent;
-    expect(within(detail).getAllByRole('term').map(text)).toEqual(['種別', '借り先']);
+    expect(within(detail).getAllByRole('term').map(text)).toEqual(['種別', '借り先', '調の外の音']);
     expect(within(detail).getAllByRole('definition').map(text)).toEqual([
       '借用和音 〔流儀〕',
       '同主短調 〔流儀〕',
+      'A♭ 〔計算〕',
     ]);
   });
 

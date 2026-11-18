@@ -48,6 +48,7 @@ describe('parseProgressionReading', () => {
   const d7 = {
     ...bare,
     roman: { basis: 'school', numeral: 'V7/V' },
+    outOfKey: { basis: 'computation', notes: ['F♯'] },
     roleFit: { basis: 'school', fit: 'fits' },
   };
   const full = {
@@ -64,6 +65,7 @@ describe('parseProgressionReading', () => {
 
     expect(slots).toEqual(full.slots);
     expect(slots[1]).not.toHaveProperty('roman');
+    expect(slots[1]).not.toHaveProperty('outOfKey');
     expect(slots[1]).not.toHaveProperty('roleFit');
     expect(slots[2]).not.toHaveProperty('roleFit');
   });
@@ -103,6 +105,10 @@ describe('parseProgressionReading', () => {
       body: {
         slots: [{ ...d7, tensionCautions: { basis: 'x', cautions: [{ tension: 'P11' }] } }],
       },
+    },
+    {
+      name: 'out-of-key notes that are not strings',
+      body: { slots: [{ ...d7, outOfKey: { basis: 'computation', notes: [1] } }] },
     },
     {
       name: 'a role fit that is not a label',

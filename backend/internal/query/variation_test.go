@@ -318,3 +318,27 @@ func TestLabelBases(t *testing.T) {
 		}
 	}
 }
+
+// OutOfKey looks at every member, tensions included, by spelling, and not at a
+// bass. C major is C D E F G A B.
+func TestOutOfKey(t *testing.T) {
+	tests := []struct {
+		name  string
+		chord material.Chord
+		want  string
+	}{
+		{"G7(♭9): a tension", chord("G", "M3 P5 m7 m9", ""), "A♭"},
+		{"G7", chord("G", "M3 P5 m7", ""), ""},
+		{"Fm", chord("F", "m3 P5", ""), "A♭"},
+		{"D7(♯11): in the order of the members", chord("D", "M3 P5 m7 A11", ""), "F♯ G♯"},
+		{"C/F♯: not the bass", chord("C", "M3 P5", "A4"), ""},
+		{"B♯: by spelling, not by pitch class", chord("B♯", "M3 P5", ""), "B♯ D𝄪 F𝄪"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := names(query.OutOfKey(tt.chord, major(note("C"))).Notes); got != tt.want {
+				t.Errorf("OutOfKey = %q; want %q", got, tt.want)
+			}
+		})
+	}
+}

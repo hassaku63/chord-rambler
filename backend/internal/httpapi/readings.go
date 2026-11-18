@@ -280,6 +280,7 @@ type (
 		Resolution      *resolutionLabel      `json:"resolution,omitempty"`
 		Cadence         *cadenceLabel         `json:"cadence,omitempty"`
 		TensionCautions *tensionCautionsLabel `json:"tensionCautions,omitempty"`
+		OutOfKey        *notesLabel           `json:"outOfKey,omitempty"`
 		RoleFit         *roleFitLabel         `json:"roleFit,omitempty"`
 	}
 	chordNameLabel struct {
@@ -397,7 +398,18 @@ func chordLabels(c material.Chord, key material.Scale, r reading.SlotReading) (s
 		Resolution:      &resolutionLabel{Basis: basisID(school), Resolution: resolutionID(r.Resolution)},
 		Cadence:         &cadenceLabel{Basis: basisID(school), Cadence: cadenceID(r.Cadence)},
 		TensionCautions: tensionCautionsOf(school, cautions),
+		OutOfKey:        outOfKeyOf(query.OutOfKey(c, key)),
 	}, nil
+}
+
+// outOfKeyOf writes the notes outside the key, or no label (nil) when there
+// are none.
+func outOfKeyOf(label query.OutOfKeyLabel) *notesLabel {
+	if len(label.Notes) == 0 {
+		return nil
+	}
+	notes := notesOf(label.Basis(), label.Notes)
+	return &notes
 }
 
 // chordNameOf writes the chord with its spelling kept; the name rests on the
