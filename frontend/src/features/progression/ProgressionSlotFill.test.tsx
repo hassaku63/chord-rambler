@@ -182,6 +182,22 @@ describe('ProgressionScreen slot fill', () => {
     );
   });
 
+  it('shows the role of each slot on its node in the plan tab only, and the adding there', () => {
+    render(<ProgressionScreen />);
+    plan();
+    const nodes = () =>
+      within(screen.getByRole('list', { name: '本線' }))
+        .getAllByRole('button')
+        .map((b) => b.textContent);
+
+    expect(nodes()).toEqual(['1 C', '2 まだ選んでいない 準備', '3 G7 高まり', '4 C']);
+    expect(screen.getByRole('button', { name: '和音なしの枠を足す' })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('tab', { name: '探索' }));
+
+    expect(nodes()).toEqual(['1 C', '2 まだ選んでいない', '3 G7', '4 C']);
+  });
+
   it('shows the candidates for a slot with a chord, with the next slot resolved and closed', async () => {
     render(<ProgressionScreen />);
     plan();
@@ -282,5 +298,39 @@ describe('ProgressionScreen slot fill', () => {
     fireEvent.click(trial);
 
     expect(trial).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('goes on to the next slot not chosen yet after filling, then from the start, then stays', async () => {
+    stubServer({ ...answers, '/progressions/slot-candidates': () => ({ groups: betweenCAndG7 }) });
+    render(<ProgressionScreen />);
+    fireEvent.click(screen.getByRole('tab', { name: '計画' }));
+    const addUnchosen = screen.getByRole('button', { name: 'まだ選んでいない枠を足す' });
+    fireEvent.click(addUnchosen);
+    fireEvent.click(addUnchosen);
+    fireEvent.click(addUnchosen);
+    const chosen = () => cards().map((c) => within(c).getAllByRole('button')[0]?.ariaPressed);
+    const heading = () => screen.getByRole('heading', { level: 2, name: /番目の枠）$/ });
+    fireEvent.click(within(card(1)).getByRole('button', { name: 'まだ選んでいない' }));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Dm7 をこの枠に入れる' }));
+
+    expect(chosen()).toEqual(['false', 'false', 'true']);
+    expect(heading()).toHaveTextContent('まだ選んでいない（3 番目の枠）');
+    // The candidates it was on go until the new slot's come; the focus stays on the panel.
+    expect(heading()).toHaveFocus();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'F をこの枠に入れる' }));
+
+    expect(chosen()).toEqual(['true', 'false', 'false']);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Em をこの枠に入れる' }));
+
+    expect(chosen()).toEqual(['true', 'false', 'false']);
+    expect(heading()).toHaveTextContent('Em（1 番目の枠）');
+    expect(cards().map((c) => within(c).getAllByRole('button')[0]?.textContent)).toEqual([
+      'Em',
+      'Dm7',
+      'F',
+    ]);
   });
 });

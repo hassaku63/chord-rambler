@@ -190,10 +190,20 @@ export type ProgressionState = {
   /** Puts a role of the contract on the slot; an empty string takes its role away. */
   setRole: (index: number, role: string) => void;
   select: (index: number | null) => void;
+  /** Whether a change of the progression is there to undo. */
+  canUndo: boolean;
+  /**
+   * Takes back the last change of the progression, one at a time, and fits
+   * the slots to the phrases again. The history lives in memory only.
+   */
+  undo: () => void;
 };
 
 /** The slots, their bases and what the last change shortened, which change together. */
 type Held = { progression: Progression; bases: (string | null)[]; shortened: Slot[] };
+
+/** The slots and their bases before each change, the last change last: what undo takes back. */
+type Past = Omit<Held, 'shortened'>[];
 
 function initial(): Held {
   const progression = load();
@@ -221,22 +231,50 @@ function without({ progression, bases }: Held, index: number): Omit<Held, 'short
   };
 }
 
-/** The slots and the footprint, with the one way to change the slots, which clears the footprint. */
+/** Whether two states hold the same slots, bases and key. */
+function same(a: Omit<Held, 'shortened'>, b: Omit<Held, 'shortened'>): boolean {
+  return JSON.stringify([a.progression, a.bases]) === JSON.stringify([b.progression, b.bases]);
+}
+
+/**
+ * The slots, their history, the footprint and the slot chosen, with the one
+ * way to change the slots, which keeps the state before it and clears the
+ * footprint, and the way to take a change back.
+ */
 function useHeld() {
-  const [held, setHeld] = useState(initial);
+  const [{ held, past }, setHistory] = useState(() => ({ held: initial(), past: [] as Past }));
   const [footprint, setFootprint] = useState<Footprint | null>(null);
+  const [selected, setSelected] = useState<number | null>(null);
   /** Changes the progression; every change goes through here, so none leaves a slot crossing. */
   const change = useCallback((next: (h: Held) => Omit<Held, 'shortened'>) => {
-    setHeld((h) => fitted(next(h)));
+    setHistory(({ held: h, past: p }) => {
+      const changed = fitted(next(h));
+      // A change that changes nothing leaves nothing to undo.
+      return { held: changed, past: same(changed, h) ? p : [...p, h] };
+    });
     setFootprint(null);
   }, []);
-  return { held, change, footprint, setFootprint };
+  const undo = useCallback(() => {
+    if (past.length === 0) {
+      return;
+    }
+    setHistory(({ held: h, past: p }) => {
+      const last = p.at(-1);
+      return last === undefined
+        ? { held: h, past: p }
+        : { held: fitted(last), past: p.slice(0, -1) };
+    });
+    setFootprint(null);
+    // The slot taken back by an undo is chosen no more.
+    const count = past.at(-1)?.progression.slots.length ?? 0;
+    setSelected((s) => (s !== null && s >= count ? null : s));
+  }, [past]);
+  return { held, past, change, undo, footprint, setFootprint, selected, setSelected };
 }
 
 /** Holds the progression, kept in localStorage so that a reload brings it back. */
 export function useProgression(): ProgressionState {
-  const { held, change, footprint, setFootprint } = useHeld();
-  const [selected, setSelected] = useState<number | null>(null);
+  const { held, past, change, undo, footprint, setFootprint, selected, setSelected } = useHeld();
   const { progression, bases, shortened } = held;
 
   useEffect(() => save(progression), [progression]);
@@ -333,7 +371,7 @@ export function useProgression(): ProgressionState {
         change((h) => without(h, index));
         setSelected((s) => (s === null || s < index ? s : s === index ? null : s - 1));
       },
-      [change],
+      [change, setSelected],
     ),
     setBeats: useCallback(
       (index: number, beats: number) => {
@@ -354,5 +392,7 @@ export function useProgression(): ProgressionState {
       [changeSlots],
     ),
     select: setSelected,
+    canUndo: past.length > 0,
+    undo,
   };
 }

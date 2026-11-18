@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Schemas } from '@/test/standInServer';
 import { stubServer } from '@/test/standInServer';
@@ -136,5 +136,38 @@ describe('ProgressionScreen as the workbench', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: /^他の候補/ })).not.toBeInTheDocument();
     expect(within(mainLine()).getAllByRole('listitem').map(text)).toEqual(['1 C I']);
+  });
+
+  it('takes back the changes one at a time with the one undo of both tabs', async () => {
+    render(<ProgressionScreen />);
+    const undo = screen.getByRole('button', { name: '元に戻す' });
+    expect(undo).toBeDisabled();
+    expect(
+      within(screen.getByRole('tabpanel')).queryByRole('button', { name: '元に戻す' }),
+    ).toBeNull();
+    addChord('C');
+    addChord('G7');
+    fireEvent.click(screen.getByRole('tab', { name: '計画' }));
+    const strip = screen.getByRole('list', { name: '進行' });
+    const role = () => within(strip).getAllByRole('combobox', { name: '役割' })[1];
+    fireEvent.change(role() ?? strip, { target: { value: 'rise' } });
+    expect(role()).toHaveValue('rise');
+
+    fireEvent.click(undo);
+
+    expect(role()).toHaveValue('');
+
+    fireEvent.click(screen.getByRole('tab', { name: '探索' }));
+    fireEvent.click(undo);
+
+    await waitFor(() =>
+      expect(within(mainLine()).getAllByRole('listitem').map(text)).toEqual(['1 C I']),
+    );
+    expect(undo).toBeEnabled();
+
+    fireEvent.click(undo);
+
+    expect(within(strip).queryAllByRole('listitem')).toEqual([]);
+    expect(undo).toBeDisabled();
   });
 });
