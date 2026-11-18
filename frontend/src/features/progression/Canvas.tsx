@@ -84,7 +84,7 @@ export function Canvas({ slots, readings, selected, sounding, onSelect, branches
           })}
         </ol>
       )}
-      {branches && (
+      {branches && branches.tail.candidates.length > 0 && (
         <Branches
           group={branches.tail}
           label="枝"

@@ -174,7 +174,12 @@ describe('ProgressionScreen with branches in the explore tab', () => {
     fireEvent.keyDown(await branch('F'), { key: 'Enter' });
     expect(await screen.findByRole('toolbar', { name: '探索の足跡' })).toBeInTheDocument();
 
+    // The focus put on the first new branch picks it; the plan tab does not name it.
+    await waitFor(() => expect(within(branches()).getAllByRole('button')[0]).toHaveFocus());
     fireEvent.click(screen.getByRole('tab', { name: '計画' }));
+    expect(within(panel()).getByRole('heading', { level: 2 })).toHaveTextContent(
+      '枠を選んでいません',
+    );
     expect(screen.queryByRole('toolbar', { name: '探索の足跡' })).not.toBeInTheDocument();
     expect(screen.queryByRole('toolbar', { name: '枝' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('tab', { name: '探索' }));

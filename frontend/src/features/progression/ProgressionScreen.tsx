@@ -238,7 +238,8 @@ type PanelProps = {
 function ContextPanel({ tab, state, readings, playback, branches }: PanelProps) {
   const { progression, selected } = state;
   const { beats, candidates, busy } = branches.next;
-  const { picked } = branches;
+  // Branches are picked in the explore tab only.
+  const picked = tab === 'explore' ? branches.picked : null;
   // The candidate groups opened or closed, kept here so that a new answer keeps them.
   const [opened, setOpened] = useState<Partial<Record<string, boolean>>>({});
   const chosen = selected === null ? undefined : progression.slots[selected];
@@ -256,7 +257,7 @@ function ContextPanel({ tab, state, readings, playback, branches }: PanelProps) 
 
       <ChosenSlot state={state} readings={readings} />
 
-      {tab === 'explore' && picked !== null && (
+      {picked !== null && (
         <BranchDetail
           picked={picked}
           onConfirm={() => branches.confirm(picked.place, picked.candidate.chord.name)}
