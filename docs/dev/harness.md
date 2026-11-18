@@ -93,6 +93,12 @@ Chromium が要る。手元にないときは `cd frontend && npx playwright ins
 | --- | --- | --- | --- |
 | PR の大きさの予算（足した行と消した行の和。lockfile、`*.gen.ts`、バイナリは数えない。600 行を超えると警告、1000 行を超えると失敗。比べる先が要るので `make check` には入れない） | 読みきれない大きさの PR | `make pr-size`（比べる先は `PR_BASE`、既定は `origin/main`） | CI の必須のジョブ（PR のときだけ。マージの結果のコミットの 1 つ目の親と比べる） |
 
+## 配布物の大きさ
+
+| 検査 | 防ぐもの | 個別実行 | 場所 |
+| --- | --- | --- | --- |
+| 初回に読み込む量の予算（`frontend/dist/index.html` 自身と、それが参照する `<script src>`・`<link rel="stylesheet">` の gzip した大きさの合計。値と根拠は `scripts/check-bundle-size.sh` の 1 か所。超えると、合計・予算・ファイルごとの大きさを出して失敗する。先にビルドが要る） | 気づかないうちに画面の初回の読み込みが重くなること | `make bundle-budget`（値の上書きは `BUNDLE_BUDGET_BYTES`） | `make check` |
+
 ## 知識の鮮度（ADR-0007、ADR-0015）
 
 | 検査 | 防ぐもの | 個別実行 | 場所 |
