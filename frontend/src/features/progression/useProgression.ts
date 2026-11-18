@@ -255,6 +255,9 @@ function useHeld() {
     setFootprint(null);
   }, []);
   const undo = useCallback(() => {
+    if (past.length === 0) {
+      return;
+    }
     setHistory(({ held: h, past: p }) => {
       const last = p.at(-1);
       return last === undefined
