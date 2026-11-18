@@ -21,3 +21,4 @@
 | [0015](0015-standards-index.md) | 業界標準の索引を、プラクティスの索引と分けて置く |
 | [0016](0016-deployed-images-are-distroless.md) | 配備するイメージは distroless を基本にする |
 | [0017](0017-screen-checks-in-a-real-browser.md) | 画面の通しの操作・アクセシビリティ・配置を、Playwright と axe-core で実ブラウザで検査する |
+| [0018](0018-hci-index.md) | HCI の知見の索引を、標準とプラクティスの索引の隣に置く |

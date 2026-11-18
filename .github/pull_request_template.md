@@ -12,7 +12,7 @@
 
 ## 当たった索引の項目
 
-<!-- `.claude/skills/practices/index.md` の項目名と、判断の問いへの答えを 1〜2 行で。なければ「なし」 -->
+<!-- `.claude/skills/practices/index.md` と、画面・操作・フィードバック・配置・色を決めた・変えたときは `.claude/skills/hci/index.md` の項目名と、判断の問いへの答えを 1〜2 行で。なければ「なし」 -->
 
 ## 変更内容
 

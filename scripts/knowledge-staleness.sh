@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Lists the knowledge this repository keeps that may have gone stale (ADR-0007):
-#   1. Entries of the practice index and the standards index past their review
-#      date (確認 date + 間隔).
+#   1. Entries of the practice index, the standards index and the HCI index
+#      past their review date (確認 or 確認日 date + 間隔). An HCI entry marked
+#      未確認 has no date and is not listed here.
 #   2. Source URLs that no longer open, or that now answer from another place
-#      (both indexes, docs/architecture/theory-conventions.md).
+#      (the three indexes, docs/architecture/theory-conventions.md).
 #   3. Practice index entries whose recorded Git source file has changed since
 #      the recorded commit.
 #
@@ -22,7 +23,8 @@ cd "$(dirname "$0")/.." || exit 1
 
 index=.claude/skills/practices/index.md
 standards=.claude/skills/standards/index.md
-url_files=("$index" "$standards" docs/architecture/theory-conventions.md)
+hci=.claude/skills/hci/index.md
+url_files=("$index" "$standards" "$hci" docs/architecture/theory-conventions.md)
 offline=0
 [ "${1:-}" = "--offline" ] && offline=1
 
@@ -53,8 +55,11 @@ entries() {
 
 # --- 1. review dates ---------------------------------------------------------
 # Prints "- [label]name（…）" for each entry of the index in $1 past its date.
-overdue_in() { # file label
-  entries "$1" | awk -F '\t' '$2 == "確認" { print $1 "\t" $3 }' | while IFS=$'\t' read -r name value; do
+# The date is the field 確認 unless $3 names another; a value that does not
+# start with a date (未確認（…）) is skipped.
+overdue_in() { # file label [field]
+  entries "$1" | awk -F '\t' -v field="${3:-確認}" '$2 == field { print $1 "\t" $3 }' | while IFS=$'\t' read -r name value; do
+    case "$value" in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*) ;; *) continue ;; esac
     checked=${value%% *}
     days=$(printf '%s' "$value" | sed -E 's/.*間隔 ([0-9]+) 日.*/\1/')
     due=$(( $(epoch "$checked") + days * 86400 ))
@@ -63,7 +68,7 @@ overdue_in() { # file label
     fi
   done
 }
-overdue=$(overdue_in "$index" ""; overdue_in "$standards" "標準の索引: ")
+overdue=$(overdue_in "$index" ""; overdue_in "$standards" "標準の索引: "; overdue_in "$hci" "HCI の索引: " 確認日)
 if [ -n "$overdue" ]; then
   section "見直しの期限を過ぎた項目"
   printf '%s\n' "$overdue" >> "$findings"

@@ -42,7 +42,7 @@ ready の Issue を 1 つ → 受け入れ条件を確認 → テストを書く
 | 決まっている判断 | 従う ADR、`docs/architecture/` の文書、Issue のコメントの判断 |
 | 触る場所 | 足す・変えるファイルやパッケージ |
 | スコープ外 | やらないこと。見つけたら Issue にすること |
-| 当たる索引の項目 | `.claude/skills/practices/index.md` の項目名 |
+| 当たる索引の項目 | `.claude/skills/practices/index.md` の項目名。画面・操作に関わるときは `.claude/skills/hci/index.md` の項目名も |
 | 依存（任意） | 先に閉じている必要のある Issue。`blocked by #N` の形で書く |
 
 次のどれかに当たるなら、`ready` にしない。企画の Issue に戻して、所有者の判断を受ける。
