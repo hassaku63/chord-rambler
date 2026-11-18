@@ -15,7 +15,7 @@ description: 画面の画像とアクセシビリティツリーを状態ごと�
 
 ## 手順
 
-1. **動かす。** `make e2e` と同じ仕組みで動く。先に API をビルドする（`make backend-build`）。Chromium が要る。取り方と `PW_CHROMIUM_PATH` は `docs/dev/harness.md` の「画面（実ブラウザ）」の節。API と画面の開発サーバーは、Playwright の `webServer` が専用のポート（`frontend/playwright.config.ts`）で起動して止める。`make e2e` と同時には走らせない（ポートがぶつかる）。
+1. **動かす。** `make e2e` と同じ仕組みで動く。先に API をビルドする（`make backend-build`）。Chromium が要る。取り方と `PW_CHROMIUM_PATH` は `docs/dev/harness.md` の「画面（実ブラウザ。ADR-0017）」の節。API と画面の開発サーバーは、Playwright の `webServer` が専用のポート（`frontend/playwright.config.ts`）で起動して止める。`make e2e` と同時には走らせない（ポートがぶつかる）。
 2. **撮る。** `cd frontend && npm run ui:shots`。
    - 状態ごと（`1-first` 最初の画面、`2-added` 和音を足した、`3-chosen` 枠を選んで候補と変形が出た）に、幅 360・768・1280（高さ 800、配置の検査と同じ）で撮る。
    - `frontend/ui-review-out/` に、`<状態>-<幅>.png`（ページ全体）と `<状態>-<幅>.aria.yaml`（Playwright の `ariaSnapshot` で取ったアクセシビリティツリー）を書く。出力先は `UI_SHOTS_DIR` で変えられる。
