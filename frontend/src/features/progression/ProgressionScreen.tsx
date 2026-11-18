@@ -1,14 +1,22 @@
 import { useState } from 'react';
+import type { SlotReading } from '@/shared/api/client';
 import type { AudioContextFactory } from './usePlayer';
 import type { ReadingState } from './useProgressionReading';
 import { useProgressionReading } from './useProgressionReading';
+import type { ProgressionState } from './useProgression';
 import { KEYS, barTicks, maxBeatsAt, useProgression } from './useProgression';
-import { usePlayback } from './usePlayback';
+import type { PlaybackState } from './usePlayback';
+import { triedAt, usePlayback } from './usePlayback';
+import { useNextCandidates } from './useNextCandidates';
+import { CandidateList } from './CandidateList';
+import { candidateMarks, candidateRows } from './labels';
+import { SlotFill } from './SlotFill';
+import { useVariations } from './useVariations';
+import { VariationList } from './VariationList';
 import { PlaybackControls } from './PlaybackControls';
 import { Canvas } from './Canvas';
-import type { Tab } from './ContextPanel';
-import { ContextPanel } from './ContextPanel';
-import { SlotCard } from './SlotCard';
+import { SlotCard, slotName } from './SlotCard';
+import { SlotDetail } from './SlotDetail';
 import { shortenedNotice } from './terms';
 import './progression.css';
 
@@ -24,6 +32,8 @@ function ReadingAlert({ reading }: { reading: ReadingState }) {
 }
 
 /** The two tabs on the same progression (ADR-0019): exploring from the last slot, and planning. */
+type Tab = 'explore' | 'plan';
+
 const TABS: readonly { id: Tab; word: string }[] = [
   { id: 'explore', word: '探索' },
   { id: 'plan', word: '計画' },
@@ -169,5 +179,99 @@ export function ProgressionScreen({ createAudioContext }: Props) {
         <ContextPanel tab={tab} state={state} readings={readings} playback={playback} />
       </div>
     </div>
+  );
+}
+
+/** The labels and the variations of the chosen slot, if any. */
+function ChosenSlot({ state, readings }: { state: ProgressionState; readings: SlotReading[] }) {
+  const { progression, selected } = state;
+  const chosen = selected === null ? undefined : progression.slots[selected];
+  const chord = chosen?.chord;
+  // A slot added from the candidates keeps its variations from that chord (#115).
+  const base = chord === undefined || selected === null ? null : (state.bases[selected] ?? chord);
+  const variations = useVariations(progression.key, base);
+
+  return (
+    <>
+      {chosen && selected !== null && <SlotDetail slot={chosen} reading={readings[selected]} />}
+
+      {chord !== undefined &&
+        selected !== null &&
+        base !== null &&
+        variations.state === 'given' && (
+          <VariationList
+            base={base}
+            current={chord}
+            variations={variations.variations}
+            onChoose={(name) => state.replaceChord(selected, name)}
+          />
+        )}
+    </>
+  );
+}
+
+type PanelProps = {
+  tab: Tab;
+  state: ProgressionState;
+  readings: SlotReading[];
+  playback: PlaybackState;
+};
+
+/**
+ * The context panel, which follows what is chosen: always which slot it is;
+ * for a chosen slot its labels and variations, and in the plan tab the
+ * candidates to fill it; in the explore tab with nothing chosen, the
+ * candidates for the slot after the last, as the other candidates (the
+ * branches come in a later slice).
+ */
+function ContextPanel({ tab, state, readings, playback }: PanelProps) {
+  const { progression, selected } = state;
+  // Asked for even while hidden, so that the last answer is there when the slot is let go.
+  const { beats, candidates, busy } = useNextCandidates(progression);
+  // The candidate groups opened or closed, kept here so that a new answer keeps them.
+  const [opened, setOpened] = useState<Partial<Record<string, boolean>>>({});
+  const chosen = selected === null ? undefined : progression.slots[selected];
+
+  return (
+    <aside className="context-panel" aria-labelledby="context-heading">
+      <p className="context-where">{TABS.find(({ id }) => id === tab)?.word}のタブ</p>
+      <h2 id="context-heading">
+        {chosen === undefined || selected === null
+          ? '枠を選んでいません'
+          : `${slotName(chosen, readings[selected])}（${String(selected + 1)} 番目の枠）`}
+      </h2>
+
+      <ChosenSlot state={state} readings={readings} />
+
+      <SlotFill
+        progression={progression}
+        selected={tab === 'plan' ? selected : null}
+        playback={playback}
+        onFill={state.fillSlot}
+      />
+
+      {tab === 'plan' && selected === null && <p>枠を選ぶと、その枠を埋める候補が出ます。</p>}
+
+      {tab === 'explore' && selected === null && candidates.state === 'given' && (
+        <CandidateList
+          words={{
+            heading: `他の候補（末尾に足す、${beats} 拍）`,
+            list: (kind) => `${kind}の候補`,
+            add: '足す',
+            trial: (chord) => `${chord} を試聴する`,
+          }}
+          groups={candidates.groups}
+          marksOf={candidateMarks}
+          rowsOf={candidateRows}
+          busy={busy}
+          opened={opened}
+          onToggle={(kind, open) => setOpened((o) => ({ ...o, [kind]: open }))}
+          auditioning={triedAt(playback.auditioning, progression.slots.length)}
+          onAdd={(name) => state.addCandidate(name, beats)}
+          onAudition={(name) => playback.audition(name, beats)}
+          onStop={playback.stop}
+        />
+      )}
+    </aside>
   );
 }
