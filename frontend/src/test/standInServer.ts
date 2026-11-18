@@ -181,20 +181,32 @@ function candidatesFor({
   };
 }
 
-/** The variations of F, F and Fsus4; a 400 for any other chord, as for a chord with no third. */
+/**
+ * The variations of F, F and Fsus4, with the labels of their readings in C
+ * (Fsus4 has B♭ outside the key); a 400 for any other chord, as for a chord
+ * with no third.
+ */
 function variationsOf({ chord }: Schemas['VariationsRequest']): Schemas['Variations'] | Refusal {
   if (chord !== 'F') {
     return refuse('the chord has no third');
   }
-  const variation = (name: string): Schemas['Variation'] => ({
-    chord: { basis: 'definition', name },
-    isInput: name === chord,
-    members: { basis: 'definition', notes: [] },
-    reading: diatonic,
-    tensionCautions: { basis: 'school', cautions: [] },
-    outOfKey: { basis: 'computation', notes: [] },
+  // Each variation carries the labels of the chord as the readings know it.
+  const variations = ['F', 'Fsus4'].flatMap((name): Schemas['Variation'][] => {
+    const slot = known[name];
+    return slot === undefined
+      ? []
+      : [
+          {
+            chord: slot.chord,
+            isInput: name === chord,
+            members: { basis: 'definition', notes: [] },
+            reading: slot.reading,
+            tensionCautions: slot.tensionCautions,
+            outOfKey: slot.outOfKey ?? { basis: 'computation', notes: [] },
+          },
+        ];
   });
-  return { variations: [variation('F'), variation('Fsus4')] };
+  return { variations };
 }
 
 /** One note of middle C for each slot with a chord. */

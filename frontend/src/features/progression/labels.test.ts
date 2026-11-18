@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { SlotReading } from '@/shared/api/client';
-import { labelRows } from './labels';
+import type { SlotReading, Variation } from '@/shared/api/client';
+import { labelRows, variationMarks } from './labels';
 
 const fm7: Extract<SlotReading, { content: 'chord' }> = {
   content: 'chord',
@@ -30,5 +30,26 @@ describe('labelRows', () => {
 
   it('shows no row for the notes outside the key when the reading has none', () => {
     expect(labelRows(fm7).map((row) => row.term)).not.toContain('調の外の音');
+  });
+});
+
+describe('variationMarks', () => {
+  const variation: Variation = {
+    chord: { basis: 'definition', name: 'Fm7' },
+    isInput: false,
+    members: { basis: 'definition', notes: ['F', 'A♭', 'C', 'E♭'] },
+    reading: fm7.reading,
+    tensionCautions: { basis: 'school', cautions: [] },
+    outOfKey: { basis: 'computation', notes: ['A♭', 'E♭'] },
+  };
+
+  it('names the notes outside the key after the reading, joined as the detail joins them', () => {
+    expect(variationMarks(variation)).toEqual(['借用和音', '調の外の音 A♭、E♭']);
+  });
+
+  it('shows no mark for the notes outside the key when there are none', () => {
+    const inKey = { ...variation, outOfKey: { basis: 'computation', notes: [] } };
+
+    expect(variationMarks(inKey)).toEqual(['借用和音']);
   });
 });

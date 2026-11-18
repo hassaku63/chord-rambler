@@ -257,6 +257,20 @@ describe('ProgressionScreen', () => {
     );
   });
 
+  it('names the notes outside the key beside a variation that has any, not in its button', async () => {
+    render(<ProgressionScreen />);
+    addChord('F');
+    fireEvent.click(await screen.findByRole('button', { name: /^F IV/ }));
+
+    const list = await screen.findByRole('list', { name: 'F の変形' });
+    const text = (el: HTMLElement) => el.textContent;
+    expect(within(list).getAllByRole('listitem').map(text)).toEqual([
+      'F ダイアトニック S',
+      'Fsus4 借用和音 調の外の音 B♭',
+    ]);
+    expect(within(list).getAllByRole('button').map(text)).toEqual(['F', 'Fsus4']);
+  });
+
   it('shows no variations for a chord with no third typed in', async () => {
     render(<ProgressionScreen />);
     addChord('Fsus4');

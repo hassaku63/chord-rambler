@@ -1,4 +1,4 @@
-import type { Candidate, SlotCandidate, SlotReading } from '@/shared/api/client';
+import type { Candidate, SlotCandidate, SlotReading, Variation } from '@/shared/api/client';
 import { PARALLEL_MINOR, TARGET_NUMERALS, TERMS, wordFor } from './terms';
 
 /** One label of the detailed view: what it is about, its word, and its basis. */
@@ -30,6 +30,14 @@ function chordRows(reading: ChordReading): LabelRow[] {
   ];
 }
 
+/** What the notes outside the key are called, in the detailed view and in the variations' marks. */
+const OUT_OF_KEY = '調の外の音';
+
+/** The notes outside the key, joined in the order the server gives them; null when there are none. */
+function outOfKeyWord(label: { notes: string[] } | undefined): string | null {
+  return label === undefined || label.notes.length === 0 ? null : label.notes.join('、');
+}
+
 /** The labels of a slot, in the order the detailed view lists them. */
 export function labelRows(slot: SlotReading): LabelRow[] {
   const { roleFit } = slot;
@@ -41,13 +49,12 @@ export function labelRows(slot: SlotReading): LabelRow[] {
   const cautions = tensionCautions.cautions
     .map((c) => `${c.tension}（${c.chordTone} の半音上）`)
     .join('、');
-  const outside = outOfKey?.notes.join('、');
   return [
     ...chordRows(reading),
     ...row('解決', wordFor(TERMS.resolution, resolution.resolution), resolution.basis),
     ...row('終止', wordFor(TERMS.cadence, cadence.cadence), cadence.basis),
     ...(cautions ? row('テンションの注意', cautions, tensionCautions.basis) : []),
-    ...(outOfKey && outside ? row('調の外の音', outside, outOfKey.basis) : []),
+    ...(outOfKey ? row(OUT_OF_KEY, outOfKeyWord(outOfKey), outOfKey.basis) : []),
     ...fit,
   ];
 }
@@ -65,6 +72,18 @@ function fitMark(roleFit: SlotReading['roleFit']): string | undefined {
 /** The short marks of a chord's reading: kind and function. */
 export function readingMarks(reading: ChordReading): string[] {
   const marks = [wordFor(TERMS.kind, reading.kind), wordFor(TERMS.functionMark, reading.function)];
+  return marks.filter((mark): mark is string => typeof mark === 'string');
+}
+
+/**
+ * The short marks of a variation: kind, function, and the notes it has
+ * outside the key (調の外の音 A♭), when it has any.
+ */
+export function variationMarks(variation: Variation): string[] {
+  const marks = [
+    ...readingMarks(variation.reading),
+    about(OUT_OF_KEY, outOfKeyWord(variation.outOfKey)),
+  ];
   return marks.filter((mark): mark is string => typeof mark === 'string');
 }
 
