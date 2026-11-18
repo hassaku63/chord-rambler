@@ -14,8 +14,13 @@ const WEB = `http://127.0.0.1:${WEB_PORT}`;
 // one this version of Playwright downloads is not there (docs/dev/harness.md).
 const chromium = process.env.PW_CHROMIUM_PATH;
 
+// UI_SHOTS runs only the shots for the ui-review skill (`npm run ui:shots`).
+// Their file name is outside the default testMatch, so the checks never run them.
+const shots = Boolean(process.env.UI_SHOTS);
+
 export default defineConfig({
   testDir: './e2e',
+  ...(shots ? { testMatch: /ui-shots\.ts$/ } : {}),
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
