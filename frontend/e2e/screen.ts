@@ -4,7 +4,7 @@ import { expect } from '@playwright/test';
 /** Opens the screen and waits until it has heard from the API server. */
 export async function openScreen(page: Page): Promise<void> {
   await page.goto('/');
-  await expect(page.getByRole('status')).toHaveText(/サーバーにつながっています/);
+  await expect(page.getByText(/サーバーにつながっています/)).toHaveRole('status');
 }
 
 /** The strip of slots. */

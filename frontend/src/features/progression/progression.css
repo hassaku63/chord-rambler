@@ -103,8 +103,9 @@
   padding: 0;
 }
 
-/* Always one line high, so that the list does not move when the line fills or empties. */
-.candidates-wait {
+/* Always one line high, so that what is below does not move when the line fills or empties. */
+.candidates-wait,
+.slot-notice {
   min-height: 1.5em;
   margin: 0;
 }

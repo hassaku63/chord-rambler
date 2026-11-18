@@ -14,7 +14,7 @@ describe('App', () => {
 
     render(<App />);
 
-    expect(screen.getByRole('status')).toHaveTextContent('サーバーを確認しています。');
+    expect(screen.getByText('サーバーを確認しています。')).toHaveRole('status');
   });
 
   it('shows the version once the server answers', async () => {

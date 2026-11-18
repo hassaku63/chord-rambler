@@ -58,4 +58,24 @@ describe('the stand-in server', () => {
       },
     });
   });
+
+  it('refuses a slot that crosses into the next phrase, naming its slot', async () => {
+    const answer = await readProgression({
+      key: 'C',
+      slots: [
+        { chord: 'F', beats: 12 },
+        { chord: 'Dm7', beats: 8 },
+      ],
+    });
+
+    expect(answer).toEqual({
+      ok: false,
+      problem: {
+        title: 'Bad Request',
+        status: 400,
+        detail: 'slot 1: a slot must not cross the boundary of a phrase',
+        slot: 1,
+      },
+    });
+  });
 });
