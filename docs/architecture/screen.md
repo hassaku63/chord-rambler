@@ -29,7 +29,7 @@
 | `frontend/src/features/progression/terms.ts` | 札と役割の識別子を語にする表。ここ 1 か所に置く。役割の一覧も、ここの表から引く。枠を縮めたことを知らせる文も、ここで作る |
 | `frontend/src/shared/api/client.ts` | API の呼び出しと、応答の検証 |
 | `frontend/src/test/standInServer.ts` | 画面のテスト（Testing Library）が `fetch` の代わりに置く仮のサーバー。契約の POST の経路すべてに、生成した型（`schema.gen.ts`）の形で答える。読みは、サーバーと同じく、フレーズをまたぐ枠を `slot` の欄つきで拒む。経路の一覧も答えの形も型で縛るので、契約に経路や必ず付く札が増えると、型の検査で落ちる。前後の枠に和音があるときに付く札（`resolution`、`nextResolution`）を縛る型も置く。既定の答え（`world`）を、テストのファイルが経路ごとに差し替える。拒む答えは `refuse` で作る |
-| `frontend/e2e/` | 実ブラウザでの画面の検査（ADR-0017）。通しのシナリオ（`progression.spec.ts`）、アクセシビリティ（`accessibility.spec.ts`）、配置（`layout.spec.ts`）。画面の語や操作を変えたら、ここの問い合わせも直す |
+| `frontend/e2e/` | 実ブラウザでの画面の検査（ADR-0017）。通しのシナリオ（`progression.spec.ts`）、アクセシビリティ（`accessibility.spec.ts`）、配置（`layout.spec.ts`）。検査ではない、画面レビューの撮影（`ui-shots.ts`。`.claude/skills/ui-review/SKILL.md`）も置く。画面の語や操作を変えたら、ここの問い合わせも直す |
 
 ## 札の語
 
