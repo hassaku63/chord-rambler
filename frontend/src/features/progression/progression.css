@@ -58,7 +58,14 @@
   color: var(--color-ink-muted);
 }
 
+.workbench label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .workbench :is(button, select, input) {
+  padding: 0.15rem 0.5rem;
   border: 1px solid var(--color-line);
   border-radius: 7px;
   background: var(--color-surface);
