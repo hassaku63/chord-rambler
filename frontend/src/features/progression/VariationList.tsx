@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import type { Variation } from '@/shared/api/client';
 import { variationMarks } from './labels';
 
@@ -28,8 +29,16 @@ export function VariationList({ base, current, variations, onChoose }: Props) {
               <button type="button" aria-pressed={chosen} onClick={() => onChoose(name)}>
                 {name}
               </button>{' '}
-              {/* Beside the button, not in its name, as a candidate's marks are. */}
-              <span>{variationMarks(variation).join(' ')}</span>
+              {/* Beside the button, not in its name, as a candidate's marks are. Each
+                  mark keeps to one line (調の外の音 B♭); the marks wrap between them. */}
+              <span>
+                {variationMarks(variation).map((mark, i) => (
+                  <Fragment key={mark}>
+                    {i > 0 && ' '}
+                    <span className="mark">{mark}</span>
+                  </Fragment>
+                ))}
+              </span>
             </li>
           );
         })}

@@ -103,6 +103,11 @@
   padding: 0;
 }
 
+/* A mark and its notes stay together (調の外の音 B♭); the marks wrap between them. */
+.variation-list .mark {
+  white-space: nowrap;
+}
+
 /* Always one line high, so that what is below does not move when the line fills or empties. */
 .candidates-wait,
 .slot-notice {
