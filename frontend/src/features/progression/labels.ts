@@ -176,6 +176,14 @@ export function candidateRows(candidate: Candidate): LabelRow[] {
   return rowsOf(candidate, '末尾の和音の解決');
 }
 
+/**
+ * The labels of a branch of the footprint: a candidate after the slot before
+ * the one it is beside, which is no longer the last.
+ */
+export function footprintRows(candidate: Candidate): LabelRow[] {
+  return rowsOf(candidate, '前の枠の和音の解決');
+}
+
 /** A word with what it is about (次の枠へ 解決), or null when there is no word. */
 function about(what: string, word: string | null): string | null {
   return word === null ? null : `${what} ${word}`;

@@ -7,7 +7,9 @@ import type { ProgressionState } from './useProgression';
 import { KEYS, barTicks, maxBeatsAt, useProgression } from './useProgression';
 import type { PlaybackState } from './usePlayback';
 import { triedAt, usePlayback } from './usePlayback';
-import { useNextCandidates } from './useNextCandidates';
+import type { BranchesState } from './useBranches';
+import { useBranches } from './useBranches';
+import { BranchDetail } from './BranchDetail';
 import { CandidateList } from './CandidateList';
 import { candidateMarks, candidateRows } from './labels';
 import { SlotFill } from './SlotFill';
@@ -87,12 +89,16 @@ export function ProgressionScreen({ createAudioContext }: Props) {
   const { progression, selected } = state;
   const reading = useProgressionReading(progression);
   const playback = usePlayback(progression, createAudioContext);
+  const branches = useBranches(state, playback);
   const [chordName, setChordName] = useState('');
   const [tab, setTab] = useState<Tab>('explore');
   const readings = reading.state === 'read' ? reading.reading.slots : [];
   const unreadable = reading.state === 'refused' ? reading.slot : null;
   const ticks = barTicks(progression.slots);
-  const select = (i: number) => state.select(selected === i ? null : i);
+  const select = (i: number) => {
+    branches.unpick();
+    state.select(selected === i ? null : i);
+  };
 
   return (
     <div className="workbench">
@@ -143,6 +149,7 @@ export function ProgressionScreen({ createAudioContext }: Props) {
             selected={selected}
             sounding={playback.sounding}
             onSelect={select}
+            branches={tab === 'explore' ? branches : null}
           />
 
           <section className="strip" aria-labelledby="strip-heading">
@@ -179,7 +186,7 @@ export function ProgressionScreen({ createAudioContext }: Props) {
           </section>
         </div>
 
-        <ContextPanel tab={tab} state={state} readings={readings} playback={playback} />
+        <ContextPanel {...{ tab, state, readings, playback, branches }} />
       </div>
     </div>
   );
@@ -218,19 +225,21 @@ type PanelProps = {
   state: ProgressionState;
   readings: SlotReading[];
   playback: PlaybackState;
+  branches: BranchesState;
 };
 
 /**
- * The context panel, which follows what is chosen: always which slot it is;
- * for a chosen slot its labels and variations, and in the plan tab the
- * candidates to fill it; in the explore tab with nothing chosen, the
- * candidates for the slot after the last, as the other candidates (the
- * branches come in a later slice).
+ * The context panel, which follows what is chosen: always which slot or
+ * branch it is; for a chosen slot its labels and variations, and in the plan
+ * tab the candidates to fill it; in the explore tab, the branch picked and,
+ * with no slot chosen, all the candidates for the slot after the last, as the
+ * other candidates.
  */
-function ContextPanel({ tab, state, readings, playback }: PanelProps) {
+function ContextPanel({ tab, state, readings, playback, branches }: PanelProps) {
   const { progression, selected } = state;
-  // Asked for even while hidden, so that the last answer is there when the slot is let go.
-  const { beats, candidates, busy } = useNextCandidates(progression);
+  const { beats, candidates, busy } = branches.next;
+  // Branches are picked in the explore tab only.
+  const picked = tab === 'explore' ? branches.picked : null;
   // The candidate groups opened or closed, kept here so that a new answer keeps them.
   const [opened, setOpened] = useState<Partial<Record<string, boolean>>>({});
   const chosen = selected === null ? undefined : progression.slots[selected];
@@ -239,12 +248,21 @@ function ContextPanel({ tab, state, readings, playback }: PanelProps) {
     <aside className="context-panel" aria-labelledby="context-heading">
       <p className="context-where">{TABS.find(({ id }) => id === tab)?.word}のタブ</p>
       <h2 id="context-heading">
-        {chosen === undefined || selected === null
-          ? '枠を選んでいません'
-          : `${slotName(chosen, readings[selected])}（${String(selected + 1)} 番目の枠）`}
+        {chosen !== undefined && selected !== null
+          ? `${slotName(chosen, readings[selected])}（${String(selected + 1)} 番目の枠）`
+          : picked === null
+            ? '枠を選んでいません'
+            : `${picked.candidate.chord.name}（${String(picked.at + 1)} 番目の枠の枝）`}
       </h2>
 
       <ChosenSlot state={state} readings={readings} />
+
+      {picked !== null && (
+        <BranchDetail
+          picked={picked}
+          onConfirm={() => branches.confirm(picked.place, picked.candidate.chord.name)}
+        />
+      )}
 
       <SlotFill
         progression={progression}

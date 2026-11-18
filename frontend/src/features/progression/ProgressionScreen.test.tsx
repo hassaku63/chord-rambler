@@ -244,7 +244,9 @@ describe('ProgressionScreen', () => {
     render(<ProgressionScreen />);
     fireEvent.click(await screen.findByRole('button', { name: 'F を足す' }));
     fireEvent.change(screen.getByRole('combobox', { name: '長さ' }), { target: { value: '2' } });
-    fireEvent.click(await screen.findByRole('button', { name: /^F IV/ }));
+    // In the strip: the branches have an F of their own.
+    const strip = screen.getByRole('list', { name: '進行' });
+    fireEvent.click(await within(strip).findByRole('button', { name: /^F IV/ }));
     const list = await screen.findByRole('list', { name: 'F の変形' });
     expect(within(list).getByRole('button', { name: 'F' })).toHaveAttribute('aria-pressed', 'true');
 
@@ -264,7 +266,9 @@ describe('ProgressionScreen', () => {
   it('names the notes outside the key beside a variation that has any, not in its button', async () => {
     render(<ProgressionScreen />);
     addChord('F');
-    fireEvent.click(await screen.findByRole('button', { name: /^F IV/ }));
+    // In the strip: the branches have an F of their own.
+    const strip = screen.getByRole('list', { name: '進行' });
+    fireEvent.click(await within(strip).findByRole('button', { name: /^F IV/ }));
 
     const list = await screen.findByRole('list', { name: 'F の変形' });
     const text = (el: HTMLElement) => el.textContent;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { SlotReading, Variation } from '@/shared/api/client';
-import { edgeWords, labelRows, variationMarks } from './labels';
+import type { Candidate, SlotReading, Variation } from '@/shared/api/client';
+import { candidateRows, edgeWords, footprintRows, labelRows, variationMarks } from './labels';
 
 const fm7: Extract<SlotReading, { content: 'chord' }> = {
   content: 'chord',
@@ -68,5 +68,20 @@ describe('edgeWords', () => {
     { name: 'no reading yet', before: undefined, after: undefined, want: [] },
   ])('names the judgments of the line: $name', ({ before, after, want }) => {
     expect(edgeWords(before, after)).toEqual(want);
+  });
+});
+
+describe('footprintRows', () => {
+  it('names the resolution as that of the slot before, where the candidate rows name the last', () => {
+    const g7: Candidate = {
+      chord: { basis: 'definition', name: 'G7' },
+      roman: { basis: 'computation', numeral: 'V7' },
+      reading: { ...fm7.reading, kind: 'diatonic', function: 'dominant', modes: [] },
+      resolution: { basis: 'school', resolution: 'expected' },
+    };
+    const term = (rows: { term: string }[]) => rows.map((row) => row.term).at(-1);
+
+    expect(term(candidateRows(g7))).toBe('末尾の和音の解決');
+    expect(term(footprintRows(g7))).toBe('前の枠の和音の解決');
   });
 });

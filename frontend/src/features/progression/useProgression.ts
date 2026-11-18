@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { Progression, Slot } from '@/shared/api/client';
+import type { Candidate, Progression, Slot } from '@/shared/api/client';
 import type { Role } from './terms';
 import { isRole } from './terms';
 
@@ -151,6 +151,9 @@ function save(progression: Progression) {
   }
 }
 
+/** The branches of a step, kept beside the slot one of them was put in (screen-promise.md, 4). */
+export type Footprint = { at: number; branches: Candidate[] };
+
 /** The progression being built, the slot chosen in it, and the operations on them. */
 export type ProgressionState = {
   progression: Progression;
@@ -165,6 +168,9 @@ export type ProgressionState = {
    * their phrase, as they are now; empty when it shortened none.
    */
   shortened: Slot[];
+  /** The footprint, which every change of the progression clears: set it after the change. */
+  footprint: Footprint | null;
+  setFootprint: (footprint: Footprint) => void;
   setKey: (key: string) => void;
   /** Adds a slot holding a typed chord, as long as nextBeats gives. */
   addChord: (name: string) => void;
@@ -215,16 +221,23 @@ function without({ progression, bases }: Held, index: number): Omit<Held, 'short
   };
 }
 
+/** The slots and the footprint, with the one way to change the slots, which clears the footprint. */
+function useHeld() {
+  const [held, setHeld] = useState(initial);
+  const [footprint, setFootprint] = useState<Footprint | null>(null);
+  /** Changes the progression; every change goes through here, so none leaves a slot crossing. */
+  const change = useCallback((next: (h: Held) => Omit<Held, 'shortened'>) => {
+    setHeld((h) => fitted(next(h)));
+    setFootprint(null);
+  }, []);
+  return { held, change, footprint, setFootprint };
+}
+
 /** Holds the progression, kept in localStorage so that a reload brings it back. */
 export function useProgression(): ProgressionState {
-  const [held, setHeld] = useState(initial);
+  const { held, change, footprint, setFootprint } = useHeld();
   const [selected, setSelected] = useState<number | null>(null);
   const { progression, bases, shortened } = held;
-  /** Changes the progression; every change goes through here, so none leaves a slot crossing. */
-  const change = useCallback(
-    (next: (h: Held) => Omit<Held, 'shortened'>) => setHeld((h) => fitted(next(h))),
-    [],
-  );
 
   useEffect(() => save(progression), [progression]);
 
@@ -255,6 +268,8 @@ export function useProgression(): ProgressionState {
     selected,
     bases,
     shortened,
+    footprint,
+    setFootprint,
     setKey: useCallback(
       (key: string) => {
         if (KEYS.some((k) => k === key)) {

@@ -19,6 +19,20 @@ export async function tailCandidates(page: Page): Promise<Locator> {
   return region;
 }
 
+/** The branches after the last slot, once the answer to the latest progression is in. */
+export async function branches(page: Page): Promise<Locator> {
+  const toolbar = page.getByRole('toolbar', { name: '枝', exact: true });
+  await expect(toolbar).toHaveAttribute('aria-busy', 'false');
+  return toolbar;
+}
+
+/** Picks the branch of the chord by pressing it, which plays it and shows its labels. */
+export async function pickBranch(page: Page, name: string): Promise<void> {
+  const branch = (await branches(page)).getByRole('button', { name, exact: true });
+  await branch.click();
+  await expect(branch).toHaveAttribute('aria-pressed', 'true');
+}
+
 /** Adds a slot by typing its chord name. */
 export async function addByName(page: Page, chord: string): Promise<void> {
   await page.getByRole('textbox', { name: '和音名' }).fill(chord);
