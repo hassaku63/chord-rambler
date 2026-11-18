@@ -16,6 +16,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "ui:shots": "UI_SHOTS=1 playwright test",
     "gen:api": "openapi-typescript ../docs/api/openapi.yaml --default-non-nullable=false -o src/shared/api/schema.gen.ts && prettier --write src/shared/api/schema.gen.ts"
   },
   "dependencies": {
