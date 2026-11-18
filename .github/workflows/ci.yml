@@ -51,9 +51,14 @@ jobs:
       - run: npm ci
         working-directory: frontend
       # `make e2e` needs the Chromium of the Playwright in the lockfile (ADR-0017).
+      # The runner already has the libraries Chromium needs; --with-deps would also
+      # fetch nine font packages from apt, which once took five minutes (#57).
       - name: Chromium for the end-to-end checks
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
         working-directory: frontend
+      # The one font of those the screen uses: Japanese text renders as on a desktop.
+      - name: Japanese font for the screen
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends fonts-ipafont-gothic
       - run: make doctor
       - run: make check
       # Needs the network, so it is not part of `make check` (docs/dev/harness.md).

@@ -29,7 +29,7 @@ CI の `required (make check)` は、Chromium を取ってから `make check` �
 
 `make e2e` は、API をビルドし、Playwright の `webServer` で API と画面の開発サーバーを専用のポート（`frontend/playwright.config.ts`）で起動して、Chromium で `frontend/e2e/` を走らせる。手元の実測（2026-11-16、4 コア。API のビルドが済んだあと）は、`make e2e` が約 12 秒、`make check` の全体が約 40〜70 秒（Go のテストのキャッシュの有無で変わる）。CI での時間はまだ測っていない。
 
-Chromium が要る。手元にないときは `cd frontend && npx playwright install chromium`（Linux で OS のライブラリもないときは `--with-deps`。CI はこれを `make check` の前に走らせる）。取れないときは、手元の Chromium の実行ファイルを渡す: `PW_CHROMIUM_PATH=/path/to/chrome make check`。
+Chromium が要る。手元にないときは `cd frontend && npx playwright install chromium`（Linux で OS のライブラリもないときは `--with-deps`）。CI は `make check` の前に、`--with-deps` を付けずに Chromium を取り、画面が使う日本語のフォント（`fonts-ipafont-gothic`）だけを apt で入れる（ランナーには Chromium の共有ライブラリが既にある。#57）。取れないときは、手元の Chromium の実行ファイルを渡す: `PW_CHROMIUM_PATH=/path/to/chrome make check`。
 
 | 検査 | 防ぐもの | 個別実行 | 場所 |
 | --- | --- | --- | --- |
