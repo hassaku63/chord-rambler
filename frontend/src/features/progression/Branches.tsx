@@ -20,11 +20,11 @@ type Props = {
  */
 export function Branches({ group, label, footprint = false, busy = false, toolbarRef }: Props) {
   const id = useId();
-  const { candidates, picked, auditioning, handlers } = group;
+  const { candidates, picked, auditioning, on } = group;
   // The Tab stop: the branch picked, or the first.
   const stop = candidates.some((c) => c.chord.name === picked) ? picked : candidates[0]?.chord.name;
   return (
-    <div className={footprint ? 'branches footprint' : 'branches'}>
+    <div className={footprint ? 'branches footprint' : 'branches tail'}>
       {footprint && (
         <span id={id} className="footprint-caption">
           {label}
@@ -49,11 +49,11 @@ export function Branches({ group, label, footprint = false, busy = false, toolba
                 aria-pressed={picked === name}
                 aria-current={trial || undefined}
                 tabIndex={name === stop ? 0 : -1}
-                onPointerDown={handlers.onPointerDown}
-                onFocus={() => handlers.onFocus(candidate)}
-                onClick={() => handlers.onClick(candidate)}
-                onDoubleClick={() => handlers.onDoubleClick(candidate)}
-                onKeyDown={(e) => handlers.onKeyDown(e, candidate)}
+                onPointerDown={on.pointerDown}
+                onFocus={() => on.focus(candidate)}
+                onClick={() => on.click(candidate)}
+                onDoubleClick={() => on.confirm(candidate)}
+                onKeyDown={(e) => on.keyDown(e, candidate)}
               >
                 <span className="branch-name">{name}</span>{' '}
                 <span className="branch-numeral">{candidate.roman.numeral}</span>

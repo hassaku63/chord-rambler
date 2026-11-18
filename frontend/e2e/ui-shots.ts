@@ -2,7 +2,15 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
-import { addByName, openScreen, planTab, strip, tailCandidates } from './screen';
+import {
+  addByName,
+  branches,
+  openScreen,
+  pickBranch,
+  planTab,
+  strip,
+  tailCandidates,
+} from './screen';
 
 // Shots for the ui-review skill (.claude/skills/ui-review/SKILL.md): each
 // state at each width, as an image of the whole page and as the
@@ -61,6 +69,27 @@ const states: { name: string; reach: (page: Page) => Promise<void> }[] = [
       await choose.click();
       await expect(choose).toHaveAttribute('aria-pressed', 'true');
       await expect(page.getByRole('list', { name: /変形/ })).toBeVisible();
+    },
+  },
+  {
+    name: '5-branch-picked',
+    reach: async (page) => {
+      await openScreen(page);
+      await addByName(page, 'C');
+      await pickBranch(page, 'F IV');
+    },
+  },
+  {
+    name: '6-footprint',
+    reach: async (page) => {
+      await openScreen(page);
+      for (const chord of ['C', 'Am']) {
+        await addByName(page, chord);
+      }
+      await pickBranch(page, 'F IV');
+      await page.getByRole('button', { name: 'F を確定する', exact: true }).click();
+      await branches(page);
+      await expect(page.getByRole('toolbar', { name: '探索の足跡' })).toBeVisible();
     },
   },
 ];

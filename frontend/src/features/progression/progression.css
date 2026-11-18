@@ -99,8 +99,12 @@
   padding: 0.3rem 1.1rem;
 }
 
-/* The canvas: the main line on a dotted ground. */
+/* The canvas: the main line on a dotted ground, the branches from its last node. */
 .canvas {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  align-content: start;
+  align-items: center;
   flex: 1;
   min-height: 10rem;
   overflow: auto;
@@ -109,13 +113,8 @@
     13px;
 }
 
-/* The main line, then the branches growing from its last node. */
-.canvas-flow {
-  display: flex;
-  align-items: center;
-  width: max-content;
-  min-height: 100%;
-  padding-bottom: 1rem;
+.canvas > h2 {
+  grid-column: 1 / -1;
 }
 
 .canvas-line,
@@ -128,21 +127,19 @@
   padding: 0;
 }
 
-/* The judgments on a line: small labels side by side above the arrow, each on one line. */
 .edge {
   display: flex;
-  flex: none;
   flex-direction: column;
   align-items: center;
-  gap: 0.15rem;
   padding: 0 0.5rem 1.5rem;
   font-size: 0.75rem;
+  white-space: nowrap;
 }
 
+/* Each judgment a small label of its own above the arrow, on one line. */
 .edge-words {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 0.15rem;
 }
 
@@ -151,168 +148,12 @@
   border: 1px solid var(--color-line);
   border-radius: 4px;
   background: var(--color-surface);
-  white-space: nowrap;
-  word-break: keep-all;
 }
 
 .node-wrap {
   position: relative;
   display: flex;
   flex-direction: column;
-}
-
-.canvas-start {
-  flex: none;
-  padding: 0.5rem 0.75rem;
-  border: 2px dashed var(--color-line);
-  border-radius: 50%;
-  font-size: 0.8rem;
-  color: var(--color-ink-muted);
-}
-
-/* The branches: dashed lines from the last node to each, the picked one filled,
-   the one on trial with a dashed outline and the words (screen-promise.md, 4). */
-.branches {
-  position: relative;
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  margin: 1.5em 0 0 1.5rem;
-}
-
-.branch-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.branches:not(.footprint) .branch-list {
-  padding-left: 1.5rem;
-}
-
-.branch-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.branches:not(.footprint)::before,
-.branches:not(.footprint) .branch-item::before,
-.branches:not(.footprint) .branch-item::after {
-  content: '';
-  position: absolute;
-  border: 0 dashed var(--color-line);
-}
-
-/* The stem from the last node, the rise between the branches, and a twig to each. */
-.branches:not(.footprint)::before {
-  left: -1.5rem;
-  top: 50%;
-  width: 1.5rem;
-  border-top-width: 2px;
-}
-
-.branches:not(.footprint) .branch-item::before {
-  left: -1.5rem;
-  top: 50%;
-  width: 1.5rem;
-  border-top-width: 2px;
-}
-
-.branches:not(.footprint) .branch-item::after {
-  left: -1.5rem;
-  top: -0.2rem;
-  bottom: -0.2rem;
-  border-left-width: 2px;
-}
-
-.branches:not(.footprint) .branch-item:first-child::after {
-  top: 50%;
-}
-
-.branches:not(.footprint) .branch-item:last-child::after {
-  bottom: 50%;
-}
-
-.workbench .branch {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  min-width: 7rem;
-  padding: 0.2rem 0.75rem;
-  border: 2px solid var(--color-line);
-  border-radius: 8px;
-}
-
-.branches:not(.footprint) .branch-item {
-  animation: branch-grow 0.2s ease-out;
-}
-
-@keyframes branch-grow {
-  from {
-    transform: translateX(-0.75rem);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .branches:not(.footprint) .branch-item {
-    animation: none;
-  }
-}
-
-.workbench .branch[aria-pressed='true'] {
-  background: var(--color-chosen);
-  color: inherit;
-  outline: 2px solid var(--color-accent);
-}
-
-.workbench .branch[aria-current] {
-  border-style: dashed;
-}
-
-.branch-name {
-  font: 1.4rem var(--font-serif);
-}
-
-.branch-numeral {
-  font-size: 0.85rem;
-}
-
-.branch-auditioning {
-  font-weight: bold;
-  white-space: nowrap;
-}
-
-/* The footprint: the branches of the step before, under the node put in, in
-   muted words and dashed lines, named in words. */
-.footprint {
-  position: absolute;
-  top: calc(100% + 0.5rem);
-  left: 0;
-  margin: 0;
-}
-
-.footprint-caption {
-  font: 0.7rem var(--font-mono);
-  color: var(--color-ink-muted);
-  white-space: nowrap;
-}
-
-.footprint .branch-list {
-  gap: 0.25rem;
-}
-
-.workbench .footprint .branch {
-  min-width: 0;
-  padding: 0 0.5rem;
-  border: 1px dashed var(--color-line);
-  background: transparent;
-  color: var(--color-ink-muted);
-}
-
-.footprint .branch-name {
-  font-size: 1rem;
 }
 
 .node-sounding {
@@ -351,6 +192,114 @@
 }
 
 .node.empty .node-name {
+  font-size: 1rem;
+}
+
+/* The branches: dashed twigs from the last node (or the start) to each; the
+   one picked filled, the one on trial dashed and named (screen-promise.md, 4). */
+.canvas-start {
+  padding: 0.5rem;
+  border: 2px dashed var(--color-line);
+  border-radius: 50%;
+}
+
+.branches {
+  position: relative;
+  margin: 1.5em 0 0 3rem;
+}
+
+.branch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.branch-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tail::before,
+.tail .branch-item::before,
+.tail .branch-item::after {
+  content: '';
+  position: absolute;
+  left: -1.5rem;
+  width: 1.5rem;
+  top: 50%;
+  border-top: 2px dashed var(--color-line);
+}
+
+.tail::before {
+  left: -3rem;
+}
+
+.tail .branch-item::after {
+  top: -0.2rem;
+  bottom: -0.2rem;
+  width: 0;
+  border: 0 dashed var(--color-line);
+  border-left-width: 2px;
+}
+
+.tail .branch-item:first-child::after {
+  top: 50%;
+}
+
+.tail .branch-item:last-child::after {
+  bottom: 50%;
+}
+
+.workbench .branch {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 7rem;
+  border: 2px solid var(--color-line);
+  border-radius: 8px;
+}
+
+.workbench .branch[aria-pressed='true'] {
+  background: var(--color-chosen);
+  color: inherit;
+  outline: 2px solid var(--color-accent);
+}
+
+.workbench .branch[aria-current] {
+  border-style: dashed;
+}
+
+.branch-name {
+  font: 1.4rem var(--font-serif);
+}
+
+.branch-auditioning {
+  font-weight: bold;
+}
+
+/* The footprint: under the node put in, in muted words and thin dashed lines, named in words. */
+.footprint {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-ink-muted);
+}
+
+.footprint-caption {
+  font-family: var(--font-mono);
+}
+
+.workbench .footprint .branch:not([aria-pressed='true']) {
+  min-width: 0;
+  border: 1px dashed var(--color-line);
+  background: transparent;
+  color: inherit;
+}
+
+.footprint .branch-name {
   font-size: 1rem;
 }
 
@@ -502,9 +451,4 @@
 .slot-notice {
   min-height: 1.5em;
   margin: 0;
-}
-
-.workbench .footprint .branch[aria-pressed='true'] {
-  background: var(--color-chosen);
-  color: inherit;
 }
