@@ -13,6 +13,7 @@ import { VariationList } from './VariationList';
 import { PlaybackControls } from './PlaybackControls';
 import { SlotCard } from './SlotCard';
 import { SlotDetail } from './SlotDetail';
+import { shortenedNotice } from './terms';
 import './progression.css';
 
 function ReadingAlert({ reading }: { reading: ReadingState }) {
@@ -110,6 +111,11 @@ export function ProgressionScreen({ createAudioContext }: Props) {
           />
         ))}
       </ol>
+
+      {/* Always there, so that the sentence is read out when it comes (WCAG 4.1.3). */}
+      <p role="status" className="slot-notice">
+        {shortenedNotice(state.shortened)}
+      </p>
 
       {chosen && selected !== null && <SlotDetail slot={chosen} reading={readings[selected]} />}
 

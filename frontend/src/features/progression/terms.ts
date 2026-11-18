@@ -135,3 +135,23 @@ export const TARGET_NUMERALS: Readonly<Record<number, string>> = {
 export function wordFor(table: Readonly<Record<string, string | null>>, id: string): string | null {
   return Object.hasOwn(table, id) ? (table[id] ?? null) : id;
 }
+
+/** What a sentence calls a slot: by its chord, or by what kind of empty slot it is. */
+function slotWord(slot: Schemas['Slot']): string {
+  if (slot.chord !== undefined) {
+    return `${slot.chord} の枠`;
+  }
+  return slot.content === 'none' ? '和音なしの枠' : 'まだ選んでいない枠';
+}
+
+/**
+ * The one sentence that tells which slots a change shortened to the end of
+ * their phrase, as they are now (#179), or an empty string for none.
+ */
+export function shortenedNotice(slots: readonly Schemas['Slot'][]): string {
+  if (slots.length === 0) {
+    return '';
+  }
+  const each = slots.map((slot) => `${slotWord(slot)}を ${slot.beats} 拍に`);
+  return `${each.join('、')}縮めました（フレーズをまたぐため）。`;
+}

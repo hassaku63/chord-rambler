@@ -31,6 +31,27 @@ export function maxBeatsAt(slots: Slot[], index: number): number {
   return PHRASE_BEATS - (start % PHRASE_BEATS);
 }
 
+/**
+ * The slots with each that would cross the end of the phrase it starts in
+ * shortened to end there, and the indexes of those shortened (#179). Going
+ * from the left, a shortening moves the starts after it before they are
+ * looked at, so one pass takes in a slot it makes cross.
+ */
+export function fitToPhrases(slots: Slot[]): { slots: Slot[]; shortened: number[] } {
+  const shortened: number[] = [];
+  let start = 0;
+  const fitted = slots.map((slot, i) => {
+    const left = PHRASE_BEATS - (start % PHRASE_BEATS);
+    const fit = slot.beats > left ? { ...slot, beats: left } : slot;
+    if (fit !== slot) {
+      shortened.push(i);
+    }
+    start += fit.beats;
+    return fit;
+  });
+  return { slots: fitted, shortened };
+}
+
 /** Where the progression is kept in the browser (the C1 of #110). */
 export const STORAGE_KEY = 'chord-rambler.progression';
 
@@ -118,6 +139,11 @@ export type ProgressionState = {
    * the base its variations come from (#115). Kept in memory only.
    */
   bases: (string | null)[];
+  /**
+   * The slots the last change of the progression shortened to the end of
+   * their phrase, as they are now; empty when it shortened none.
+   */
+  shortened: Slot[];
   setKey: (key: string) => void;
   /** Adds a slot holding a typed chord, as long as nextBeats gives. */
   addChord: (name: string) => void;
@@ -139,53 +165,83 @@ export type ProgressionState = {
   select: (index: number | null) => void;
 };
 
-/** The slots and their bases, which change together. */
-type Held = { progression: Progression; bases: (string | null)[] };
+/** The slots, their bases and what the last change shortened, which change together. */
+type Held = { progression: Progression; bases: (string | null)[]; shortened: Slot[] };
 
 function initial(): Held {
   const progression = load();
-  return { progression, bases: progression.slots.map(() => null) };
+  return { progression, bases: progression.slots.map(() => null), shortened: [] };
+}
+
+/**
+ * The state after a change: no slot crosses into the next phrase, and the
+ * slots shortened for that are the ones the change shortened.
+ */
+function fitted({ progression, bases }: Omit<Held, 'shortened'>): Held {
+  const { slots, shortened } = fitToPhrases(progression.slots);
+  return {
+    progression: { ...progression, slots },
+    bases,
+    shortened: slots.filter((_, i) => shortened.includes(i)),
+  };
+}
+
+/** The slots and their bases without the slot at the index. */
+function without({ progression, bases }: Held, index: number): Omit<Held, 'shortened'> {
+  return {
+    progression: { ...progression, slots: progression.slots.filter((_, i) => i !== index) },
+    bases: bases.filter((_, i) => i !== index),
+  };
 }
 
 /** Holds the progression, kept in localStorage so that a reload brings it back. */
 export function useProgression(): ProgressionState {
   const [held, setHeld] = useState(initial);
   const [selected, setSelected] = useState<number | null>(null);
-  const { progression, bases } = held;
+  const { progression, bases, shortened } = held;
+  /** Changes the progression; every change goes through here, so none leaves a slot crossing. */
+  const change = useCallback(
+    (next: (h: Held) => Omit<Held, 'shortened'>) => setHeld((h) => fitted(next(h))),
+    [],
+  );
 
   useEffect(() => save(progression), [progression]);
 
   /** Adds a slot after the last; a function makes it from the slots before it. */
   const append = useCallback(
     (slot: Slot | ((slots: Slot[]) => Slot), base: string | null = null) =>
-      setHeld((h) => {
+      change((h) => {
         const added = typeof slot === 'function' ? slot(h.progression.slots) : slot;
         return {
           progression: { ...h.progression, slots: [...h.progression.slots, added] },
           bases: [...h.bases, base],
         };
       }),
-    [],
+    [change],
   );
   /** Changes the slots in place: the bases stay with them. */
   const changeSlots = useCallback(
-    (change: (slot: Slot, i: number) => Slot) =>
-      setHeld((h) => ({
+    (each: (slot: Slot, i: number) => Slot) =>
+      change((h) => ({
         ...h,
-        progression: { ...h.progression, slots: h.progression.slots.map(change) },
+        progression: { ...h.progression, slots: h.progression.slots.map(each) },
       })),
-    [],
+    [change],
   );
 
   return {
     progression,
     selected,
     bases,
-    setKey: useCallback((key: string) => {
-      if (KEYS.some((k) => k === key)) {
-        setHeld((h) => ({ ...h, progression: { ...h.progression, key } }));
-      }
-    }, []),
+    shortened,
+    setKey: useCallback(
+      (key: string) => {
+        if (KEYS.some((k) => k === key)) {
+          change((h) => ({ ...h, progression: { ...h.progression, key } }));
+        }
+      },
+      [change],
+    ),
     addChord: useCallback(
       (name: string) => {
         const chord = name.trim();
@@ -220,26 +276,29 @@ export function useProgression(): ProgressionState {
         ),
       [changeSlots],
     ),
-    fillSlot: useCallback((index: number, chord: string) => {
-      if (chord !== '') {
-        setHeld((h) => ({
-          progression: {
-            ...h.progression,
-            slots: h.progression.slots.map((slot, i) =>
-              i === index ? withRole({ chord, beats: slot.beats }, slot.role ?? null) : slot,
-            ),
-          },
-          bases: h.bases.map((base, i) => (i === index ? chord : base)),
-        }));
-      }
-    }, []),
-    remove: useCallback((index: number) => {
-      setHeld((h) => ({
-        progression: { ...h.progression, slots: h.progression.slots.filter((_, i) => i !== index) },
-        bases: h.bases.filter((_, i) => i !== index),
-      }));
-      setSelected((s) => (s === null || s < index ? s : s === index ? null : s - 1));
-    }, []),
+    fillSlot: useCallback(
+      (index: number, chord: string) => {
+        if (chord !== '') {
+          change((h) => ({
+            progression: {
+              ...h.progression,
+              slots: h.progression.slots.map((slot, i) =>
+                i === index ? withRole({ chord, beats: slot.beats }, slot.role ?? null) : slot,
+              ),
+            },
+            bases: h.bases.map((base, i) => (i === index ? chord : base)),
+          }));
+        }
+      },
+      [change],
+    ),
+    remove: useCallback(
+      (index: number) => {
+        change((h) => without(h, index));
+        setSelected((s) => (s === null || s < index ? s : s === index ? null : s - 1));
+      },
+      [change],
+    ),
     setBeats: useCallback(
       (index: number, beats: number) => {
         if (isBeats(beats)) {
