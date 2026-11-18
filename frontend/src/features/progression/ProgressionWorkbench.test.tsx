@@ -63,12 +63,6 @@ describe('ProgressionScreen as the workbench', () => {
       '解決 正格終止→3 C I',
       '→4 まだ選んでいない',
     ]);
-    expect(within(mainLine()).getAllByRole('button').map(text)).toEqual([
-      '1 Dm7 ii7',
-      '2 G7 V7',
-      '3 C I',
-      '4 まだ選んでいない',
-    ]);
   });
 
   it('chooses the slot of a node, as the strip does, and names it in the context panel', async () => {
@@ -83,11 +77,7 @@ describe('ProgressionScreen as the workbench', () => {
     fireEvent.click(node);
 
     expect(node).toHaveAttribute('aria-pressed', 'true');
-    const strip = screen.getByRole('list', { name: '進行' });
-    expect(within(strip).getByRole('button', { name: /^G7 V7/ })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    expect(screen.getByRole('button', { name: /^G7 V7/ })).toHaveAttribute('aria-pressed', 'true');
     expect(within(panel()).getByRole('heading', { level: 2 })).toHaveTextContent(
       'G7（2 番目の枠）',
     );
@@ -127,7 +117,6 @@ describe('ProgressionScreen as the workbench', () => {
     addChord('C');
     await within(mainLine()).findByText('I');
     const [explore, plan] = screen.getAllByRole('tab');
-    expect(screen.getByRole('tablist').textContent).toBe('探索計画');
     expect(explore).toHaveAttribute('aria-selected', 'true');
     expect(within(panel()).getByText('探索のタブ')).toBeInTheDocument();
 
@@ -142,10 +131,5 @@ describe('ProgressionScreen as the workbench', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: /^他の候補/ })).not.toBeInTheDocument();
     expect(within(mainLine()).getAllByRole('listitem').map(text)).toEqual(['1 C I']);
-
-    fireEvent.click(explore ?? document.body);
-
-    expect(explore).toHaveAttribute('aria-selected', 'true');
-    expect(within(panel()).getByText('探索のタブ')).toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import type { AudioContextFactory } from './usePlayer';
 import type { ReadingState } from './useProgressionReading';
 import { useProgressionReading } from './useProgressionReading';
@@ -31,15 +31,11 @@ const TABS: readonly { id: Tab; word: string }[] = [
 
 /** The tabs, with the arrow keys moving between them (the WAI-ARIA tabs pattern). */
 function Tabs({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
-  const buttons = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
   return (
     <div className="tabs" role="tablist" aria-label="やり方">
       {TABS.map(({ id, word }) => (
         <button
           key={id}
-          ref={(button) => {
-            buttons.current[id] = button;
-          }}
           type="button"
           role="tab"
           id={`tab-${id}`}
@@ -52,7 +48,7 @@ function Tabs({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
               // With two tabs, either arrow goes to the other.
               const other = id === 'explore' ? 'plan' : 'explore';
               onTab(other);
-              buttons.current[other]?.focus();
+              document.getElementById(`tab-${other}`)?.focus();
             }
           }}
         >
@@ -122,7 +118,7 @@ export function ProgressionScreen({ createAudioContext }: Props) {
       <Tabs tab={tab} onTab={setTab} />
 
       <div
-        className={`workbench-main ${tab}`}
+        className="workbench-main"
         id="workbench-panel"
         role="tabpanel"
         aria-labelledby={`tab-${tab}`}
