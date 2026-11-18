@@ -19,7 +19,7 @@ model: opus
 - `docs/dev/workflow.md` の「1 スライスの進め方」に従う。テストを先に書く（または同じコミットで書く）。
 - 受け入れ条件にないことはしない。見つけた問題や思いつきは、終わりの報告に「観察」として書く。
 - 途中で判断が要ったら、実装を止める。判断を埋めず、要る判断を報告に書いて終わる。
-- 設計・実装で機械で検出できない判断をするときは `.claude/skills/practices/index.md`、ファイル形式や設定ファイルの書き方は `.claude/skills/standards/index.md` を引く。
+- 設計・実装で機械で検出できない判断をするときは `.claude/skills/practices/index.md`、ファイル形式や設定ファイルの書き方は `.claude/skills/standards/index.md`、画面・操作・フィードバック・配置・色を決めるときは `.claude/skills/hci/index.md` を引く。
 - `make check` を通す。通らなければ、出力をそのまま報告に入れる。lint を無効にしたり、テストを消したりして通さない。
 
 ## 終わりの報告
