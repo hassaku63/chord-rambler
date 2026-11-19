@@ -8,7 +8,7 @@
 - 日本語と英語で取り違えやすい語は、下の「取り違えやすい語」に書く。
 - 文書、Issue、PR で、英語を見失いやすい語を使うときは、最初に出たところで英語を括弧で添える（「同主短調（parallel minor）」）。添える英語は、表の「英語」の列に従う。
 - 直訳で新しい訳語を作らない。新しい語が要るときは、先にこの用語集に足す。
-- 表の「英語」の列は、音楽の語では英語の音楽理論の語。このプロダクトの語では、コードと契約が使う英語で、定まった音楽の語ではない。
+- 表の「英語」の列は、音楽の語では英語の音楽理論の語。定まった英語の語が見当たらないものは、コードと契約が使う英語を「（コードと契約の語）」と添えて書く。このプロダクトの語では、コードと契約が使う英語で、定まった音楽の語ではない。
 - 表の「コード・契約」の列は、Go の識別子（`reading.Kind`）、契約（`docs/api/openapi.yaml`）の欄と値（契約 `kind: secondary-dominant`）、画面の識別子（`frontend/src/features/progression/terms.ts` の `TERMS.kind` など）。識別子のない語は「—」。
 
 ### 取り違えやすい語
@@ -22,7 +22,7 @@
 | 解決 | 3 つを指す。和音の進み方（`reading.Resolution`）、その「期待どおり」の値の画面の語（`TERMS.resolution`）、構造的な役割の 1 つ（`progression.RoleResolve`、契約 `resolve`） |
 | 形 | 和音から根音を除いたもの（`material.Shape`）、役割の条件の「3 度のある三和音か七の和音」（`reading.ConditionShape`、契約 `shape`）、セカンダリー・ドミナントの形（`relation.SecondaryDominantShape`） |
 | 区間 | 曲の中の大きな部分（`progression.Section`）と、枠の定義の「1 つの和音が鳴る区間」（時間の幅） |
-| モード | `docs/product/concept.md` では音楽の旋法、`docs/product/screen-promise.md` では画面の操作のモード。音楽の語は「旋法」と書く |
+| モード | `docs/product/concept.md` では音楽の旋法（mode）、`docs/product/screen-promise.md` では画面の操作のモード。この用語集の音楽の語は「旋法」 |
 
 ### 英語との対の出どころ
 
@@ -31,7 +31,7 @@
   - 導音 leading note, leading tone: ヤマハミュージックメディア 音楽用語ダス。https://kotobank.jp/word/導音
   - 三全音 tritone: 日本大百科全書（ニッポニカ）。https://kotobank.jp/word/三全音
   - 変格終止 plagal cadence: ブリタニカ国際大百科事典 小項目事典。https://kotobank.jp/word/変格終止
-  - 三和音 triad、転回形 inversion、属七の和音 dominant seventh chord、和声的短音階 harmonic minor scale、教会旋法 church mode: 音楽用語ダス。https://kotobank.jp/word/三和音 、https://kotobank.jp/word/転回形 、https://kotobank.jp/word/属七の和音 、https://kotobank.jp/word/和声的短音階 、https://kotobank.jp/word/教会旋法 。三和音の種類を長・短・増・減で言うことは、同じ「三和音」の項の精選版 日本国語大辞典
+  - 三和音 triad、転回形 inversion、属七の和音 dominant seventh chord、和声的短音階 harmonic minor scale、教会旋法 church mode: 音楽用語ダス。https://kotobank.jp/word/三和音 、https://kotobank.jp/word/転回形 、https://kotobank.jp/word/属七の和音 、https://kotobank.jp/word/和声的短音階 、https://kotobank.jp/word/教会旋法 。三和音に長三和音・短三和音・増三和音・減三和音の別があることは、同じ「三和音」の項の精選版 日本国語大辞典
   - 同主調（日本語の意味だけ。「ハ長調とハ短調（同主調）」）: 音楽用語ダス「近親調」。https://kotobank.jp/word/近親調
 - 英語の語を、`docs/architecture/theory-conventions.md` が挙げる出どころで確かめたもの。日本語との対は、定義が一致することによる:
   - authentic cadence、half cadence、plagal cadence、deceptive cadence: Hutchinson（4 の「定義」）
@@ -55,7 +55,7 @@
 | 同主短調 | parallel minor | `reading.Reading.FromParallelMinor`。契約 `fromParallelMinor`。画面 `PARALLEL_MINOR` | 同じ主音の短調（C major に対する C minor） |
 | 平行調 | relative key | — | 調号が同じ長調と短調（C major と A minor）。読みは使わない。英語の parallel key（同主調）と取り違えない |
 | 旋法 | mode | `material.Mode`。契約 `Mode` | 音階の種類（長調、自然短音階、ミクソリディアン、ドリアンなど） |
-| 教会旋法 | church modes（Ionian、Dorian、Phrygian、Lydian、Mixolydian、Aeolian、Locrian） | `material.Ionian` 〜 `material.Locrian`。契約 `ionian` 〜 `locrian`。画面 `TERMS.mode` | 7 つの旋法。イオニアン（長調）、ドリアン、フリジアン、リディアン、ミクソリディアン、エオリアン（自然短音階）、ロクリアン。借用和音の借り先を言うときに使う |
+| 教会旋法 | church modes（Ionian、Dorian、Phrygian、Lydian、Mixolydian、Aeolian、Locrian） | `material.Mode` の `Ionian`、`Dorian`、`Phrygian`、`Lydian`、`Mixolydian`、`Aeolian`、`Locrian`。契約 `ionian`、`dorian`、`phrygian`、`lydian`、`mixolydian`、`aeolian`、`locrian`。画面 `TERMS.mode` | 7 つの旋法。イオニアン（長調）、ドリアン、フリジアン、リディアン、ミクソリディアン、エオリアン（自然短音階）、ロクリアン。借用和音の借り先を言うときに使う |
 | 自然短音階 | natural minor scale（旋法は Aeolian） | `material.Aeolian`。契約 `aeolian`（画面の語は「自然短音階」） | 旋法としてはエオリアン。借用和音の借り先がこれを含むとき、「同主短調から」と言う |
 | 和声的短音階 | harmonic minor scale | — | 自然短音階の 7 度を半音上げた音階。エンジンは持たないので、借り先にならない（C で Bdim7 は事実だけ） |
 | 同主旋法 | parallel modes | `relation.ModesHolding` | 主音が同じ旋法。借り先は、和音を綴りで含む同主旋法の集合 |
@@ -66,7 +66,7 @@
 | 音程 | interval | `material.Interval` | 2 つの音の隔たり。度と種類の組で書く（長 3 度） |
 | 音程の種類 | interval quality | `material.Quality`（`Perfect`、`Major`、`Minor`、`Augmented`、`Diminished`。略号 P、M、m、A、d）。契約の音程は略号と度で書く（`P11`、`M3`） | 完全・長・短・増・減の 5 つ |
 | 根音 | root | `material.Chord.Root` | 和音の 1 度にあたる構成音。和音は、根音と、根音からの音程で書く（`docs/architecture/domain-model.md` の「和音」） |
-| 構成音 | members（of a chord） | `material.Chord.Notes`、`query.MembersLabel`。契約 `members` | 和音を作る音。根音と、根音からの音程の音で、テンションを含む。構成音でないバス（C/D の D）は含まない |
+| 構成音 | members（コードと契約の語） | `material.Chord.Notes`、`query.MembersLabel`。契約 `members` | 和音を作る音。根音と、根音からの音程の音で、テンションを含む。構成音でないバス（C/D の D）は含まない |
 | 和音の音 | chord tones | `reading.TensionCaution` の `ChordTone`。契約 `chordTone` | テンションの注意で見る、根音と 3 度・5 度・7 度の構成音 |
 | 三和音 | triad | — | 根音に 3 度と 5 度の音を重ねた和音 |
 | 三和音の種類 | triad quality | `material.Triad`（`TriadMajor`、`TriadMinor`、`TriadDiminished`、`TriadAugmented`。ほかに `TriadSus4`、`TriadSus2`、`TriadOther`）。`query.ErrNoTriadQuality` | 3 度と 5 度で決まる、長・短・減・増の 4 つ。エンジンの見方は、3 度を置き換えた sus4・sus2 と「その他」も同じ型で返す（`docs/architecture/domain-model.md` の「見方」） |
@@ -87,9 +87,9 @@
 | 導音 | leading tone、leading note | `relation.HasLeadingTone` | 主音の半音下の音。主音へ進もうとする |
 | 三全音 | tritone | `relation.HasTritone` | 全音 3 つ分の音程。属七の 3 度と 7 度が作る |
 | 借用和音 | borrowed chord。この使い方は modal interchange（Berklee）、mode mixture（Hutchinson） | `reading.Borrowed`。契約 `kind: borrowed` | 同じ主音の別の旋法にある和音を、今の調で使うこと。セカンダリー・ドミナントは含めない |
-| 借り先 | 契約の説明では the parallel modes a borrowed chord is borrowed from | `reading.Reading` の `Modes`。契約 `modes` | 借用和音を含む同主旋法の集合。自然短音階を含むなら「同主短調から」と言う |
+| 借り先 | the parallel modes a borrowed chord is borrowed from（契約の説明の語） | `reading.Reading` の `Modes`。契約 `modes` | 借用和音を含む同主旋法の集合。自然短音階を含むなら「同主短調から」と言う |
 | セカンダリー・ドミナント | secondary dominant | `reading.SecondaryDominant`、`relation.SecondaryDominantShape`。契約 `kind: secondary-dominant` | 主和音以外の調の和音に対して、ドミナントの形をした和音（V7/V など） |
-| 向かう先 | target（the degree a secondary dominant points to） | `reading.Reading` の `Target`、`material.Position.WithTarget`。契約 `target`。画面 `TARGET_NUMERALS` | セカンダリー・ドミナントが向かう和音の度数（2〜6。V7/V の /V） |
+| 向かう先 | target（コードと契約の語） | `reading.Reading` の `Target`、`material.Position.WithTarget`。契約 `target`。画面 `TARGET_NUMERALS` | セカンダリー・ドミナントが向かう和音の度数（2〜6。V7/V の /V） |
 | 解決 | resolution | `reading.Resolution`。契約 `resolution`、`ResolutionLabel` | 緊張のある和音が、期待される和音へ進むこと。期待と違う先へ進むことを「変則」と呼ぶ |
 | 期待どおり（の解決） | expected resolution | `reading.ResolutionExpected`。契約 `resolution: expected`（画面の語は「解決」） | 解決の値の 1 つ。次の和音が期待した先であること（`docs/architecture/theory-conventions.md` の 2） |
 | 変則 | irregular resolution | `reading.ResolutionIrregular`。契約 `resolution: irregular` | 解決の値の 1 つ。次の和音が期待した先でないこと |
@@ -120,8 +120,8 @@
 | 和音なし、まだ選んでいない | no chord、unchosen | `progression.NoChord`、`progression.Unchosen`。契約 `content: none`、`content: unchosen` | 和音を持たない枠の 2 つの中身。和音なしは鳴らさない枠、まだ選んでいないは和音をまだ決めていない枠 |
 | 区間 | section | `progression.Section` | フレーズをまとめた、曲の中の大きな部分（A メロ、サビなど） |
 | 役割 | role | `progression.Role`。契約 `Role`、`role`。画面 `TERMS.role`、`ROLE_GROUPS` | 枠が進行の中で果たす働き。構造的な役割と、色合いの役割がある |
-| 構造的な役割 | structural roles | `progression.RoleStable` 〜 `progression.RoleClose`。契約 `stable`（安定）、`link`（つなぎ）、`prepare`（準備）、`rise`（高まり）、`resolve`（解決）、`close`（締め） | 機能とフレーズの位置から決まる役割。安定、つなぎ、準備、高まり、解決、締め |
-| 色合いの役割 | colour roles | `progression.RoleSpread` 〜 `progression.RoleLinger`。契約 `spread`（広がり）、`float`（浮遊）、`wistful`（切なさ）、`linger`（余韻） | 印象で決める役割。広がり、浮遊、切なさ、余韻 |
+| 構造的な役割 | structural roles | `progression.RoleStable`、`RoleLink`、`RolePrepare`、`RoleRise`、`RoleResolve`、`RoleClose`。契約 `stable`（安定）、`link`（つなぎ）、`prepare`（準備）、`rise`（高まり）、`resolve`（解決）、`close`（締め） | 機能とフレーズの位置から決まる役割。安定、つなぎ、準備、高まり、解決、締め |
+| 色合いの役割 | colour roles | `progression.RoleSpread`、`RoleFloat`、`RoleWistful`、`RoleLinger`。契約 `spread`（広がり）、`float`（浮遊）、`wistful`（切なさ）、`linger`（余韻） | 印象で決める役割。広がり、浮遊、切なさ、余韻 |
 | 役割に合うか | role fit | `reading.RoleFit`、`reading.ReadRoleFits`。契約 `roleFit`、`fit: fits`（合う）、`misfits`（合わない）、`undecided`（決められない） | 枠の読みが、置いた構造的な役割に合うかの判定。合う、合わない、決められない の 3 つ（`docs/architecture/theory-conventions.md` の 7） |
 | 当たらなかった条件 | unmet conditions | `reading.RoleCondition`、`reading.ReadRoleVerdicts`。契約 `unmet`、`RoleCondition`。画面 `TERMS.unmet` | 「合わない」ときに、構造的な役割の合う条件のうち満たさなかったもの（`docs/architecture/theory-conventions.md` の 7） |
 | 候補 | candidate | `query.Candidate`、`query.SlotCandidate`。契約 `Candidate`、`SlotCandidate` | ある枠に置ける和音の提案。理由を伴う |
