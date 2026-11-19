@@ -6,7 +6,9 @@ import (
 )
 
 // Velocity is the velocity of every note, 0 to 127. There is one value until
-// the progression has accompaniment patterns.
+// the progression has accompaniment patterns. 64 is the value the MIDI 1.0
+// Detailed Specification gives for mezzo-forte and for devices without
+// velocity sensitivity.
 const Velocity = 64
 
 // The lowest note numbers of the two registers: the bass in C2 to B2 and the

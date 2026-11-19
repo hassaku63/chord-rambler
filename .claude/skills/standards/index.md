@@ -98,11 +98,11 @@
 | --- | --- |
 | 発行元 | The MIDI Association |
 | 何を決めているか | 楽器どうしが演奏を伝えるメッセージ。Note On と Note Off は、鍵盤の番号（key (note) number）と強さ（velocity）を、それぞれ 7 ビットのデータバイト（0〜127）で運ぶ |
-| 一次情報 | メッセージの一覧は https://midi.org/summary-of-midi-1-0-messages （登録なしで読める。ページ自身が、正式の仕様に当たるよう勧めている）。正式の仕様は MIDI 1.0 Detailed Specification で、https://midi.org/midi-1-0-core-specifications から Google Drive の PDF を開く。PDF は開けず、ノート番号の定義の文言と、中央の C をどの番号に置くかは確かめていない |
-| 状態 | 現行。core specifications のページは、Detailed Specification を 1996 年の改訂としている。MIDI 2.0（Universal MIDI Packet）の仕様が別にある（確かめていない） |
+| 一次情報 | メッセージの一覧は https://midi.org/summary-of-midi-1-0-messages （登録なしで読める。ページ自身が、正式の仕様に当たるよう勧めている）。正式の仕様は MIDI 1.0 Detailed Specification（版 4.2.1、1996 年の改訂）で、https://midi.org/midi-1-0-detailed-specification/ から Google Drive の PDF を開く（登録なしで読める）。ノート番号は 10 ページの「NOTE NUMBER」、強さは同じページの「VELOCITY」 |
+| 状態 | 現行。開いたのは版 4.2.1（1996 年の改訂）。MIDI 2.0（Universal MIDI Packet）の仕様が別にある（確かめていない） |
 | 当たるべき場面 | 音の高さを数で表す・受け渡すとき（演奏のまとまりの音符、画面での周波数への換算、標準 MIDI ファイルの書き出し）。オクターブの番号の付け方を決めるとき。強さの値を決めるとき |
-| chord-rambler との接点 | `backend/internal/performance` の音符（`Note`）が、ノート番号と強さを持つ（`docs/architecture/domain-model.md` の 9）。C4 = 60 は、このプロジェクトの規約として採る（オクターブの番号の付け方は流儀が割れ、ここでは一次情報で確かめていない）。強さの定数の値は、仕様から引いていない |
-| 確認 | 2026-11-16 / 間隔 365 日 |
+| chord-rambler との接点 | `backend/internal/performance` の音符（`Note`）が、ノート番号と強さを持つ（`docs/architecture/domain-model.md` の 9）。仕様は、中央の C（88 鍵のピアノの中央の C）を 60 と定める。中央の C を「C4」と呼ぶのは、このプロジェクトの規約（仕様はオクターブの番号の付け方を定めない）。強さの定数（`performance.Velocity` = 64）は、仕様が「メゾフォルテに当たり、強さを感じない機器も使う値」とする 64 に合う |
+| 確認 | 2026-11-19 / 間隔 365 日 |
 
 ## Web と API
 
