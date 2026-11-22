@@ -28,7 +28,7 @@ jobs:
         id: tv
         run: echo "lint=v$(awk '$1 == "golangci-lint" { print $2 }' .tool-versions)" >> "$GITHUB_OUTPUT"
       # CI uses the Go the application is built with, not the runner's.
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: .tool-versions
           cache-dependency-path: backend/go.mod # module and build cache
